@@ -2,25 +2,29 @@ import 'package:flutter/material.dart';
 
 class CustomerLedgerPage extends StatefulWidget {
   final Map<String, dynamic> customerData;
+  final Function(Map<String, dynamic>) onUpdateCustomer;
 
-  const CustomerLedgerPage({super.key, required this.customerData});
+  const CustomerLedgerPage({
+    super.key,
+    required this.customerData,
+    required this.onUpdateCustomer,
+  });
 
   @override
   State<CustomerLedgerPage> createState() => _CustomerLedgerPageState();
 }
 
 class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
-  late Map<String, dynamic> _customer;
-  late List<Map<String, dynamic>> _entries;
+  late Map<String, dynamic> customer;
 
   @override
   void initState() {
     super.initState();
-    _customer = Map<String, dynamic>.from(widget.customerData);
-    _entries = List<Map<String, dynamic>>.from(_customer['entries'] ?? []);
+    customer = Map<String, dynamic>.from(widget.customerData);
+    customer['entries'] = List<dynamic>.from(widget.customerData['entries'] ?? []);
   }
 
-  void _addEntryDialog(bool isReceived) {
+  void _addNewTransaction(String type) {
     final TextEditingController amountController = TextEditingController();
     final TextEditingController detailsController = TextEditingController();
 
@@ -31,8 +35,11 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
           textDirection: TextDirection.rtl,
           child: AlertDialog(
             title: Text(
-              isReceived ? 'آپ کو ملے (رقم وصولی)' : 'آپ نے دیے (سامان/ادھار)',
-              style: TextStyle(color: isReceived ? Colors.green : Colors.red, fontWeight: FontWeight.bold),
+              type == 'got' ? 'پیمنٹ اِن (وصولی)' : 'پیمنٹ آؤٹ (ادھار)',
+              style: TextStyle(
+                fontWeight: FontWeight.bold, 
+                color: type == 'got' ? Colors.green.shade800 : Colors.red.shade800,
+              ),
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -40,37 +47,154 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
                 TextField(
                   controller: amountController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'رقم (Rs.)', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: 'رقم (Rs.)'),
                 ),
-                const SizedBox(height: 10),
                 TextField(
                   controller: detailsController,
-                  decoration: const InputDecoration(labelText: 'تفصیل', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: 'تفصیل (آئٹم یا وجہ)'),
                 ),
               ],
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('منسوخ')),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('کینسل'),
+              ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: isReceived ? Colors.green : Colors.red),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: type == 'got' ? Colors.green.shade800 : Colors.red.shade800,
+                ),
                 onPressed: () {
-                  final int amount = int.tryParse(amountController.text) ?? 0;
-                  if (amount > 0) {
-                    setState(() {
-                      int currentBalance = _customer['balance'] as int;
-                      int newBalance = isReceived ? currentBalance - amount : currentBalance + amount;
-                      _customer['balance'] = newBalance;
+                  final amount = int.tryParse(amountController.text) ?? 0;
+                  if (amount <= 0) return;
 
-                      _entries.insert(0, {
-                        'date': 'آج, 05:00 PM',
-                        'type': isReceived ? 'got' : 'gave',
-                        'amount': amount,
-                        'details': detailsController.text.isEmpty ? (isReceived ? 'قسط وصولی' : 'سامان ادھار') : detailsController.text,
-                        'balanceAfter': newBalance,
-                      });
-                    });
-                    Navigator.pop(context);
-                  }
+                  final details = detailsController.text;
+                  final now = DateTime.now();
+                  
+                  final days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                  final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  final formattedDate = "${days[now.weekday % 7]}, ${now.day.toString().padLeft(2, '0')} ${months[now.month - 1]} ${now.year.toString().substring(2)}";
+
+                  final newEntry = {
+                    'date': formattedDate,
+                    'type': type,
+                    'amount': amount,
+                    'details': details,
+                    'timestamp': now.millisecondsSinceEpoch,
+                  };
+
+                  setState(() {
+                    customer['entries'].insert(0, newEntry);
+                    
+                    int currentBalance = (customer['balance'] as num?)?.toInt() ?? 0;
+                    if (type == 'got') {
+                      currentBalance -= amount;
+                    } else {
+                      currentBalance += amount;
+                    }
+                    customer['balance'] = currentBalance;
+                  });
+
+                  widget.onUpdateCustomer(customer);
+                  Navigator.pop(context);
+                },
+                child: const Text('محفوظ کریں', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEditDeleteDialog(int index) {
+    final entry = customer['entries'][index];
+    final TextEditingController amountController = TextEditingController(text: entry['amount'].toString());
+    final TextEditingController detailsController = TextEditingController(text: entry['details'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('ٹرانزیکشن تبدیل کریں', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'رقم (Rs.)'),
+                ),
+                TextField(
+                  controller: detailsController,
+                  decoration: const InputDecoration(labelText: 'تفصیل'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    final oldAmount = (entry['amount'] as num?)?.toInt() ?? 0;
+                    final type = entry['type'] ?? 'gave';
+                    int currentBalance = (customer['balance'] as num?)?.toInt() ?? 0;
+
+                    if (type == 'got') {
+                      currentBalance += oldAmount;
+                    } else {
+                      currentBalance -= oldAmount;
+                    }
+
+                    customer['balance'] = currentBalance;
+                    customer['entries'].removeAt(index);
+                  });
+
+                  widget.onUpdateCustomer(customer);
+                  Navigator.pop(context);
+                },
+                child: const Text('ڈیلیٹ کریں', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('کینسل'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D47A1)),
+                onPressed: () {
+                  final newAmount = int.tryParse(amountController.text) ?? 0;
+                  final newDetails = detailsController.text;
+                  final oldAmount = (entry['amount'] as num?)?.toInt() ?? 0;
+                  final type = entry['type'] ?? 'gave';
+
+                  setState(() {
+                    int currentBalance = (customer['balance'] as num?)?.toInt() ?? 0;
+
+                    if (type == 'got') {
+                      currentBalance += oldAmount;
+                    } else {
+                      currentBalance -= oldAmount;
+                    }
+
+                    if (type == 'got') {
+                      currentBalance -= newAmount;
+                    } else {
+                      currentBalance += newAmount;
+                    }
+
+                    customer['balance'] = currentBalance;
+                    customer['entries'][index] = {
+                      'date': entry['date'],
+                      'type': type,
+                      'amount': newAmount,
+                      'details': newDetails,
+                      'timestamp': entry['timestamp'] ?? DateTime.now().millisecondsSinceEpoch,
+                    };
+                  });
+
+                  widget.onUpdateCustomer(customer);
+                  Navigator.pop(context);
                 },
                 child: const Text('محفوظ کریں', style: TextStyle(color: Colors.white)),
               ),
@@ -83,76 +207,142 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
 
   @override
   Widget build(BuildContext context) {
-    int balance = _customer['balance'] ?? 0;
+    final entries = customer['entries'] as List<dynamic>;
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
+          title: Text(customer['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
           backgroundColor: const Color(0xFF0D47A1),
-          iconTheme: const IconThemeData(color: Colors.white),
-          title: InkWell(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('پروفائل پیج اگلے مرحلے میں جڑے گا: ${_customer['name']}')),
-              );
-            },
-            child: Row(
-              children: [
-                CircleAvatar(backgroundColor: Colors.white24, child: Text(_customer['name'][0], style: const TextStyle(color: Colors.white))),
-                const SizedBox(width: 10),
-                Text(_customer['name'], style: const TextStyle(color: Colors.white, fontSize: 16)),
-              ],
-            ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
           ),
         ),
         body: Column(
           children: [
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              color: Colors.white,
-              child: Column(
-                children: [
-                  Text('Rs ${balance.abs()}', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: balance >= 0 ? Colors.red.shade700 : Colors.green.shade700)),
-                  Text(balance >= 0 ? 'آپ کو ملیں گے' : 'آپ نے دینے ہیں', style: const TextStyle(color: Colors.grey)),
-                ],
+              padding: const EdgeInsets.all(16),
+              color: const Color(0xFF0D47A1),
+              child: Card(
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(customer['name'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text('فون: ${customer['phone']}', style: TextStyle(color: Colors.grey.shade600)),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Rs. ${customer['balance']}',
+                            style: TextStyle(
+                              fontSize: 22, 
+                              fontWeight: FontWeight.bold,
+                              color: ((customer['balance'] as num?)?.toInt() ?? 0) >= 0 ? Colors.red.shade700 : Colors.green.shade700,
+                            ),
+                          ),
+                          Text(
+                            ((customer['balance'] as num?)?.toInt() ?? 0) >= 0 ? 'باقی آؤٹ (ادھار)' : 'باقی اِن (ایڈوانس)',
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            const Divider(),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _btn(Icons.picture_as_pdf, 'رپورٹ', Colors.orange),
-                  _btn(Icons.calendar_month, _customer['dueDate'] ?? 'تاریخ', Colors.blue),
-                  _btn(Icons.chat, 'ریمائنڈر', Colors.green),
-                ],
-              ),
-            ),
-            const Divider(),
+
             Expanded(
-              child: ListView.builder(
-                itemCount: _entries.length,
-                itemBuilder: (context, index) {
-                  final item = _entries[index];
-                  bool isGot = item['type'] == 'got';
-                  return ListTile(
-                    title: Text(item['details']),
-                    subtitle: Text('${item['date']} | بیلنس: Rs ${item['balanceAfter']}'),
-                    trailing: Text('${item['amount']}', style: TextStyle(color: isGot ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
-                  );
-                },
-              ),
+              child: entries.isEmpty
+                  ? const Center(
+                      child: Text('کوئی لین دین نہیں ہے، نیچے دیے گئے بٹنوں سے اینٹری شروع کریں۔'),
+                    )
+                  : ListView.builder(
+                      itemCount: entries.length,
+                      itemBuilder: (context, index) {
+                        final entry = entries[index];
+                        final isGot = entry['type'] == 'got';
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          child: ListTile(
+                            onTap: () => _showEditDeleteDialog(index),
+                            leading: CircleAvatar(
+                              backgroundColor: isGot ? Colors.green.shade100 : Colors.red.shade100,
+                              child: Icon(
+                                isGot ? Icons.arrow_downward : Icons.arrow_upward,
+                                color: isGot ? Colors.green.shade800 : Colors.red.shade800,
+                              ),
+                            ),
+                            title: Text(
+                              entry['details'] != null && entry['details'].toString().isNotEmpty
+                                  ? entry['details']
+                                  : (isGot ? 'پیمنٹ اِن' : 'پیمنٹ آؤٹ'),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text(entry['date'] ?? ''),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Rs. ${entry['amount']}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: isGot ? Colors.green.shade700 : Colors.red.shade700,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.edit, size: 14, color: Colors.grey),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
-            Container(
-              padding: const EdgeInsets.all(12),
+
+            Padding(
+              padding: const EdgeInsets.all(12.0),
               child: Row(
                 children: [
-                  Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.green), onPressed: () => _addEntryDialog(true), child: const Text('آپ کو ملے Rs', style: TextStyle(color: Colors.white)))),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () => _addNewTransaction('got'),
+                      icon: const Icon(Icons.add, color: Colors.white),
+                      label: const Text('پیمنٹ اِن (آئے)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ),
                   const SizedBox(width: 12),
-                  Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => _addEntryDialog(false), child: const Text('آپ نے دیے Rs', style: TextStyle(color: Colors.white)))),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade700,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () => _addNewTransaction('gave'),
+                      icon: const Icon(Icons.remove, color: Colors.white),
+                      label: const Text('پیمنٹ آؤٹ (گئے)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -160,9 +350,5 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
         ),
       ),
     );
-  }
-
-  Widget _btn(IconData icon, String label, Color color) {
-    return Column(children: [Icon(icon, color: color), Text(label, style: const TextStyle(fontSize: 11))]);
   }
 }
