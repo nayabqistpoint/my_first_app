@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'inventory_page.dart';
 import 'customer_ledger_page.dart';
+import 'calculator_page.dart';
+import 'add_customer_page.dart'; 
 
 void main() {
   runApp(const MyApp());
@@ -53,27 +55,19 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
         {'date': 'Sat, 10 Jun 26', 'type': 'gave', 'amount': 23000, 'details': 'سام سنگ A14 ادھار', 'balanceAfter': 23000},
       ]
     },
-    {
-      'name': 'علی رضا (فون ایکسچینج)',
-      'phone': '03021234567',
-      'balance': 45000,
-      'dueDate': '20 Jul 26',
-      'entries': []
-    },
-    {
-      'name': 'طارق محمود',
-      'phone': '03055556666',
-      'balance': 12000,
-      'dueDate': '25 Jul 26',
-      'entries': []
-    },
-    {
-      'name': 'عدنان موبائل شاپ',
-      'phone': '03137778888',
-      'balance': 85000,
-      'dueDate': '30 Jul 26',
-      'entries': []
-    },
+    {'name': 'علی رضا (فون ایکسچینج)', 'phone': '03021234567', 'balance': 45000, 'dueDate': '20 Jul 26', 'entries': []},
+    {'name': 'طارق محمود', 'phone': '03055556666', 'balance': 12000, 'dueDate': '25 Jul 26', 'entries': []},
+    {'name': 'عدنان موبائل شاپ', 'phone': '03137778888', 'balance': 85000, 'dueDate': '30 Jul 26', 'entries': []},
+    {'name': 'سجاد حسین بٹ', 'phone': '03214567890', 'balance': 22000, 'dueDate': '05 Aug 26', 'entries': []},
+    {'name': 'عرفان الیکٹرانکس', 'phone': '03009876543', 'balance': 60000, 'dueDate': '10 Aug 26', 'entries': []},
+    {'name': 'بلال جنرل سٹور', 'phone': '03451234567', 'balance': 15000, 'dueDate': '12 Aug 26', 'entries': []},
+    {'name': 'حمزہ چوہدری', 'phone': '03335554443', 'balance': 35000, 'dueDate': '18 Aug 26', 'entries': []},
+    {'name': 'قاسم علی', 'phone': '03123456789', 'balance': 9000, 'dueDate': '22 Aug 26', 'entries': []},
+    {'name': 'یاسر فاروق', 'phone': '03041112223', 'balance': 27000, 'dueDate': '25 Aug 26', 'entries': []},
+    {'name': 'عمران خان (درزی)', 'phone': '03227778889', 'balance': 14000, 'dueDate': '28 Aug 26', 'entries': []},
+    {'name': 'زاہد محمود کلوتھ ہاؤس', 'phone': '03069998887', 'balance': 52000, 'dueDate': '01 Sep 26', 'entries': []},
+    {'name': 'نعمان شاہد', 'phone': '03154445556', 'balance': 19500, 'dueDate': '05 Sep 26', 'entries': []},
+    {'name': 'شاہد اقبال فینسی ہاؤس', 'phone': '03013332221', 'balance': 41000, 'dueDate': '10 Sep 26', 'entries': []},
   ];
 
   int get _totalYouWillGet {
@@ -90,15 +84,40 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           backgroundColor: const Color(0xFF0D47A1),
           centerTitle: true,
         ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () async {
+            final messenger = ScaffoldMessenger.of(context);
+
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AddCustomerPage()),
+            );
+            
+            if (!mounted) return;
+
+            if (result != null && result is Map<String, dynamic>) {
+              setState(() {
+                _customers.add(result);
+              });
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text('${result['name']} کامیابی سے شامل کر دیا گیا!'), 
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+          label: const Text('نیا کسٹمر', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          icon: const Icon(Icons.person_add, color: Colors.white),
+          backgroundColor: const Color(0xFF0D47A1),
+        ),
         body: Column(
           children: [
-            // ۱. کلیکیبل بینرز
             Container(
               padding: const EdgeInsets.all(12),
               color: const Color(0xFF0D47A1),
               child: Row(
                 children: [
-                  // دائیں طرف: آپ کو ملیں گے (Green)
                   Expanded(
                     child: InkWell(
                       onTap: () {
@@ -126,7 +145,6 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // بائیں طرف: آپ نے دینے ہیں (Red)
                   Expanded(
                     child: InkWell(
                       onTap: () {
@@ -157,7 +175,6 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
               ),
             ),
 
-            // ۲. کوئک ایکشن بار
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               color: Colors.grey.shade100,
@@ -202,7 +219,12 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                         icon: Icons.calculate,
                         label: 'کیلکولیٹر',
                         color: Colors.purple,
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const CalculatorPage()),
+                          );
+                        },
                       ),
                       _quickActionButton(
                         icon: Icons.inventory_2,
@@ -229,7 +251,6 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
 
             const Divider(height: 1),
 
-            // ۳. کسٹمر لسٹ
             Expanded(
               child: ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -248,12 +269,13 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                             builder: (context) => CustomerLedgerPage(customerData: customer),
                           ),
                         );
+                        if (!mounted) return;
                         setState(() {});
                       },
                       leading: CircleAvatar(
                         backgroundColor: const Color(0xFF0D47A1),
                         child: Text(
-                          customer['name'][0],
+                          customer['name'].isNotEmpty ? customer['name'][0] : 'C',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -281,16 +303,15 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
     );
   }
 
-  // یہاں withOpacity کو 100% محفوظ withAlpha سے بدل دیا گیا ہے
   Widget _quickActionButton({required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: color.withAlpha(26), // 10% Opacity کے برابر
+          color: color.withAlpha(26),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withAlpha(76)), // 30% Opacity کے برابر
+          border: Border.all(color: color.withAlpha(76)),
         ),
         child: Row(
           children: [
