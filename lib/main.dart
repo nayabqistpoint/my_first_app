@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dashboard/business_dashboard.dart'; // بزنس ڈیش بورڈ کی امپورٹ
 import 'inventory_page.dart';
 import 'customer_ledger_page.dart';
 import 'calculator_page.dart';
@@ -213,269 +214,293 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   Widget build(BuildContext context) {
     final filteredList = _filteredCustomers;
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('نایاپ قسط پوائنٹ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          backgroundColor: const Color(0xFF0D47A1),
-          centerTitle: true,
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            final messenger = ScaffoldMessenger.of(context);
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AddCustomerPage()),
-            );
-            
-            if (!mounted) return;
-
-            if (result != null && result is Map<String, dynamic>) {
-              setState(() {
-                result['timestamp'] = DateTime.now().millisecondsSinceEpoch;
-                result['entries'] = [];
-                _customers.add(result);
-              });
-              messenger.showSnackBar(
-                SnackBar(
-                  content: Text('${result['name']} کامیابی سے شامل کر دیا گیا!'), 
-                  backgroundColor: Colors.green,
-                ),
+    // یہاں سوائپ کے لیے GestureDetector کو باہر لپیٹ دیا گیا ہے، باقی پورا کوڈ ہوبہو آپ کا ہی ہے
+    return GestureDetector(
+      onHorizontalDragEnd: (details) {
+        // دائیں طرف سے بائیں طرف سوائپ کرنے پر بزنس ڈیش بورڈ پر جائے گا
+        if (details.primaryVelocity != null && details.primaryVelocity! > 300) {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => const BusinessDashboard(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                const begin = Offset(-1.0, 0.0);
+                const end = Offset.zero;
+                const curve = Curves.easeInOut;
+                var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
+              },
+            ),
+          );
+        }
+      },
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('نایاپ قسط پوائنٹ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            backgroundColor: const Color(0xFF0D47A1),
+            centerTitle: true,
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddCustomerPage()),
               );
-            }
-          },
-          label: const Text('نیا کسٹمر', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          icon: const Icon(Icons.person_add, color: Colors.white),
-          backgroundColor: const Color(0xFF0D47A1),
-        ),
-        body: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              color: const Color(0xFF0D47A1),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Card(
-                      color: Colors.red.shade50,
-                      elevation: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                        child: Column(
-                          children: [
-                            const Text('کل باہر رقم (آؤٹ)', style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
-                            Text('Rs. $_totalOut', style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.bold, fontSize: 17)),
-                          ],
+              
+              if (!mounted) return;
+
+              if (result != null && result is Map<String, dynamic>) {
+                setState(() {
+                  result['timestamp'] = DateTime.now().millisecondsSinceEpoch;
+                  result['entries'] = [];
+                  _customers.add(result);
+                });
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('${result['name']} کامیابی سے شامل کر دیا گیا!'), 
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            label: const Text('نیا کسٹمر', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            icon: const Icon(Icons.person_add, color: Colors.white),
+            backgroundColor: const Color(0xFF0D47A1),
+          ),
+          body: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                color: const Color(0xFF0D47A1),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Card(
+                        color: Colors.red.shade50,
+                        elevation: 3,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                          child: Column(
+                            children: [
+                              const Text('کل باہر رقم (آؤٹ)', style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 4),
+                              Text('Rs. $_totalOut', style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.bold, fontSize: 17)),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Card(
-                      color: Colors.green.shade50,
-                      elevation: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                        child: Column(
-                          children: [
-                            const Text('کل جمع رقم (اِن)', style: TextStyle(color: Colors.green, fontSize: 13, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
-                            Text('Rs. $_totalIn', style: TextStyle(color: Colors.green.shade900, fontWeight: FontWeight.bold, fontSize: 17)),
-                          ],
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Card(
+                        color: Colors.green.shade50,
+                        elevation: 3,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                          child: Column(
+                            children: [
+                              const Text('کل جمع رقم (اِن)', style: TextStyle(color: Colors.green, fontSize: 13, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 4),
+                              Text('Rs. $_totalIn', style: TextStyle(color: Colors.green.shade900, fontWeight: FontWeight.bold, fontSize: 17)),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              color: Colors.grey.shade100,
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 40,
-                          child: TextField(
-                            onChanged: (value) {
-                              setState(() {
-                                _searchQuery = value;
-                              });
-                            },
-                            decoration: InputDecoration(
-                              hintText: 'کسٹمر تلاش کریں...',
-                              prefixIcon: const Icon(Icons.search, size: 20),
-                              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                              fillColor: Colors.white,
-                              filled: true,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                color: Colors.grey.shade100,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 40,
+                            child: TextField(
+                              onChanged: (value) {
+                                setState(() {
+                                  _searchQuery = value;
+                                });
+                              },
+                              decoration: InputDecoration(
+                                hintText: 'کسٹمر تلاش کریں...',
+                                prefixIcon: const Icon(Icons.search, size: 20),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                                fillColor: Colors.white,
+                                filled: true,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        style: IconButton.styleFrom(
-                          backgroundColor: const Color(0xFF0D47A1),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        icon: const Icon(Icons.filter_list, color: Colors.white),
-                        onPressed: _showFilterBottomSheet,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: ['All', 'ہول سیلر', 'ریٹیلر', 'لوکل فیملی'].map((group) {
-                        final isSelected = _selectedGroup == group;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                          child: ChoiceChip(
-                            label: Text(group),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                _selectedGroup = selected ? group : 'All';
-                              });
-                            },
+                        const SizedBox(width: 8),
+                        IconButton(
+                          style: IconButton.styleFrom(
+                            backgroundColor: const Color(0xFF0D47A1),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                        );
-                      }).toList(),
+                          icon: const Icon(Icons.filter_list, color: Colors.white),
+                          onPressed: _showFilterBottomSheet,
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _quickActionButton(
-                        icon: Icons.calculate,
-                        label: 'کیلکولیٹر',
-                        color: Colors.purple,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const CalculatorPage()),
-                          );
-                        },
-                      ),
-                      _quickActionButton(
-                        icon: Icons.inventory_2,
-                        label: 'اسٹاک انوینٹری',
-                        color: const Color(0xFF0D47A1),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const InventoryPage()),
-                          );
-                        },
-                      ),
-                      _quickActionButton(
-                        icon: Icons.history,
-                        label: 'روزنامچہ / ہسٹری',
-                        color: Colors.teal,
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => HistoryPage(
-                                customers: _customers,
-                                onUpdateCustomers: (updatedList) {
-                                  _customers = updatedList;
-                                },
-                              ),
+                    const SizedBox(height: 8),
+                    
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: ['All', 'ہول سیلر', 'ریٹیلر', 'لوکل فیملی'].map((group) {
+                          final isSelected = _selectedGroup == group;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                            child: ChoiceChip(
+                              label: Text(group),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedGroup = selected ? group : 'All';
+                                });
+                              },
                             ),
                           );
-                          if (!mounted) return;
-                          setState(() {});
-                        },
+                        }).toList(),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _quickActionButton(
+                          icon: Icons.calculate,
+                          label: 'کیلکولیٹر',
+                          color: Colors.purple,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const CalculatorPage()),
+                            );
+                          },
+                        ),
+                        _quickActionButton(
+                          icon: Icons.inventory_2,
+                          label: 'اسٹاک انوینٹری',
+                          color: const Color(0xFF0D47A1),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const InventoryPage()),
+                            );
+                          },
+                        ),
+                        _quickActionButton(
+                          icon: Icons.history,
+                          label: 'روزنامچہ / ہسٹری',
+                          color: Colors.teal,
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => HistoryPage(
+                                  customers: _customers,
+                                  onUpdateCustomers: (updatedList) {
+                                    _customers = updatedList;
+                                  },
+                                ),
+                              ),
+                            );
+                            if (!mounted) return;
+                            setState(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            const Divider(height: 1),
+              const Divider(height: 1),
 
-            Expanded(
-              child: filteredList.isEmpty
-                  ? const Center(child: Text('کوئی کسٹمر نہیں ملا!', style: TextStyle(fontWeight: FontWeight.bold)))
-                  : ListView.builder(
-                      itemCount: filteredList.length,
-                      itemBuilder: (context, index) {
-                        final customer = filteredList[index];
-                        final customerIndexInMainList = _customers.indexWhere((c) => c['phone'] == customer['phone']);
-                        final bal = (customer['balance'] as num?)?.toInt() ?? 0;
+              Expanded(
+                child: filteredList.isEmpty
+                    ? const Center(child: Text('کوئی کسٹمر نہیں ملا!', style: TextStyle(fontWeight: FontWeight.bold)))
+                    : ListView.builder(
+                        itemCount: filteredList.length,
+                        itemBuilder: (context, index) {
+                          final customer = filteredList[index];
+                          final customerIndexInMainList = _customers.indexWhere((c) => c['phone'] == customer['phone']);
+                          final bal = (customer['balance'] as num?)?.toInt() ?? 0;
 
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                          elevation: 1.5,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          child: ListTile(
-                            onTap: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CustomerLedgerPage(
-                                    customerData: customer,
-                                    onUpdateCustomer: (updatedCustomer) {
-                                      setState(() {
-                                        if (customerIndexInMainList != -1) {
-                                          _customers[customerIndexInMainList] = updatedCustomer;
-                                        }
-                                      });
-                                    },
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            elevation: 1.5,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            child: ListTile(
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CustomerLedgerPage(
+                                      customerData: customer,
+                                      onUpdateCustomer: (updatedCustomer) {
+                                        setState(() {
+                                          if (customerIndexInMainList != -1) {
+                                            _customers[customerIndexInMainList] = updatedCustomer;
+                                          }
+                                        });
+                                      },
+                                    ),
                                   ),
+                                );
+                              },
+                              leading: CircleAvatar(
+                                backgroundColor: const Color(0xFF0D47A1),
+                                child: Text(
+                                  customer['name'].isNotEmpty ? customer['name'][0] : 'C',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                 ),
-                              );
-                            },
-                            leading: CircleAvatar(
-                              backgroundColor: const Color(0xFF0D47A1),
-                              child: Text(
-                                customer['name'].isNotEmpty ? customer['name'][0] : 'C',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                              title: Text(customer['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                              subtitle: Text('فون: ${customer['phone']} | وعدہ: ${customer['dueDate']}'),
+                              trailing: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'Rs. ${bal.abs()}',
+                                    style: TextStyle(
+                                      color: bal >= 0 ? Colors.red : Colors.green, 
+                                      fontWeight: FontWeight.bold, 
+                                      fontSize: 15
+                                    ),
+                                  ),
+                                  Text(
+                                    bal >= 0 ? 'آؤٹ' : 'اِن', 
+                                    style: const TextStyle(color: Colors.grey, fontSize: 10)
+                                  ),
+                                ],
                               ),
                             ),
-                            title: Text(customer['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                            subtitle: Text('فون: ${customer['phone']} | وعدہ: ${customer['dueDate']}'),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'Rs. ${bal.abs()}',
-                                  style: TextStyle(
-                                    color: bal >= 0 ? Colors.red : Colors.green, 
-                                    fontWeight: FontWeight.bold, 
-                                    fontSize: 15
-                                  ),
-                                ),
-                                Text(
-                                  bal >= 0 ? 'آؤٹ' : 'اِن', 
-                                  style: const TextStyle(color: Colors.grey, fontSize: 10)
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
