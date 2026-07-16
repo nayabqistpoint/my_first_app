@@ -52,6 +52,7 @@ class _InventoryPageState extends State<InventoryPage> {
     return _stockItems.fold(0, (sum, item) => sum + (item['quantity'] as int));
   }
 
+  // یہاں ہم نے واشگاف کیا کہ آنے والا پیرامیٹر String ہی ہے
   void _openSupplierHistory(String supplierName) {
     final supplierPurchases =
         _stockItems.where((item) => item['supplier'] == supplierName).toList();
@@ -124,7 +125,8 @@ class _InventoryPageState extends State<InventoryPage> {
                   return Card(
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     child: ListTile(
-                      onTap: () => _openSupplierHistory(item['supplier']),
+                      // یہاں ہم نے 'as String' لکھ کر ڈارٹ کو بتا دیا کہ یہ لازمی ٹیکسٹ (String) ہے
+                      onTap: () => _openSupplierHistory(item['supplier'] as String),
                       leading: CircleAvatar(
                         backgroundColor: Colors.blue.shade50,
                         child: const Icon(Icons.phone_android, color: Color(0xFF0D47A1)),
