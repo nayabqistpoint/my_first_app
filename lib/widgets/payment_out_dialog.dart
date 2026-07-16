@@ -9,9 +9,9 @@ class PaymentOutDialog extends StatefulWidget {
 }
 
 class _PaymentOutDialogState extends State<PaymentOutDialog> {
+  final TextEditingController _customerNameController = TextEditingController(); 
   final TextEditingController _cashController = TextEditingController();
   final TextEditingController _bankController = TextEditingController();
-  final TextEditingController _bankNameController = TextEditingController(); 
   final TextEditingController _penaltyController = TextEditingController(); 
 
   final TextEditingController _totalPriceController = TextEditingController();
@@ -25,6 +25,26 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
   DateTime _dueDate = DateTime.now().add(const Duration(days: 30)); 
   DateTime _selectedDate = DateTime.now(); 
   double _liveTotal = 0.0;
+
+  String _selectedBank = 'لاکر (Locker)';
+  final List<String> _bankList = [
+    'لاکر (Locker)',
+    'احمد (دستی لین دین)',
+    'میزان بینک',
+    'ایزی پیسہ',
+    'جائز کیش',
+    'الائیڈ بینک'
+  ];
+
+  String _selectedExpenseCategory = 'دکان کا کرایہ';
+  final List<String> _expenseCategories = [
+    'دکان کا کرایہ',
+    'بجلی کا بل',
+    'چائے پانی / کھانا',
+    'ملازمین کی تنخواہ',
+    'سفری اخراجات',
+    'متفرق خرچہ'
+  ];
 
   bool _hasImage = false;
   bool _hasPdf = false;
@@ -54,9 +74,9 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
 
   @override
   void dispose() {
+    _customerNameController.dispose();
     _cashController.dispose();
     _bankController.dispose();
-    _bankNameController.dispose();
     _penaltyController.dispose();
     _totalPriceController.dispose();
     _advanceController.dispose();
@@ -67,7 +87,7 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
   }
 
   void _calculateTotal() {
-    if (_transactionType == 'نقد') {
+    if (_transactionType == 'نقد' || _transactionType == 'ایکسپنس') {
       final double cash = double.tryParse(_cashController.text.trim()) ?? 0.0;
       final double bank = double.tryParse(_bankController.text.trim()) ?? 0.0;
       final double penalty = double.tryParse(_penaltyController.text.trim()) ?? 0.0;
@@ -119,19 +139,23 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
 
   Future<void> _shareOutOnWhatsApp() async {
     String message = "";
+    String customer = _customerNameController.text.isEmpty ? 'معزز کسٹمر' : _customerNameController.text;
+
     if (_transactionType == 'نقد') {
       message = "🧾 *رسید - ادائیگی (Payment Out)*\n"
+          "کسٹمر کا نام: $customer\n"
           "تاریخ: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}\n"
           "-------------------\n"
           "کیش ادا کی: ${_cashController.text.isEmpty ? '0' : _cashController.text} روپے\n"
-          "بینک بھیجی: ${_bankController.text.isEmpty ? '0' : _bankController.text} روپے (${_bankNameController.text.isEmpty ? 'کیش/بینک' : _bankNameController.text})\n"
+          "بینک بھیجی: ${_bankController.text.isEmpty ? '0' : _bankController.text} روپے ($_selectedBank)\n"
           "جرمانہ / نقصان: ${_penaltyController.text.isEmpty ? '0' : _penaltyController.text} روپے\n"
           "-------------------\n"
           "کل ادا کردہ رقم: *$_liveTotal روپے*\n"
           "تفصیل: ${_detailsController.text.isEmpty ? 'پیمنٹ ادائیگی' : _detailsController.text}\n"
           "شکریہ!";
-    } else {
+    } else if (_transactionType == 'سیل') {
       message = "🧾 *رسید - سیل / آئٹم بیچی (Item Sold)*\n"
+          "کسٹمر کا نام: $customer\n"
           "تاریخ: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}\n"
           "آئٹم کا نام: $_selectedItem\n"
           "IMEI نمبر: ${_imeiController.text}\n"
@@ -144,13 +168,23 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
           "باقی رقم (کھاتہ): *$_liveTotal روپے*\n"
           "تفصیل: ${_detailsController.text.isEmpty ? 'نیا اسمارٹ فون فروخت کیا' : _detailsController.text}\n"
           "شکریہ!";
+    } else {
+      message = "🧾 *رسید - کاروباری خرچہ (Expense)*\n"
+          "کیٹیگری: $_selectedExpenseCategory\n"
+          "تاریخ: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}\n"
+          "-------------------\n"
+          "کیش خرچ: ${_cashController.text.isEmpty ? '0' : _cashController.text} روپے\n"
+          "بینک سے خرچ: ${_bankController.text.isEmpty ? '0' : _bankController.text} روپے ($_selectedBank)\n"
+          "-------------------\n"
+          "کل خرچہ رقم: *$_liveTotal روپے*\n"
+          "تفصیل: ${_detailsController.text.isEmpty ? 'کاروباری اخراجات' : _detailsController.text}\n"
+          "شکریہ!";
     }
     
     final Uri whatsappUrl = Uri.parse("whatsapp://send?text=${Uri.encodeComponent(message)}");
     if (await canLaunchUrl(whatsappUrl)) {
       await launchUrl(whatsappUrl);
     } else {
-      // یہاں ہم نے mounted چیک شامل کیا ہے تاکہ linter کا مسئلہ نہ آئے
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('واٹس ایپ اوپن کرنے میں مسئلہ آیا یا انسٹال نہیں ہے!')),
@@ -191,16 +225,31 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
               const Divider(),
 
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'تاریخ: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  Expanded(
+                    child: TextField(
+                      controller: _customerNameController,
+                      enabled: _transactionType != 'ایکسپنس', 
+                      decoration: InputDecoration(
+                        labelText: _transactionType == 'ایکسپنس' ? 'اخراجات کی انٹری' : 'کسٹمر کا نام (ضروری)',
+                        border: const UnderlineInputBorder(),
+                        prefixIcon: const Icon(Icons.person, color: Colors.red),
+                      ),
+                    ),
                   ),
-                  TextButton.icon(
-                    onPressed: () => _selectTxDate(context),
-                    icon: const Icon(Icons.calendar_month, color: Color(0xFF0D47A1)),
-                    label: const Text('تاریخ تبدیل کریں', style: TextStyle(color: Color(0xFF0D47A1))),
+                  const SizedBox(width: 15),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'تاریخ: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      TextButton(
+                        onPressed: () => _selectTxDate(context),
+                        child: const Text('تبدیل کریں', style: TextStyle(fontSize: 12, color: Color(0xFF0D47A1))),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -228,11 +277,11 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Center(child: Text('صرف پیسے دیئے (Cash Out)', style: TextStyle(fontWeight: FontWeight.bold))),
+                        child: const Center(child: Text('پیسے دیئے (Out)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 5),
                   Expanded(
                     child: InkWell(
                       onTap: () {
@@ -251,7 +300,30 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Center(child: Text('سیل / آئٹم بیچی (Item Sold)', style: TextStyle(fontWeight: FontWeight.bold))),
+                        child: const Center(child: Text('سیل / قسط (Sale)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _transactionType = 'ایکسپنس';
+                          _calculateTotal();
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _transactionType == 'ایکسپنس' ? Colors.orange.shade50 : Colors.grey.shade100,
+                          border: Border.all(
+                            color: _transactionType == 'ایکسپنس' ? Colors.orange : Colors.grey.shade300,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(child: Text('اخراجات (Expense)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.orange))),
                       ),
                     ),
                   ),
@@ -259,7 +331,28 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
               ),
               const SizedBox(height: 20),
 
-              if (_transactionType == 'نقد') ...[
+              if (_transactionType == 'ایکسپنس') ...[
+                DropdownButtonFormField<String>(
+                  // یہاں value کو اب initialValue سے تبدیل کر دیا گیا ہے (لائن نمبرز کے مطابق)
+                  initialValue: _selectedExpenseCategory,
+                  decoration: const InputDecoration(
+                    labelText: 'ایکسپنس کیٹگری کا انتخاب کریں',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.category, color: Colors.orange),
+                  ),
+                  items: _expenseCategories.map((cat) {
+                    return DropdownMenuItem(value: cat, child: Text(cat));
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedExpenseCategory = val!;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              if (_transactionType == 'نقد' || _transactionType == 'ایکسپنس') ...[
                 TextField(
                   controller: _cashController,
                   keyboardType: TextInputType.number,
@@ -288,29 +381,41 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
                     const SizedBox(width: 8),
                     Expanded(
                       flex: 2,
-                      child: TextField(
-                        controller: _bankNameController,
+                      child: DropdownButtonFormField<String>(
+                        // یہاں بھی value کو اب initialValue سے تبدیل کر دیا گیا ہے
+                        initialValue: _selectedBank,
                         decoration: const InputDecoration(
-                          labelText: 'نام بینک / کسٹمر',
+                          labelText: 'بینک / بندہ',
                           border: OutlineInputBorder(),
                         ),
+                        items: _bankList.map((bank) {
+                          return DropdownMenuItem(value: bank, child: Text(bank, style: const TextStyle(fontSize: 12)));
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedBank = val!;
+                          });
+                        },
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
 
-                TextField(
-                  controller: _penaltyController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'جرمانہ / فالتو نقصان (Penalty/Loss)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.gavel, color: Colors.orange),
+                if (_transactionType == 'نقد') ...[
+                  TextField(
+                    controller: _penaltyController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'جرمانہ / فالتو نقصان (Penalty/Loss)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.gavel, color: Colors.orange),
+                    ),
                   ),
-                ),
+                ],
               ] else ...[
                 DropdownButtonFormField<String>(
+                  // یہاں بھی value کو اب initialValue سے تبدیل کر دیا گیا ہے
                   initialValue: _selectedItem,
                   decoration: const InputDecoration(
                     labelText: 'سٹاک آئٹم کا انتخاب کریں',
@@ -410,22 +515,18 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
                   IconButton(
                     icon: Icon(Icons.image, color: _hasImage ? Colors.red : Colors.grey, size: 30),
                     onPressed: () => setState(() => _hasImage = !_hasImage),
-                    tooltip: 'تصویر لگائیں',
                   ),
                   IconButton(
                     icon: Icon(Icons.picture_as_pdf, color: _hasPdf ? Colors.red : Colors.grey, size: 30),
                     onPressed: () => setState(() => _hasPdf = !_hasPdf),
-                    tooltip: 'پی ڈی ایف جوڑیں',
                   ),
                   IconButton(
                     icon: Icon(Icons.mic, color: _hasAudio ? Colors.blue : Colors.grey, size: 30),
                     onPressed: () => setState(() => _hasAudio = !_hasAudio),
-                    tooltip: 'آڈیو ریکارڈنگ',
                   ),
                   IconButton(
                     icon: Icon(Icons.videocam, color: _hasVideo ? Colors.purple : Colors.grey, size: 30),
                     onPressed: () => setState(() => _hasVideo = !_hasVideo),
-                    tooltip: 'ویڈیو ریکارڈنگ',
                   ),
                 ],
               ),
@@ -434,9 +535,9 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: _transactionType == 'ایکسپنس' ? Colors.orange.shade50 : Colors.red.shade50,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.red.shade200),
+                  border: Border.all(color: _transactionType == 'ایکسپنس' ? Colors.orange.shade200 : Colors.red.shade200),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -444,10 +545,23 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
                     Text(
                       _transactionType == 'نقد' 
                           ? 'کل ادا کردہ رقم (ٹوٹل ادائیگی):' 
-                          : 'باقی رقم (جو کھاتے میں چڑھے گی):',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.red),
+                          : _transactionType == 'سیل'
+                              ? 'باقی رقم (جو کھاتے میں چڑھے گی):'
+                              : 'کل اخراجات کی رقم (Expense):',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold, 
+                        fontSize: 14, 
+                        color: _transactionType == 'ایکسپنس' ? Colors.orange.shade900 : Colors.red
+                      ),
                     ),
-                    Text('Rs. ${_liveTotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+                    Text(
+                      'Rs. ${_liveTotal.toStringAsFixed(0)}', 
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold, 
+                        fontSize: 18, 
+                        color: _transactionType == 'ایکسپنس' ? Colors.orange.shade900 : Colors.red
+                      )
+                    ),
                   ],
                 ),
               ),
@@ -458,11 +572,17 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
                 height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                    backgroundColor: _transactionType == 'ایکسپنس' ? Colors.orange : Colors.red,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
-                    if (_liveTotal == 0.0 && _transactionType == 'نقد') {
+                    if (_transactionType != 'ایکسپنس' && _customerNameController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('برائے مہربانی کسٹمر کا نام درج کریں!')),
+                      );
+                      return;
+                    }
+                    if (_liveTotal == 0.0 && (_transactionType == 'نقد' || _transactionType == 'ایکسپنس')) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('برائے مہربانی کوئی رقم درج کریں!')),
                       );
@@ -481,15 +601,20 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
                       if (details.isEmpty) {
                         details = 'فروخت کردہ: $_selectedItem (IMEI: ${_imeiController.text})';
                       }
+                    } else if (_transactionType == 'ایکسپنس') {
+                      if (details.isEmpty) details = 'کاروباری اخراجات: $_selectedExpenseCategory';
                     } else {
                       if (details.isEmpty) details = 'پیمنٹ ادائیگی';
                     }
 
                     Navigator.pop(context, {
+                      'transaction_type': _transactionType, 
+                      'customer_name': _transactionType == 'ایکسپنس' ? 'کاروباری اخراجات' : _customerNameController.text.trim(),
                       'amount': _liveTotal, 
                       'cash_amount': double.tryParse(_cashController.text.trim()) ?? 0.0,
                       'bank_amount': double.tryParse(_bankController.text.trim()) ?? 0.0,
-                      'bank_name': _bankNameController.text.trim(),
+                      'bank_name': _selectedBank,
+                      'expense_category': _transactionType == 'ایکسپنس' ? _selectedExpenseCategory : null,
                       'penalty': double.tryParse(_penaltyController.text.trim()) ?? 0.0,
                       'type': 'gave',
                       'date': '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
@@ -510,9 +635,11 @@ class _PaymentOutDialogState extends State<PaymentOutDialog> {
                       }
                     });
                   },
-                  child: const Text(
-                    'ادائیگی محفوظ کریں (Save Out)',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  child: Text(
+                    _transactionType == 'ایکسپنس' 
+                        ? 'خرچہ محفوظ کریں (Save Expense)' 
+                        : 'ادائیگی محفوظ کریں (Save Out)',
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

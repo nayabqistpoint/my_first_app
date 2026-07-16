@@ -9,14 +9,24 @@ class PaymentInDialog extends StatefulWidget {
 }
 
 class _PaymentInDialogState extends State<PaymentInDialog> {
+  final TextEditingController _customerNameController = TextEditingController(); 
   final TextEditingController _cashController = TextEditingController();
   final TextEditingController _bankController = TextEditingController();
-  final TextEditingController _bankNameController = TextEditingController(); 
   final TextEditingController _discountController = TextEditingController();
   final TextEditingController _detailsController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
   double _liveTotal = 0.0;
+
+  String _selectedBank = 'لاکر (Locker)';
+  final List<String> _bankList = [
+    'لاکر (Locker)',
+    'احمد (دستی لین دین)',
+    'میزان بینک',
+    'ایزی پیسہ',
+    'جائز کیش',
+    'الائیڈ بینک'
+  ];
 
   bool _hasImage = false;
   bool _hasPdf = false;
@@ -33,9 +43,9 @@ class _PaymentInDialogState extends State<PaymentInDialog> {
 
   @override
   void dispose() {
+    _customerNameController.dispose();
     _cashController.dispose();
     _bankController.dispose();
-    _bankNameController.dispose();
     _discountController.dispose();
     _detailsController.dispose();
     super.dispose();
@@ -67,10 +77,11 @@ class _PaymentInDialogState extends State<PaymentInDialog> {
 
   Future<void> _shareOnWhatsApp() async {
     String message = "🧾 *رسید - ادائیگی وصولی (Payment In)*\n"
+        "کسٹمر کا نام: ${_customerNameController.text.isEmpty ? 'معزز کسٹمر' : _customerNameController.text}\n"
         "تاریخ: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}\n"
         "-------------------\n"
         "کیش رقم: ${_cashController.text.isEmpty ? '0' : _cashController.text} روپے\n"
-        "بینک رقم: ${_bankController.text.isEmpty ? '0' : _bankController.text} روپے (${_bankNameController.text.isEmpty ? 'کیش/بینک' : _bankNameController.text})\n"
+        "بینک رقم: ${_bankController.text.isEmpty ? '0' : _bankController.text} روپے ($_selectedBank)\n"
         "رعایت / ڈسکاؤنٹ: ${_discountController.text.isEmpty ? '0' : _discountController.text} روپے\n"
         "-------------------\n"
         "کل موصولہ رقم: *$_liveTotal روپے*\n"
@@ -81,7 +92,6 @@ class _PaymentInDialogState extends State<PaymentInDialog> {
     if (await canLaunchUrl(whatsappUrl)) {
       await launchUrl(whatsappUrl);
     } else {
-      // یہاں ہم نے mounted چیک شامل کیا ہے تاکہ linter کا مسئلہ نہ آئے
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('واٹس ایپ اوپن کرنے میں مسئلہ آیا یا انسٹال نہیں ہے!')),
@@ -122,22 +132,36 @@ class _PaymentInDialogState extends State<PaymentInDialog> {
               const Divider(),
 
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'تاریخ: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  Expanded(
+                    child: TextField(
+                      controller: _customerNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'کسٹمر کا نام (ضروری)',
+                        border: UnderlineInputBorder(),
+                        prefixIcon: Icon(Icons.person, color: Colors.green),
+                      ),
+                    ),
                   ),
-                  TextButton.icon(
-                    onPressed: () => _selectDate(context),
-                    icon: const Icon(Icons.calendar_month, color: Color(0xFF0D47A1)),
-                    label: const Text('تبدیل کریں', style: TextStyle(color: Color(0xFF0D47A1))),
+                  const SizedBox(width: 15),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'تاریخ: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      TextButton(
+                        onPressed: () => _selectDate(context),
+                        child: const Text('تبدیل کریں', style: TextStyle(fontSize: 12, color: Color(0xFF0D47A1))),
+                      ),
+                    ],
                   ),
                 ],
               ),
               const Divider(),
 
-              const Text('رسید کی تفصیل درج کریں:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const Text('وصولی کی تفصیل درج کریں:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               const SizedBox(height: 12),
 
               TextField(
@@ -168,12 +192,21 @@ class _PaymentInDialogState extends State<PaymentInDialog> {
                   const SizedBox(width: 8),
                   Expanded(
                     flex: 2,
-                    child: TextField(
-                      controller: _bankNameController,
+                    child: DropdownButtonFormField<String>(
+                      // یہاں value کو اب initialValue سے تبدیل کر دیا گیا ہے
+                      initialValue: _selectedBank,
                       decoration: const InputDecoration(
-                        labelText: 'نام بینک / لاکر',
+                        labelText: 'بینک / بندہ',
                         border: OutlineInputBorder(),
                       ),
+                      items: _bankList.map((bank) {
+                        return DropdownMenuItem(value: bank, child: Text(bank, style: const TextStyle(fontSize: 12)));
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedBank = val!;
+                        });
+                      },
                     ),
                   ),
                 ],
@@ -209,22 +242,18 @@ class _PaymentInDialogState extends State<PaymentInDialog> {
                   IconButton(
                     icon: Icon(Icons.image, color: _hasImage ? Colors.green : Colors.grey, size: 30),
                     onPressed: () => setState(() => _hasImage = !_hasImage),
-                    tooltip: 'تصویر لگائیں',
                   ),
                   IconButton(
                     icon: Icon(Icons.picture_as_pdf, color: _hasPdf ? Colors.red : Colors.grey, size: 30),
                     onPressed: () => setState(() => _hasPdf = !_hasPdf),
-                    tooltip: 'پی ڈی ایف جوڑیں',
                   ),
                   IconButton(
                     icon: Icon(Icons.mic, color: _hasAudio ? Colors.blue : Colors.grey, size: 30),
                     onPressed: () => setState(() => _hasAudio = !_hasAudio),
-                    tooltip: 'آڈیو ریکارڈنگ',
                   ),
                   IconButton(
                     icon: Icon(Icons.videocam, color: _hasVideo ? Colors.purple : Colors.grey, size: 30),
                     onPressed: () => setState(() => _hasVideo = !_hasVideo),
-                    tooltip: 'ویڈیو ریکارڈنگ',
                   ),
                 ],
               ),
@@ -240,7 +269,7 @@ class _PaymentInDialogState extends State<PaymentInDialog> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('کل موصولہ رقم (ٹوٹل ایڈجسٹمنٹ):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.green)),
+                    const Text('کل موصولہ رقم:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.green)),
                     Text('Rs. ${_liveTotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)),
                   ],
                 ),
@@ -256,17 +285,24 @@ class _PaymentInDialogState extends State<PaymentInDialog> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
+                    if (_customerNameController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('برائے مہربانی کسٹمر کا نام درج کریں!')),
+                      );
+                      return;
+                    }
                     if (_liveTotal == 0.0) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('برائے مہربانی کوئی رقم یا رعایت درج کریں!')),
+                        const SnackBar(content: Text('برائے مہربانی کوئی رقم درج کریں!')),
                       );
                       return;
                     }
 
                     Navigator.pop(context, {
+                      'customer_name': _customerNameController.text.trim(),
                       'cash_amount': double.tryParse(_cashController.text.trim()) ?? 0.0,
                       'bank_amount': double.tryParse(_bankController.text.trim()) ?? 0.0,
-                      'bank_name': _bankNameController.text.trim(),
+                      'bank_name': _selectedBank,
                       'discount': double.tryParse(_discountController.text.trim()) ?? 0.0,
                       'amount': _liveTotal,
                       'date': '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
