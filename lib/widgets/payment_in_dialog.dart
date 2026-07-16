@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PaymentInDialog extends StatefulWidget {
   const PaymentInDialog({super.key});
@@ -8,40 +9,84 @@ class PaymentInDialog extends StatefulWidget {
 }
 
 class _PaymentInDialogState extends State<PaymentInDialog> {
+  final TextEditingController _cashController = TextEditingController();
+  final TextEditingController _bankController = TextEditingController();
+  final TextEditingController _bankNameController = TextEditingController(); 
+  final TextEditingController _discountController = TextEditingController();
+  final TextEditingController _detailsController = TextEditingController();
+
   DateTime _selectedDate = DateTime.now();
-  String? _selectedBank;
-  String? _selectedExpenseCat;
-  String? _selectedTargetCustomer;
+  double _liveTotal = 0.0;
 
-  final List<String> _banks = ['الائیڈ بینک', 'میزان بینک', 'حبیب بینک (HBL)', 'کیش دراز'];
-  final List<String> _expenseCategories = ['دکان کا کرایہ', 'بجلی بل', 'چائے پانی / مہمان نوازی', 'ملازم کی تنخواہ'];
-  final List<String> _allCustomers = ['احمد کریانہ اسٹور', 'محمد اشرف', 'علی رضا', 'طارق محمود'];
+  bool _hasImage = false;
+  bool _hasPdf = false;
+  bool _hasAudio = false;
+  bool _hasVideo = false;
 
-  final _cashController = TextEditingController();
-  final _bankController = TextEditingController();
-  final _expenseController = TextEditingController();
-  final _discountController = TextEditingController();
-  final _transferController = TextEditingController();
-  final _detailsController = TextEditingController();
-
-  double _calculateTotal() {
-    double cash = double.tryParse(_cashController.text) ?? 0.0;
-    double bank = double.tryParse(_bankController.text) ?? 0.0;
-    double expense = double.tryParse(_expenseController.text) ?? 0.0;
-    double discount = double.tryParse(_discountController.text) ?? 0.0;
-    double transfer = double.tryParse(_transferController.text) ?? 0.0;
-    return cash + bank + expense + discount + transfer;
+  @override
+  void initState() {
+    super.initState();
+    _cashController.addListener(_calculateTotal);
+    _bankController.addListener(_calculateTotal);
+    _discountController.addListener(_calculateTotal);
   }
 
   @override
   void dispose() {
     _cashController.dispose();
     _bankController.dispose();
-    _expenseController.dispose();
+    _bankNameController.dispose();
     _discountController.dispose();
-    _transferController.dispose();
     _detailsController.dispose();
     super.dispose();
+  }
+
+  void _calculateTotal() {
+    final double cash = double.tryParse(_cashController.text.trim()) ?? 0.0;
+    final double bank = double.tryParse(_bankController.text.trim()) ?? 0.0;
+    final double discount = double.tryParse(_discountController.text.trim()) ?? 0.0;
+
+    setState(() {
+      _liveTotal = cash + bank + discount;
+    });
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  Future<void> _shareOnWhatsApp() async {
+    String message = "🧾 *رسید - ادائیگی وصولی (Payment In)*\n"
+        "تاریخ: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}\n"
+        "-------------------\n"
+        "کیش رقم: ${_cashController.text.isEmpty ? '0' : _cashController.text} روپے\n"
+        "بینک رقم: ${_bankController.text.isEmpty ? '0' : _bankController.text} روپے (${_bankNameController.text.isEmpty ? 'کیش/بینک' : _bankNameController.text})\n"
+        "رعایت / ڈسکاؤنٹ: ${_discountController.text.isEmpty ? '0' : _discountController.text} روپے\n"
+        "-------------------\n"
+        "کل موصولہ رقم: *$_liveTotal روپے*\n"
+        "تفصیل: ${_detailsController.text.isEmpty ? 'پیمنٹ وصولی' : _detailsController.text}\n"
+        "شکریہ!";
+    
+    final Uri whatsappUrl = Uri.parse("whatsapp://send?text=${Uri.encodeComponent(message)}");
+    if (await canLaunchUrl(whatsappUrl)) {
+      await launchUrl(whatsappUrl);
+    } else {
+      // یہاں ہم نے mounted چیک شامل کیا ہے تاکہ linter کا مسئلہ نہ آئے
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('واٹس ایپ اوپن کرنے میں مسئلہ آیا یا انسٹال نہیں ہے!')),
+      );
+    }
   }
 
   @override
@@ -51,9 +96,9 @@ class _PaymentInDialogState extends State<PaymentInDialog> {
       child: Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 16,
+          left: 20,
+          right: 20,
+          top: 20,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -63,203 +108,188 @@ class _PaymentInDialogState extends State<PaymentInDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.arrow_downward, color: Colors.green, size: 28),
-                      SizedBox(width: 8),
-                      Text(
-                        'پیمنٹ وصولی (Payment IN)',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
-                      ),
-                    ],
+                  const Text(
+                    'پیمنٹ وصولی رسید (Payment In)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.reply, size: 30, color: Colors.blue),
+                    tooltip: 'واٹس ایپ پر شیئر کریں',
+                    onPressed: _shareOnWhatsApp,
                   ),
                 ],
               ),
               const Divider(),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'تاریخ: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _selectDate(context),
+                    icon: const Icon(Icons.calendar_month, color: Color(0xFF0D47A1)),
+                    label: const Text('تبدیل کریں', style: TextStyle(color: Color(0xFF0D47A1))),
+                  ),
+                ],
+              ),
+              const Divider(),
+
+              const Text('رسید کی تفصیل درج کریں:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(height: 12),
+
+              TextField(
+                controller: _cashController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'کیش رقم (Cash)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.wallet, color: Colors.green),
+                ),
+              ),
+              const SizedBox(height: 12),
+
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final DateTime? picked = await showDatePicker(
-                          context: context,
-                          initialDate: _selectedDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2030),
-                        );
-                        if (picked != null) {
-                          setState(() => _selectedDate = picked);
-                        }
-                      },
-                      icon: const Icon(Icons.calendar_month, size: 18),
-                      label: Text('${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
+                    flex: 3,
                     child: TextField(
-                      controller: _detailsController,
+                      controller: _bankController,
+                      keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        hintText: 'تفصیل لکھیں', // یہاں سے وزن وغیرہ ہٹا دیا گیا ہے
+                        labelText: 'بینک رقم (Bank)',
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        prefixIcon: Icon(Icons.account_balance, color: Colors.blue),
                       ),
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: _bankNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'نام بینک / لاکر',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              TextField(
+                controller: _discountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'رعایت / ڈسکاؤنٹ (Discount)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.percent, color: Colors.orange),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              TextField(
+                controller: _detailsController,
+                decoration: const InputDecoration(
+                  labelText: 'تفصیل (Details)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.description),
+                ),
+              ),
+              const SizedBox(height: 15),
+
+              const Text('فائل اور ریکارڈنگ اٹیچمنٹس:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.image, color: _hasImage ? Colors.green : Colors.grey, size: 30),
+                    onPressed: () => setState(() => _hasImage = !_hasImage),
+                    tooltip: 'تصویر لگائیں',
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.picture_as_pdf, color: _hasPdf ? Colors.red : Colors.grey, size: 30),
+                    onPressed: () => setState(() => _hasPdf = !_hasPdf),
+                    tooltip: 'پی ڈی ایف جوڑیں',
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.mic, color: _hasAudio ? Colors.blue : Colors.grey, size: 30),
+                    onPressed: () => setState(() => _hasAudio = !_hasAudio),
+                    tooltip: 'آڈیو ریکارڈنگ',
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.videocam, color: _hasVideo ? Colors.purple : Colors.grey, size: 30),
+                    onPressed: () => setState(() => _hasVideo = !_hasVideo),
+                    tooltip: 'ویڈیو ریکارڈنگ',
                   ),
                 ],
               ),
               const SizedBox(height: 15),
-              const Text(
-                'ادائیگی کی تفصیل درج کریں (پارشل پیمنٹ):',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
-              ),
-              const SizedBox(height: 8),
-              _buildInputField(
-                controller: _cashController,
-                label: 'نقد وصولی (Cash IN)',
-                icon: Icons.money_outlined,
-                color: Colors.green,
-              ),
-              _buildInputField(
-                controller: _bankController,
-                label: 'بینک ٹرانسفر (Bank IN)',
-                icon: Icons.account_balance,
-                color: Colors.blue,
-              ),
-              if ((double.tryParse(_bankController.text) ?? 0) > 0) ...[
-                const SizedBox(height: 5),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedBank,
-                  hint: const Text('بینک منتخب کریں'),
-                  items: _banks.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-                  onChanged: (val) => setState(() => _selectedBank = val),
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
-              _buildInputField(
-                controller: _expenseController,
-                label: 'براہ راست خرچہ (Direct Expense)',
-                icon: Icons.handyman,
-                color: Colors.orange,
-              ),
-              if ((double.tryParse(_expenseController.text) ?? 0) > 0) ...[
-                const SizedBox(height: 5),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedExpenseCat,
-                  hint: const Text('ایکسپینس کیٹیگری منتخب کریں'),
-                  items: _expenseCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                  onChanged: (val) => setState(() => _selectedExpenseCat = val),
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
-              _buildInputField(
-                controller: _discountController,
-                label: 'ڈسکاؤنٹ / رعایت (Discount)',
-                icon: Icons.discount_outlined,
-                color: Colors.purple,
-              ),
-              _buildInputField(
-                controller: _transferController,
-                label: 'پارٹی ٹرانسفر (Party Transfer)',
-                icon: Icons.swap_horiz,
-                color: Colors.teal,
-              ),
-              if ((double.tryParse(_transferController.text) ?? 0) > 0) ...[
-                const SizedBox(height: 5),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedTargetCustomer,
-                  hint: const Text('کسٹمر منتخب کریں جہاں ٹرانسفر کرنے ہیں'),
-                  items: _allCustomers.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                  onChanged: (val) => setState(() => _selectedTargetCustomer = val),
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  TextButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.mic, color: Colors.red),
-                    label: const Text('وائس نوٹ ثبوت', style: TextStyle(color: Colors.red)),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.picture_as_pdf, color: Colors.blueGrey),
-                    label: const Text('رسید / پی ڈی ایف', style: TextStyle(color: Colors.blueGrey)),
-                  ),
-                ],
-              ),
+
               Container(
-                width: double.infinity,
-                margin: const EdgeInsets.symmetric(vertical: 10),
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
                   color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.green.shade200),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('ٹوٹل وصولی رقم:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green)),
-                    Text('Rs. ${_calculateTotal().toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)),
+                    const Text('کل موصولہ رقم (ٹوٹل ایڈجسٹمنٹ):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.green)),
+                    Text('Rs. ${_liveTotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)),
                   ],
                 ),
               ),
+              const SizedBox(height: 20),
+
               SizedBox(
                 width: double.infinity,
+                height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('وصولی محفوظ کریں', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  onPressed: () {
+                    if (_liveTotal == 0.0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('برائے مہربانی کوئی رقم یا رعایت درج کریں!')),
+                      );
+                      return;
+                    }
+
+                    Navigator.pop(context, {
+                      'cash_amount': double.tryParse(_cashController.text.trim()) ?? 0.0,
+                      'bank_amount': double.tryParse(_bankController.text.trim()) ?? 0.0,
+                      'bank_name': _bankNameController.text.trim(),
+                      'discount': double.tryParse(_discountController.text.trim()) ?? 0.0,
+                      'amount': _liveTotal,
+                      'date': '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                      'details': _detailsController.text.trim().isEmpty 
+                          ? 'پیمنٹ وصولی' 
+                          : _detailsController.text.trim(),
+                      'attachments': {
+                        'image': _hasImage,
+                        'pdf': _hasPdf,
+                        'audio': _hasAudio,
+                        'video': _hasVideo,
+                      }
+                    });
+                  },
+                  child: const Text(
+                    'وصولی محفوظ کریں (Save In)',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: TextField(
-        controller: controller,
-        keyboardType: TextInputType.number,
-        onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, color: color),
-          border: const OutlineInputBorder(),
-          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         ),
       ),
     );
