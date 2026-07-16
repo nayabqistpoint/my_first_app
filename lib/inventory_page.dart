@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'inventory_widgets/single_item_data.dart'; 
+import 'inventory_widgets/inventory_summary_card.dart'; 
+import 'inventory_widgets/search_and_filter_section.dart'; 
+import 'inventory_widgets/stock_list_view.dart'; 
+import 'inventory_widgets/add_stock_dialog.dart'; 
 
 class InventoryPage extends StatefulWidget {
   const InventoryPage({super.key});
@@ -8,186 +13,148 @@ class InventoryPage extends StatefulWidget {
 }
 
 class _InventoryPageState extends State<InventoryPage> {
-  final List<Map<String, dynamic>> _stockItems = [
-    {
-      'model': 'Samsung A14',
-      'supplier': 'Ali Mobile',
-      'quantity': 5,
-      'purchasePrice': 38000,
-      'sellingPrice': 42000,
-      'date': '10 July 2026',
-    },
-    {
-      'model': 'Vivo Y17s',
-      'supplier': 'Zeeshan Traders',
-      'quantity': 3,
-      'purchasePrice': 29000,
-      'sellingPrice': 32500,
-      'date': '12 July 2026',
-    },
-    {
-      'model': 'Infinix Hot 30',
-      'supplier': 'Ali Mobile',
-      'quantity': 4,
-      'purchasePrice': 31000,
-      'sellingPrice': 34000,
-      'date': '08 July 2026',
-    },
-    {
-      'model': 'Tecno Spark 10',
-      'supplier': 'Rehan Wholesale',
-      'quantity': 2,
-      'purchasePrice': 26000,
-      'sellingPrice': 28500,
-      'date': '05 July 2026',
-    },
+  // ہمارا لائیو اسٹاک ڈیٹا
+  final List<SingleItemData> _stockList = [
+    SingleItemData(
+      id: '1',
+      model: 'Vivo Y17s',
+      supplier: 'Ali Mobiles',
+      category: 'موبائل',
+      purchasePrice: 34500,
+      date: '2026-07-16',
+      imei: '861234567890123',
+    ),
+    SingleItemData(
+      id: '2',
+      model: 'Oppo A18',
+      supplier: 'Zeeshan Traders',
+      category: 'موبائل',
+      purchasePrice: 32000,
+      date: '2026-07-15',
+      imei: '869876543210987',
+    ),
   ];
 
-  int get _totalStockValue {
-    return _stockItems.fold(
-        0, (sum, item) => sum + ((item['purchasePrice'] as int) * (item['quantity'] as int)));
+  String _searchQuery = '';
+  String _selectedFilter = 'آل'; // آل، آئٹم، سپلائر
+
+  // کل سرمایہ کاری کا حساب لگانے والا لاجک
+  int get _totalInvestment {
+    return _stockList.fold(0, (sum, item) => sum + item.purchasePrice);
   }
 
-  int get _totalItemsCount {
-    return _stockItems.fold(0, (sum, item) => sum + (item['quantity'] as int));
-  }
+  // کل اسٹاک کی تعداد
+  int get _totalItems => _stockList.length;
 
-  // یہاں ہم نے واشگاف کیا کہ آنے والا پیرامیٹر String ہی ہے
-  void _openSupplierHistory(String supplierName) {
-    final supplierPurchases =
-        _stockItems.where((item) => item['supplier'] == supplierName).toList();
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SupplierHistoryPage(
-          supplierName: supplierName,
-          purchases: supplierPurchases,
-        ),
-      ),
+  // ایڈ اسٹاک پاپ اپ کو کھولنے والا فنکشن
+  void _openAddStockDialog() async {
+    final result = await showDialog<SingleItemData>(
+      context: context,
+      barrierDismissible: false, // پاپ اپ سے باہر کلک کرنے پر بند نہیں ہوگا
+      builder: (BuildContext context) {
+        return const AddStockDialog();
+      },
     );
+
+    // سیکیورٹی گارڈ جو سکرین بند ہونے پر آگے کام کرنے سے روکے گا
+    if (!mounted) return; 
+
+    // اگر یوزر نے کامیابی سے ڈیٹا ایڈ کیا ہے تو اسے لسٹ میں شامل کریں
+    if (result != null) {
+      setState(() {
+        _stockList.add(result);
+      });
+      
+      // کامیابی کا میسج نیچے دکھائیں
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${result.model} کامیابی سے اسٹاک میں شامل کر دیا گیا ہے!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('اسٹاک انوینٹری', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          centerTitle: true,
-          backgroundColor: const Color(0xFF0D47A1),
-          iconTheme: const IconThemeData(color: Colors.white),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA), 
+      
+      appBar: AppBar(
+        title: const Text(
+          'اسٹاک انوینٹری',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white,
+          ),
         ),
-        body: Column(
+        centerTitle: true,
+        backgroundColor: const Color(0xFF1E3A8A), 
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+            onPressed: () {
+              // کیمرہ اسکینر کا لاجک یہاں آئے گا
+            },
+          ),
+        ],
+      ),
+
+      body: SafeArea(
+        child: Column(
           children: [
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0D47A1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  const Text('کل اسٹاک کی مالیت (Total Stock Value)', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                  const SizedBox(height: 6),
-                  Text('Rs. $_totalStockValue', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text('کل موبائلز: $_totalItemsCount عدد', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                  ),
-                ],
+            // ۱۔ انویسٹمنٹ کارڈ
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              child: InventorySummaryCard(
+                totalInvestment: _totalInvestment,
+                totalItems: _totalItems,
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('موجودہ اسٹاک آئٹمز', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  Text('(سپلائر ہسٹری کے لیے ٹیپ کریں)', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                ],
-              ),
-            ),
-            const Divider(),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _stockItems.length,
-                itemBuilder: (context, index) {
-                  final item = _stockItems[index];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    child: ListTile(
-                      // یہاں ہم نے 'as String' لکھ کر ڈارٹ کو بتا دیا کہ یہ لازمی ٹیکسٹ (String) ہے
-                      onTap: () => _openSupplierHistory(item['supplier'] as String),
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.blue.shade50,
-                        child: const Icon(Icons.phone_android, color: Color(0xFF0D47A1)),
-                      ),
-                      title: Text(item['model'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('سپلائر: ${item['supplier']}\nخرید: Rs. ${item['purchasePrice']} | فروخت: Rs. ${item['sellingPrice']}'),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text('تعداد: ${item['quantity']}', style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  );
+
+            // ۲۔ سرچ بار اور فلٹر چپس
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+              child: SearchAndFilterSection(
+                searchQuery: _searchQuery,
+                selectedFilter: _selectedFilter,
+                onSearchChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
                 },
+                onFilterChanged: (value) {
+                  setState(() {
+                    _selectedFilter = value;
+                  });
+                },
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // ۳۔ لائیو اور اسمارٹ موبائلز کی لسٹ والا حصہ
+            Expanded(
+              child: StockListView(
+                stockList: _stockList, 
+                searchQuery: _searchQuery,
+                selectedFilter: _selectedFilter,
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-}
 
-class SupplierHistoryPage extends StatelessWidget {
-  final String supplierName;
-  final List<Map<String, dynamic>> purchases;
-
-  const SupplierHistoryPage({
-    super.key,
-    required this.supplierName,
-    required this.purchases,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text('سپلائر کھاتہ: $supplierName', style: const TextStyle(color: Colors.white)),
-          backgroundColor: const Color(0xFF0D47A1),
-          iconTheme: const IconThemeData(color: Colors.white),
-        ),
-        body: ListView.builder(
-          itemCount: purchases.length,
-          itemBuilder: (context, index) {
-            final item = purchases[index];
-            return Card(
-              margin: const EdgeInsets.all(12),
-              child: ListTile(
-                title: Text(item['model'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('تعداد: ${item['quantity']} عدد | فی موبائل: Rs. ${item['purchasePrice']}'),
-                trailing: Text('ٹوٹل: Rs. ${(item['purchasePrice'] as int) * (item['quantity'] as int)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            );
-          },
-        ),
+      // نیچے بائیں طرف والا فلوٹنگ بٹن (Add Stock)
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openAddStockDialog, 
+        backgroundColor: const Color(0xFF1E3A8A),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 }
