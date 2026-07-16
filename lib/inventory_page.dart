@@ -13,23 +13,27 @@ class InventoryPage extends StatefulWidget {
 }
 
 class _InventoryPageState extends State<InventoryPage> {
-  // ہمارا لائیو اسٹاک ڈیٹا
+  // ہمارا لائیو اسٹاک ڈیٹا (نئے ماڈل کی مطابقت کے ساتھ)
   final List<SingleItemData> _stockList = [
     SingleItemData(
       id: '1',
+      billId: 'BILL-INIT-1',
       model: 'Vivo Y17s',
       supplier: 'Ali Mobiles',
       category: 'موبائل',
       purchasePrice: 34500,
+      quantity: 1,
       date: '2026-07-16',
       imei: '861234567890123',
     ),
     SingleItemData(
       id: '2',
+      billId: 'BILL-INIT-2',
       model: 'Oppo A18',
       supplier: 'Zeeshan Traders',
       category: 'موبائل',
       purchasePrice: 32000,
+      quantity: 1,
       date: '2026-07-15',
       imei: '869876543210987',
     ),
@@ -38,9 +42,9 @@ class _InventoryPageState extends State<InventoryPage> {
   String _searchQuery = '';
   String _selectedFilter = 'آل'; // آل، آئٹم، سپلائر
 
-  // کل سرمایہ کاری کا حساب لگانے والا لاجک
+  // کل سرمایہ کاری کا حساب لگانے والا لاجک (قیمت کو تعداد سے ضرب دے کر)
   int get _totalInvestment {
-    return _stockList.fold(0, (sum, item) => sum + item.purchasePrice);
+    return _stockList.fold(0, (sum, item) => sum + (item.purchasePrice * item.quantity));
   }
 
   // کل اسٹاک کی تعداد
@@ -48,7 +52,8 @@ class _InventoryPageState extends State<InventoryPage> {
 
   // ایڈ اسٹاک پاپ اپ کو کھولنے والا فنکشن
   void _openAddStockDialog() async {
-    final result = await showDialog<SingleItemData>(
+    // پاپ اپ اب میپ (Map) ریٹرن کرتا ہے جس میں بل کا پورا ریکارڈ موجود ہوتا ہے
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false, // پاپ اپ سے باہر کلک کرنے پر بند نہیں ہوگا
       builder: (BuildContext context) {
@@ -59,18 +64,20 @@ class _InventoryPageState extends State<InventoryPage> {
     // سیکیورٹی گارڈ جو سکرین بند ہونے پر آگے کام کرنے سے روکے گا
     if (!mounted) return; 
 
-    // اگر یوزر نے کامیابی سے ڈیٹا ایڈ کیا ہے تو اسے لسٹ میں شامل کریں
-    if (result != null) {
+    // اگر یوزر نے کامیابی سے بل ایڈ کیا ہے تو اس کی تمام آئٹمز کو لسٹ میں شامل کریں
+    if (result != null && result['items'] != null) {
+      final List<SingleItemData> newItems = List<SingleItemData>.from(result['items']);
+      
       setState(() {
-        _stockList.add(result);
+        _stockList.addAll(newItems);
       });
       
       // کامیابی کا میسج نیچے دکھائیں
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${result.model} کامیابی سے اسٹاک میں شامل کر دیا گیا ہے!'),
+          content: Text('${newItems.length} آئٹمز کامیابی سے بل کے ساتھ اسٹاک میں شامل کر دیے گئے ہیں!'),
           backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
+          duration: const Duration(seconds: 3),
         ),
       );
     }

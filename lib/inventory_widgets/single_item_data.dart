@@ -1,45 +1,36 @@
 class SingleItemData {
-  final String id; // ہر موبائل کی ایک منفرد آئی ڈی
-  final String model; // موبائل کا ماڈل
-  final String supplier; // سپلائر کا نام
-  final String category; // کیٹیگری (جیسے موبائل، فریج وغیرہ)
-  final int purchasePrice; // قیمتِ خرید
-  final String date; // خریداری کی تاریخ
-  final String imei; // آئی ایم ای آئی نمبر (IMEI)
+  final String id;
+  final String billId;          // پیرنٹ بل آئی ڈی
+  final String model;
+  final String category;
+  final int purchasePrice;
+  final int quantity;          // تعداد
+  final String imei;           // اس مخصوص موبائل کا IMEI
+  final String supplier;
+  final String date;
 
   SingleItemData({
     required this.id,
+    required this.billId,
     required this.model,
-    required this.supplier,
     required this.category,
     required this.purchasePrice,
-    required this.date,
+    required this.quantity,
     required this.imei,
+    required this.supplier,
+    required this.date,
   });
+}
 
-  // ڈیٹا کو میپ (Map) میں تبدیل کرنے کے لیے
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'model': model,
-      'supplier': supplier,
-      'category': category,
-      'purchasePrice': purchasePrice,
-      'date': date,
-      'imei': imei,
-    };
-  }
+// سپلائر کا ڈیٹا جو ہوم پیج پر سنک ہوگا
+class SupplierProfile {
+  final String name;
+  final String phone;
+  final int balance; // پلس کا مطلب ہم نے لینے ہیں، مائنس کا مطلب ہم نے دینے ہیں
 
-  // میپ (Map) سے ڈیٹا واپس آبجیکٹ میں تبدیل کرنے کے لیے
-  factory SingleItemData.fromMap(Map<String, dynamic> map) {
-    return SingleItemData(
-      id: map['id'] ?? '',
-      model: map['model'] ?? '',
-      supplier: map['supplier'] ?? '',
-      category: map['category'] ?? 'موبائل',
-      purchasePrice: map['purchasePrice'] as int? ?? 0,
-      date: map['date'] ?? '',
-      imei: map['imei'] ?? '',
-    );
-  }
+  SupplierProfile({
+    required this.name,
+    required this.phone,
+    this.balance = 0,
+  });
 }
