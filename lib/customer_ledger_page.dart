@@ -26,8 +26,8 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
   }
 
   // پیمنٹ وصولی (IN) پاپ اپ لوڈ کرنے کا فنکشن
-  void _showPaymentInDialog() {
-    showModalBottomSheet(
+  void _showPaymentInDialog() async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -37,11 +37,36 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
         return const PaymentInDialog();
       },
     );
+
+    // اگر پاپ اپ سے ڈیٹا موصول ہوا
+    if (result != null && mounted) {
+      setState(() {
+        final double amount = double.tryParse(result['amount'].toString()) ?? 0.0;
+        final String details = result['details'] ?? 'پیمنٹ وصولی';
+        
+        // وصولی کی وجہ سے بیلنس کم کریں (You Will Get بیلنس میں سے مائنس ہوگا)
+        final int currentBalance = (_customer['balance'] as num?)?.toInt() ?? 0;
+        _customer['balance'] = currentBalance - amount.toInt();
+
+        final List<dynamic> entries = List.from(_customer['entries'] ?? []);
+        entries.insert(0, {
+          'date': _formatCurrentDate(),
+          'type': 'got',
+          'amount': amount.toInt(),
+          'details': details,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        });
+        _customer['entries'] = entries;
+      });
+
+      // ڈیش بورڈ/مین پیج کو نیا کسٹمر ابجیکٹ بھیجیں
+      widget.onUpdateCustomer(_customer);
+    }
   }
 
   // پیمنٹ ادائیگی (OUT) پاپ اپ لوڈ کرنے کا فنکشن
-  void _showPaymentOutDialog() {
-    showModalBottomSheet(
+  void _showPaymentOutDialog() async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -51,6 +76,45 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
         return const PaymentOutDialog();
       },
     );
+
+    // اگر پاپ اپ سے ڈیٹا موصول ہوا
+    if (result != null && mounted) {
+      setState(() {
+        final double amount = double.tryParse(result['amount'].toString()) ?? 0.0;
+        final String details = result['details'] ?? 'پیمنٹ ادائیگی';
+        
+        // مزید ادھار یا ادائیگی سے بقایا بیلنس بڑھائیں
+        final int currentBalance = (_customer['balance'] as num?)?.toInt() ?? 0;
+        _customer['balance'] = currentBalance + amount.toInt();
+
+        final List<dynamic> entries = List.from(_customer['entries'] ?? []);
+        entries.insert(0, {
+          'date': _formatCurrentDate(),
+          'type': 'gave',
+          'amount': amount.toInt(),
+          'details': details,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        });
+        _customer['entries'] = entries;
+      });
+
+      // ڈیش بورڈ/مین پیج کو نیا کسٹمر ابجیکٹ بھیجیں
+      widget.onUpdateCustomer(_customer);
+    }
+  }
+
+  // تاریخ فارمیٹ کرنے کا فنکشن
+  String _formatCurrentDate() {
+    final now = DateTime.now();
+    final weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    final weekday = weekdays[now.weekday % 7];
+    final day = now.day.toString().padLeft(2, '0');
+    final month = months[now.month - 1];
+    final year = now.year.toString().substring(2);
+
+    return '$weekday, $day $month $year';
   }
 
   @override
@@ -116,7 +180,7 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
                     ),
             ),
 
-            // نیوی گیشن بٹنز (پیمنٹ اِن اور آؤٹ)
+            // بٹنز
             Container(
               padding: const EdgeInsets.all(12),
               color: Colors.grey.shade100,
