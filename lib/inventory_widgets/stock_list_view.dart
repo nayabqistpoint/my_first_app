@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-// یہ لیں بالکل پکا امپورٹ پاتھ، تاکہ یہ ڈائریکٹ آپ کے انوینٹری پیج سے ماڈل اٹھائے
-import 'package:my_first_app/inventory_page.dart'; 
+import '../inventory_page.dart'; 
+import 'single_item_data.dart'; 
 
 class StockListView extends StatelessWidget {
   final List<InventoryProduct> stockList;
@@ -14,9 +14,23 @@ class StockListView extends StatelessWidget {
     required this.selectedFilter,
   });
 
+  // تفصیلی پاپ اپ شو کرنے کا فنکشن
+  void _showItemDetails(BuildContext context, String model, double price, List<SingleItemData> linkedItems) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ItemDetailBottomSheet(
+        modelName: model,
+        price: price,
+        items: linkedItems,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // سرچ فلٹر کا لاجک
+    // 1. سرچ فلٹر لاگو کریں
     final filteredList = stockList.where((item) {
       final query = searchQuery.toLowerCase();
       return item.model.toLowerCase().contains(query) ||
@@ -38,117 +52,124 @@ class StockListView extends StatelessWidget {
       );
     }
 
+    // فلٹر کے مطابق لسٹ رینڈر کریں
     if (selectedFilter == 'آئٹم') {
-      return _buildItemGroupedList(filteredList);
+      return _buildItemGroupedList(context, filteredList);
     } else {
-      return _buildAllStockList(filteredList);
+      return _buildAllStockList(context, filteredList);
     }
   }
 
-  // الف: تمام اسٹاک کی الگ الگ لسٹ (Split View - RTL)
-  Widget _buildAllStockList(List<InventoryProduct> items) {
+  // الف: تمام اسٹاک کی مجموعی لسٹ (ماڈل اور قیمت کے حساب سے گروپ شدہ)
+  Widget _buildAllStockList(BuildContext context, List<InventoryProduct> filteredItems) {
+    final Map<String, List<InventoryProduct>> groupedMap = {};
+    for (var item in filteredItems) {
+      final key = '${item.model}_${item.purchasePrice}';
+      if (!groupedMap.containsKey(key)) {
+        groupedMap[key] = [];
+      }
+      groupedMap[key]!.add(item);
+    }
+
+    final List<String> groupedKeys = groupedMap.keys.toList();
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      itemCount: items.length,
+      itemCount: groupedKeys.length,
       itemBuilder: (context, index) {
-        final item = items[index];
-        final double itemTotal = item.stockQty * item.purchasePrice;
+        final key = groupedKeys[index];
+        final productsInGroup = groupedMap[key]!;
+        
+        final firstProduct = productsInGroup.first;
+        final String modelName = firstProduct.model;
+        final double purchasePrice = firstProduct.purchasePrice;
+        
+        int totalQty = 0;
+        for (var p in productsInGroup) {
+          totalQty += p.stockQty;
+        }
+        
+        final double totalGroupValue = totalQty * purchasePrice;
+
+        final List<SingleItemData> detailedItems = productsInGroup.map((p) {
+          return SingleItemData(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            billId: p.invoiceNumber,
+            model: p.model,
+            category: p.category,
+            purchasePrice: p.purchasePrice.toInt(),
+            quantity: p.stockQty,
+            imei: p.imei,
+            supplier: p.supplier,
+            date: "آج کا اسٹاک",
+          );
+        }).toList();
 
         return Card(
           color: Colors.white,
           elevation: 2,
           margin: const EdgeInsets.only(bottom: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // کلپ بیہیویئر لگانے سے لسٹ ٹائل کا کلک افیکٹ کارڈ کے کونوں سے باہر نہیں نکلے گا
+          clipBehavior: Clip.antiAlias, 
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            onTap: () {
+              _showItemDetails(context, modelName, purchasePrice, detailedItems);
+            },
+            leading: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                
-                // === بائیں طرف: کل رقم اور حساب ===
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Rs. ${itemTotal.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFF1E3A8A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '${item.stockQty} سیٹ × Rs. ${item.purchasePrice.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          color: Colors.grey.shade700, 
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(width: 12),
-
-                // === دائیں طرف: موبائل معلومات،سپلائر اور انوائس ===
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              item.model,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                              textAlign: TextAlign.right,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'سپلائر: ${item.supplier} | بل: ${item.invoiceNumber}',
-                              style: TextStyle(color: Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.w500),
-                              textAlign: TextAlign.right,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'کیٹیگری: ${item.category}',
-                              style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
-                              textAlign: TextAlign.right,
-                            ),
-                            if (item.imei.isNotEmpty) ...[
-                              const SizedBox(height: 3),
-                              Text(
-                                'IMEI: ${item.imei}',
-                                style: TextStyle(color: Colors.blueGrey.shade600, fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold),
-                                textAlign: TextAlign.right,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E3A8A).withAlpha(26),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.phone_android, color: Color(0xFF1E3A8A), size: 20),
-                      ),
-                    ],
+                Text(
+                  'Rs. ${totalGroupValue.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Color(0xFF1E3A8A),
                   ),
                 ),
-
+                const SizedBox(height: 2),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '$totalQty سیٹ × ${purchasePrice.toStringAsFixed(0)}',
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 10),
+                  ),
+                ),
               ],
+            ),
+            title: Text(
+              modelName,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              textAlign: TextAlign.right,
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'کیٹیگری: ${firstProduct.category}',
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                  textAlign: TextAlign.right,
+                ),
+                Text(
+                  'تفصیل دیکھنے کے لیے کلک کریں...',
+                  style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 10, fontStyle: FontStyle.italic),
+                  textAlign: TextAlign.right,
+                ),
+              ],
+            ),
+            trailing: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E3A8A).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.phone_android, color: Color(0xFF1E3A8A), size: 18),
             ),
           ),
         );
@@ -156,53 +177,86 @@ class StockListView extends StatelessWidget {
     );
   }
 
-  // ب: آئٹم وائز گروپ لسٹ
-  Widget _buildItemGroupedList(List<InventoryProduct> items) {
+  // ب: آئٹم وائز گروپ لسٹ (جب صرف ماڈل کے حساب سے دیکھنا ہو)
+  Widget _buildItemGroupedList(BuildContext context, List<InventoryProduct> filteredItems) {
+    final Map<String, List<InventoryProduct>> modelGroupedMap = {};
+    for (var item in filteredItems) {
+      if (!modelGroupedMap.containsKey(item.model)) {
+        modelGroupedMap[item.model] = [];
+      }
+      modelGroupedMap[item.model]!.add(item);
+    }
+
+    final List<String> modelKeys = modelGroupedMap.keys.toList();
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      itemCount: items.length,
+      itemCount: modelKeys.length,
       itemBuilder: (context, index) {
-        final item = items[index];
-        final double itemTotal = item.stockQty * item.purchasePrice;
+        final modelName = modelKeys[index];
+        final productsInModelGroup = modelGroupedMap[modelName]!.autoCompress(); // یا ڈائریکٹ لسٹ
+        
+        int totalQty = 0;
+        double totalValue = 0;
+        for (var p in productsInModelGroup) {
+          totalQty += p.stockQty;
+          totalValue += (p.stockQty * p.purchasePrice);
+        }
+
+        final List<SingleItemData> detailedItems = productsInModelGroup.map((p) {
+          return SingleItemData(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            billId: p.invoiceNumber,
+            model: p.model,
+            category: p.category,
+            purchasePrice: p.purchasePrice.toInt(),
+            quantity: p.stockQty,
+            imei: p.imei,
+            supplier: p.supplier,
+            date: "آج کا اسٹاک",
+          );
+        }).toList();
+
+        final double avgPrice = totalQty > 0 ? (totalValue / totalQty) : 0;
 
         return Card(
           color: Colors.white,
           elevation: 1.5,
           margin: const EdgeInsets.only(bottom: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Rs. ${itemTotal.toStringAsFixed(0)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.teal),
-                ),
-                Row(
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          item.model,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        Text('کل اسٹاک: ${item.stockQty} سیٹ', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                      ],
-                    ),
-                    const SizedBox(width: 12),
-                    CircleAvatar(
-                      backgroundColor: Colors.teal.withAlpha(26),
-                      child: const Icon(Icons.category_outlined, color: Colors.teal, size: 20),
-                    ),
-                  ],
-                ),
-              ],
+          clipBehavior: Clip.antiAlias, // یہاں بھی سیٹ کر دیا
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            onTap: () {
+              _showItemDetails(context, modelName, avgPrice, detailedItems);
+            },
+            leading: Text(
+              'Rs. ${totalValue.toStringAsFixed(0)}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.teal),
+            ),
+            title: Text(
+              modelName,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              textAlign: TextAlign.right,
+            ),
+            subtitle: Text(
+              'کل اسٹاک: $totalQty سیٹ', 
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+              textAlign: TextAlign.right,
+            ),
+            trailing: CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.teal.withValues(alpha: 0.1),
+              child: const Icon(Icons.category_outlined, color: Colors.teal, size: 16),
             ),
           ),
         );
       },
     );
   }
+}
+
+// اگر آپ کے پاس ماڈل گروپ میں سادہ لسٹ ہے تو .autoCompress() ہٹا سکتے ہیں، یہ بیک اپ سیفٹی کے لیے ہے۔
+extension on List<InventoryProduct> {
+  List<InventoryProduct> autoCompress() => this;
 }

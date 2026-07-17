@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 
-// ماڈل کلاس جو سنگل آئٹم کا ڈیٹا ہینڈل کرے گی
 class SingleItemData {
   final String id;
-  final String billId;
+  final String billId;          // پیرنٹ بل آئی ڈی
   final String model;
   final String category;
   final int purchasePrice;
-  final int quantity;
-  final String imei;
+  final int quantity;           // تعداد
+  final String imei;            // اس مخصوص موبائل کا IMEI
   final String supplier;
   final String date;
 
@@ -25,7 +24,20 @@ class SingleItemData {
   });
 }
 
-// باٹم پاپ اپ شیٹ جو تفصیلات دکھائے گی
+// سپلائر کا ڈیٹا جو ہوم پیج پر سنک ہوگا
+class SupplierProfile {
+  final String name;
+  final String phone;
+  final int balance; // پلس کا مطلب ہم نے لینے ہیں، مائنس کا مطلب ہم نے دینے ہیں
+
+  SupplierProfile({
+    required this.name,
+    required this.phone,
+    this.balance = 0,
+  });
+}
+
+// === تفصیلی پاپ اپ وزٹ (Bottom Sheet) ===
 class ItemDetailBottomSheet extends StatelessWidget {
   final String modelName;
   final double price;
@@ -41,14 +53,11 @@ class ItemDetailBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -56,98 +65,98 @@ class ItemDetailBottomSheet extends StatelessWidget {
           // ہینڈل بار
           Center(
             child: Container(
-              width: 50,
-              height: 5,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(10),
+                color: Colors.grey[300], 
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 16),
           
-          // ہیڈر
+          // ہیڈر معلومات
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'اوسط قیمت: Rs. ${price.toStringAsFixed(0)}',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey, fontSize: 13),
+                'Rs. ${price.toStringAsFixed(0)}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E3A8A)),
               ),
               Text(
                 modelName,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
+                textAlign: TextAlign.right,
               ),
             ],
           ),
+          Text(
+            'کل دستیاب سٹاک: ${items.length} سیٹ',
+            style: const TextStyle(color: Colors.grey, fontSize: 13),
+            textAlign: TextAlign.right,
+          ),
           const Divider(height: 24),
 
-          // تفصیلات کی لسٹ
-          Flexible(
+          // سنگل آئٹمز کی تفصیلی لسٹ
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.4, // زیادہ اسٹاک ہونے پر اسکرول ہوگا
+            ),
             child: ListView.builder(
               shrinkWrap: true,
               itemCount: items.length,
               itemBuilder: (context, index) {
-                final item = items[index];
-                final double totalItemCost = (item.quantity * item.purchasePrice).toDouble();
-
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  color: Colors.grey.shade50,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.grey.shade200),
-                    borderRadius: BorderRadius.circular(10),
+                final singleItem = items[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade200),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // سپلائر اور بل نمبر کا سیکشن
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.teal.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'بل نمبر: ${singleItem.billId}',
+                            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                          ),
+                          Text(
+                            'سپلائر: ${singleItem.supplier}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            singleItem.date,
+                            style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                          ),
+                          if (singleItem.imei.isNotEmpty)
+                            Text(
+                              'IMEI: ${singleItem.imei}',
+                              style: const TextStyle(
+                                fontSize: 13, 
+                                fontFamily: 'monospace', 
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueGrey
                               ),
-                              // پاپ اپ کے اندر قیمت کی فارمیٹنگ
-                              child: Text(
-                                '${item.quantity} سیٹ × Rs. ${item.purchasePrice} = Rs. ${totalItemCost.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  color: Colors.teal,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                ),
-                              ),
+                            )
+                          else
+                            const Text(
+                              'IMEI درج نہیں ہے',
+                              style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
                             ),
-                            Text(
-                              item.supplier,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-
-                        // IMEI اور بل کی معلومات
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'بل نمبر: ${item.billId}',
-                              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                            ),
-                            Text(
-                              'IMEI: ${item.imei}',
-                              style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
                   ),
                 );
               },
