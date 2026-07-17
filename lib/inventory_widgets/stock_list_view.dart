@@ -15,6 +15,7 @@ class StockListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ۱۔ سرچ فلٹر لاگو کریں
     final filteredList = stockList.where((item) {
       final query = searchQuery.toLowerCase();
       return item.model.toLowerCase().contains(query) ||
@@ -35,9 +36,15 @@ class StockListView extends StatelessWidget {
       );
     }
 
-    return _buildAllStockList(filteredList);
+    // فلٹر چِپ کے مطابق لسٹ دکھائیں
+    if (selectedFilter == 'آئٹم') {
+      return _buildItemGroupedList(filteredList);
+    } else {
+      return _buildAllStockList(filteredList);
+    }
   }
 
+  // الف: تمام اسٹاک کی لسٹ (RTL الائنمنٹ)
   Widget _buildAllStockList(List<InventoryProduct> items) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -125,7 +132,6 @@ class StockListView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          // یہاں آپ کی بتائی ہوئی ڈپریکیٹڈ وارننگ فکس کر دی ہے
                           color: const Color(0xFF1E3A8A).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
@@ -135,6 +141,59 @@ class StockListView extends StatelessWidget {
                   ),
                 ),
 
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ب: آئٹم وائز گروپ لسٹ (وارننگ یہاں فکس کر دی گئی ہے لائن 132 پر)
+  Widget _buildItemGroupedList(List<InventoryProduct> items) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final double itemTotal = item.stockQty * item.purchasePrice;
+
+        return Card(
+          color: Colors.white,
+          elevation: 1.5,
+          margin: const EdgeInsets.only(bottom: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // بائیں طرف: کل قیمت
+                Text(
+                  'Rs. ${itemTotal.toStringAsFixed(0)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.teal),
+                ),
+                // دائیں طرف: نام اور کل تعداد
+                Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          item.model,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        Text('کل اسٹاک: ${item.stockQty} سیٹ', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                    CircleAvatar(
+                      // یہاں لائن 132 پر پرانا طریقہ بدلا گیا ہے
+                      backgroundColor: Colors.teal.withValues(alpha: 0.1),
+                      child: const Icon(Icons.category_outlined, color: Colors.teal, size: 20),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

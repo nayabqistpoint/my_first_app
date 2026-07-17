@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 import 'inventory_widgets/add_stock_dialog.dart'; 
 import 'inventory_widgets/stock_list_view.dart'; 
 
-// پروڈکٹ اسٹاک کا ماڈل (اب سپلائر کے فیلڈ کے ساتھ)
+// پروڈکٹ اسٹاک کا ماڈل (اب سپلائر اور انوائس نمبر کے ساتھ)
 class InventoryProduct {
   final String category;
   final String model;
   int stockQty;
   double purchasePrice;
   final String imei;
-  final String supplier; // یہ نیا فیلڈ ایڈ کر دیا
+  final String supplier; 
+  final String invoiceNumber; // انوائس بل نمبر کے لیے
 
   InventoryProduct({
     required this.category,
     required this.model,
     required this.stockQty,
     required this.purchasePrice,
-    required this.supplier, // لازمی فیلڈ
+    required this.supplier, 
+    required this.invoiceNumber,
     this.imei = '',
   });
 }
@@ -32,10 +34,26 @@ class _InventoryPageState extends State<InventoryPage> {
   final String _searchQuery = "";
   final String _selectedFilter = "آل";
 
-  // مین اسٹاک لسٹ (ڈیمو ڈیٹا میں سپلائر کا نام شامل کر دیا)
+  // مین اسٹاک لسٹ (ابتدائی ڈیمو ڈیٹا اسپلٹ لاجک کے ساتھ)
   final List<InventoryProduct> _stockViewList = [
-    InventoryProduct(category: 'Mobile', model: 'Samsang A32', stockQty: 5, purchasePrice: 45000, supplier: 'Ali Mobiles'),
-    InventoryProduct(category: 'Accessories', model: 'Type-C Charger 18W', stockQty: 20, purchasePrice: 650, supplier: 'Khan Traders'),
+    InventoryProduct(
+      category: 'Mobile', 
+      model: 'Samsang A32', 
+      stockQty: 2, 
+      purchasePrice: 45000, 
+      supplier: 'Ali Mobiles',
+      invoiceNumber: 'INV-101',
+      imei: '358941101234567'
+    ),
+    InventoryProduct(
+      category: 'Mobile', 
+      model: 'Samsang A32', 
+      stockQty: 3, 
+      purchasePrice: 47000, // الگ قیمت خرید
+      supplier: 'Nasir Mobiles', // الگ سپلائر
+      invoiceNumber: 'INV-102', // الگ انوائس
+      imei: '358941109876543'
+    ),
   ];
 
   Future<void> _openAddStockDialog() async {
@@ -49,7 +67,9 @@ class _InventoryPageState extends State<InventoryPage> {
     if (!mounted) return;
 
     setState(() {
-      final String supplierNameFromDialog = result['supplier'] as String; // ڈائیلاگ سے سپلائر کا نام لیا
+      final String supplierNameFromDialog = result['supplier'] as String;
+      // اگر ڈائیلاگ میں انوائس نمبر کا آپشن ابھی نہیں ہے، تو ہم وقتی طور پر اٹو جنریٹ کر لیتے ہیں
+      final String invoiceNo = result['invoice'] ?? "INV-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}";
       final List<Map<String, dynamic>> items = List<Map<String, dynamic>>.from(result['items']);
 
       for (var item in items) {
@@ -61,41 +81,25 @@ class _InventoryPageState extends State<InventoryPage> {
 
         if (qty <= 0) continue; 
 
-        // چیک کریں کہ کیا یہ ماڈل، کیٹیگری اور سپلائر پہلے سے لسٹ میں موجود ہے؟
-        final existingIndex = _stockViewList.indexWhere(
-          (p) => p.model.trim().toLowerCase() == model.trim().toLowerCase() && 
-                 p.category.trim().toLowerCase() == category.trim().toLowerCase() &&
-                 p.supplier.trim().toLowerCase() == supplierNameFromDialog.trim().toLowerCase()
+        // ہم ہر انٹری کو منفرد (Unique) رکھیں گے، اس لیے نیا پروڈکٹ لسٹ کے بالکل شروع (ٹاپ) پر ایڈ ہوگا
+        _stockViewList.insert(
+          0,
+          InventoryProduct(
+            category: category,
+            model: model,
+            stockQty: qty,
+            purchasePrice: price,
+            supplier: supplierNameFromDialog,
+            invoiceNumber: invoiceNo,
+            imei: imei,
+          ),
         );
-
-        if (existingIndex != -1) {
-          // اگر موجود ہے، تو نکال کر دوبارہ ٹاپ پر اپڈیٹ کریں
-          final existingItem = _stockViewList.removeAt(existingIndex);
-          
-          existingItem.stockQty += qty;
-          existingItem.purchasePrice = price; 
-
-          _stockViewList.insert(0, existingItem);
-        } else {
-          // اگر بالکل نیا ہے تو سپلائر کے نام کے ساتھ ٹاپ پر انسرٹ کریں
-          _stockViewList.insert(
-            0,
-            InventoryProduct(
-              category: category,
-              model: model,
-              stockQty: qty,
-              purchasePrice: price,
-              supplier: supplierNameFromDialog, // ڈائیلاگ والا سپلائر نام یہاں پاس کر دیا
-              imei: imei,
-            ),
-          );
-        }
       }
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("نیا اسٹاک محفوظ ہو گیا اور لسٹ میں سب سے اوپر شامل کر دیا گیا ہے!"),
+        content: Text("نیا اسٹاک سپلائر اور انوائس وائز الگ محفوظ کر کے ٹاپ پر شامل کر دیا گیا ہے!"),
         backgroundColor: Colors.green,
       ),
     );
