@@ -15,12 +15,13 @@ class StockListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ۱۔ سرچ فلٹر لاگو کریں
+    // ۱۔ سرچ فلٹر (ماڈل، سپلائر، انوائس، اور آئی ایم ای آئی سب پر کام کرے گی)
     final filteredList = stockList.where((item) {
       final query = searchQuery.toLowerCase();
       return item.model.toLowerCase().contains(query) ||
              item.category.toLowerCase().contains(query) ||
              item.supplier.toLowerCase().contains(query) ||
+             item.invoiceNumber.toLowerCase().contains(query) ||
              item.imei.toLowerCase().contains(query);
     }).toList();
 
@@ -36,7 +37,6 @@ class StockListView extends StatelessWidget {
       );
     }
 
-    // فلٹر چِپ کے مطابق لسٹ دکھائیں
     if (selectedFilter == 'آئٹم') {
       return _buildItemGroupedList(filteredList);
     } else {
@@ -44,7 +44,7 @@ class StockListView extends StatelessWidget {
     }
   }
 
-  // الف: تمام اسٹاک کی لسٹ (RTL الائنمنٹ)
+  // الف: تمام اسٹاک کی الگ الگ لسٹ (Split View - RTL)
   Widget _buildAllStockList(List<InventoryProduct> items) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -97,7 +97,7 @@ class StockListView extends StatelessWidget {
 
                 const SizedBox(width: 12),
 
-                // === دائیں طرف: معلومات ===
+                // === دائیں طرف: موبائل معلومات، سپلائر اور انوائس ===
                 Expanded(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -106,22 +106,32 @@ class StockListView extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
+                            // موبائل ماڈل کا نام
                             Text(
                               item.model,
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                               textAlign: TextAlign.right,
                             ),
                             const SizedBox(height: 2),
+                            // سپلائر کا نام اور انوائس نمبر
                             Text(
-                              'سپلائر: ${item.supplier} | کیٹیگری: ${item.category}',
-                              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                              'سپلائر: ${item.supplier} | بل: ${item.invoiceNumber}',
+                              style: TextStyle(color: Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.w500),
                               textAlign: TextAlign.right,
                             ),
+                            const SizedBox(height: 2),
+                            // کیٹیگری
+                            Text(
+                              'کیٹیگری: ${item.category}',
+                              style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                              textAlign: TextAlign.right,
+                            ),
+                            // آئی ایم ای آئی نمبر (اگر موجود ہو)
                             if (item.imei.isNotEmpty) ...[
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 3),
                               Text(
                                 'IMEI: ${item.imei}',
-                                style: TextStyle(color: Colors.grey.shade500, fontSize: 11, fontFamily: 'monospace'),
+                                style: TextStyle(color: Colors.blueGrey.shade600, fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold),
                                 textAlign: TextAlign.right,
                               ),
                             ],
@@ -149,7 +159,7 @@ class StockListView extends StatelessWidget {
     );
   }
 
-  // ب: آئٹم وائز گروپ لسٹ (وارننگ یہاں فکس کر دی گئی ہے لائن 132 پر)
+  // ب: آئٹم وائز گروپ لسٹ
   Widget _buildItemGroupedList(List<InventoryProduct> items) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -168,12 +178,10 @@ class StockListView extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // بائیں طرف: کل قیمت
                 Text(
                   'Rs. ${itemTotal.toStringAsFixed(0)}',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.teal),
                 ),
-                // دائیں طرف: نام اور کل تعداد
                 Row(
                   children: [
                     Column(
@@ -188,7 +196,6 @@ class StockListView extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     CircleAvatar(
-                      // یہاں لائن 132 پر پرانا طریقہ بدلا گیا ہے
                       backgroundColor: Colors.teal.withValues(alpha: 0.1),
                       child: const Icon(Icons.category_outlined, color: Colors.teal, size: 20),
                     ),
