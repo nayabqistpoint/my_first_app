@@ -10,7 +10,7 @@ class InventoryProduct {
   double purchasePrice;
   final String imei;
   final String supplier; 
-  final String invoiceNumber; // انوائس بل نمبر کے لیے
+  final String invoiceNumber; 
 
   InventoryProduct({
     required this.category,
@@ -49,9 +49,9 @@ class _InventoryPageState extends State<InventoryPage> {
       category: 'Mobile', 
       model: 'Samsang A32', 
       stockQty: 3, 
-      purchasePrice: 47000, // الگ قیمت خرید
-      supplier: 'Nasir Mobiles', // الگ سپلائر
-      invoiceNumber: 'INV-102', // الگ انوائس
+      purchasePrice: 47000, 
+      supplier: 'Nasir Mobiles', 
+      invoiceNumber: 'INV-102', 
       imei: '358941109876543'
     ),
   ];
@@ -68,7 +68,6 @@ class _InventoryPageState extends State<InventoryPage> {
 
     setState(() {
       final String supplierNameFromDialog = result['supplier'] as String;
-      // اگر ڈائیلاگ میں انوائس نمبر کا آپشن ابھی نہیں ہے، تو ہم وقتی طور پر اٹو جنریٹ کر لیتے ہیں
       final String invoiceNo = result['invoice'] ?? "INV-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}";
       final List<Map<String, dynamic>> items = List<Map<String, dynamic>>.from(result['items']);
 
@@ -81,7 +80,6 @@ class _InventoryPageState extends State<InventoryPage> {
 
         if (qty <= 0) continue; 
 
-        // ہم ہر انٹری کو منفرد (Unique) رکھیں گے، اس لیے نیا پروڈکٹ لسٹ کے بالکل شروع (ٹاپ) پر ایڈ ہوگا
         _stockViewList.insert(
           0,
           InventoryProduct(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../inventory_page.dart';
+import '../inventory_page.dart'; // انوینٹری پیج سے کلاس اٹھانے کے لیے امپورٹ تبدیل کر دیا
 
 class StockListView extends StatelessWidget {
   final List<InventoryProduct> stockList;
@@ -15,7 +15,6 @@ class StockListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ۱۔ سرچ فلٹر (ماڈل، سپلائر، انوائس، اور آئی ایم ای آئی سب پر کام کرے گی)
     final filteredList = stockList.where((item) {
       final query = searchQuery.toLowerCase();
       return item.model.toLowerCase().contains(query) ||
@@ -44,7 +43,6 @@ class StockListView extends StatelessWidget {
     }
   }
 
-  // الف: تمام اسٹاک کی الگ الگ لسٹ (Split View - RTL)
   Widget _buildAllStockList(List<InventoryProduct> items) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -63,41 +61,25 @@ class StockListView extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                
-                // === بائیں طرف: کل رقم اور حساب ===
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Rs. ${itemTotal.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFF1E3A8A),
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E3A8A)),
                     ),
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(4)),
                       child: Text(
                         '${item.stockQty} سیٹ × Rs. ${item.purchasePrice.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          color: Colors.grey.shade700, 
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500
-                        ),
+                        style: TextStyle(color: Colors.grey.shade700, fontSize: 11, fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],
                 ),
-
                 const SizedBox(width: 12),
-
-                // === دائیں طرف: موبائل معلومات، سپلائر اور انوائس ===
                 Expanded(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -106,34 +88,14 @@ class StockListView extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            // موبائل ماڈل کا نام
-                            Text(
-                              item.model,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                              textAlign: TextAlign.right,
-                            ),
+                            Text(item.model, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), textAlign: TextAlign.right),
                             const SizedBox(height: 2),
-                            // سپلائر کا نام اور انوائس نمبر
-                            Text(
-                              'سپلائر: ${item.supplier} | بل: ${item.invoiceNumber}',
-                              style: TextStyle(color: Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.w500),
-                              textAlign: TextAlign.right,
-                            ),
+                            Text('سپلائر: ${item.supplier} | بل: ${item.invoiceNumber}', style: TextStyle(color: Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.w500), textAlign: TextAlign.right),
                             const SizedBox(height: 2),
-                            // کیٹیگری
-                            Text(
-                              'کیٹیگری: ${item.category}',
-                              style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
-                              textAlign: TextAlign.right,
-                            ),
-                            // آئی ایم ای آئی نمبر (اگر موجود ہو)
+                            Text('کیٹیگری: ${item.category}', style: TextStyle(color: Colors.grey.shade500, fontSize: 11), textAlign: TextAlign.right),
                             if (item.imei.isNotEmpty) ...[
                               const SizedBox(height: 3),
-                              Text(
-                                'IMEI: ${item.imei}',
-                                style: TextStyle(color: Colors.blueGrey.shade600, fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold),
-                                textAlign: TextAlign.right,
-                              ),
+                              Text('IMEI: ${item.imei}', style: TextStyle(color: Colors.blueGrey.shade600, fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold), textAlign: TextAlign.right),
                             ],
                           ],
                         ),
@@ -141,16 +103,12 @@ class StockListView extends StatelessWidget {
                       const SizedBox(width: 12),
                       Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E3A8A).withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
+                        decoration: BoxDecoration(color: const Color(0xFF1E3A8A).withValues(alpha: 0.1), shape: BoxShape.circle),
                         child: const Icon(Icons.phone_android, color: Color(0xFF1E3A8A), size: 20),
                       ),
                     ],
                   ),
                 ),
-
               ],
             ),
           ),
@@ -159,7 +117,6 @@ class StockListView extends StatelessWidget {
     );
   }
 
-  // ب: آئٹم وائز گروپ لسٹ
   Widget _buildItemGroupedList(List<InventoryProduct> items) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -178,19 +135,13 @@ class StockListView extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Rs. ${itemTotal.toStringAsFixed(0)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.teal),
-                ),
+                Text('Rs. ${itemTotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.teal)),
                 Row(
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(
-                          item.model,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
+                        Text(item.model, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         Text('کل اسٹاک: ${item.stockQty} سیٹ', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                       ],
                     ),
