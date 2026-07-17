@@ -110,13 +110,13 @@ class StockListView extends StatelessWidget {
           elevation: 2,
           margin: const EdgeInsets.only(bottom: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          // کلپ بیہیویئر لگانے سے لسٹ ٹائل کا کلک افیکٹ کارڈ کے کونوں سے باہر نہیں نکلے گا
           clipBehavior: Clip.antiAlias, 
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             onTap: () {
               _showItemDetails(context, modelName, purchasePrice, detailedItems);
             },
+            // بائیں طرف کی معلومات (ٹوٹل رقم اور درست ضرب کا حساب)
             leading: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,14 +131,19 @@ class StockListView extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(4),
                   ),
+                  // یہ رہا بالکل درست ٹیکسٹ پیٹرن جو خراب ہو گیا تھا
                   child: Text(
-                    '$totalQty سیٹ × ${purchasePrice.toStringAsFixed(0)}',
-                    style: TextStyle(color: Colors.grey.shade700, fontSize: 10),
+                    '$totalQty سیٹ × Rs. ${purchasePrice.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: Colors.grey.shade700, 
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -194,7 +199,7 @@ class StockListView extends StatelessWidget {
       itemCount: modelKeys.length,
       itemBuilder: (context, index) {
         final modelName = modelKeys[index];
-        final productsInModelGroup = modelGroupedMap[modelName]!.autoCompress(); // یا ڈائریکٹ لسٹ
+        final productsInModelGroup = modelGroupedMap[modelName]!;
         
         int totalQty = 0;
         double totalValue = 0;
@@ -224,7 +229,7 @@ class StockListView extends StatelessWidget {
           elevation: 1.5,
           margin: const EdgeInsets.only(bottom: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          clipBehavior: Clip.antiAlias, // یہاں بھی سیٹ کر دیا
+          clipBehavior: Clip.antiAlias, 
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             onTap: () {
@@ -254,9 +259,4 @@ class StockListView extends StatelessWidget {
       },
     );
   }
-}
-
-// اگر آپ کے پاس ماڈل گروپ میں سادہ لسٹ ہے تو .autoCompress() ہٹا سکتے ہیں، یہ بیک اپ سیفٹی کے لیے ہے۔
-extension on List<InventoryProduct> {
-  List<InventoryProduct> autoCompress() => this;
 }
