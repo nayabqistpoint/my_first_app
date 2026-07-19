@@ -3,9 +3,10 @@ import 'home_page/sections/top.dart';
 import 'home_page/sections/middle.dart';
 import 'home_page/sections/bottom.dart';
 
-// 1. کسٹمرز لسٹ کے ساتھ اب ٹرانزیکشنز والی فائل بھی امپورٹ ہو گئی ہے
+// فولڈر سٹرکچر کے مطابق بالکل صحیح اور اصل راستے (Paths)
 import 'home_page/views/customers_list.dart'; 
 import 'home_page/views/transactions.dart'; 
+import 'home_page/views/items.dart'; // یہاں اسٹاک یعنی آئٹمز والی فائل جوڑ دی
 
 void main() => runApp(const MaterialApp(
   debugShowCheckedModeBanner: false,
@@ -41,9 +42,9 @@ class _HomePageState extends State<HomePage> {
                 controller: _pageController,
                 onPageChanged: (index) => setState(() => _currentIndex = index),
                 children: const [
-                  CustomersListView(), // پہلا پیج کسٹمرز لسٹ کا ہے
-                  TransactionsPage(),  // 2. دوسرے نمبر پر ٹرانزیکشن کا پیج کامیابی سے جوڑ دیا ہے
-                  Center(child: Text("دیگر پیجز بعد میں شامل ہوں گے")),
+                  CustomersListView(), // پہلا پیج: کسٹمرز لسٹ
+                  TransactionsPage(),  // دوسرا پیج: ٹرانزیکشنز
+                  ItemsPage(),         // تیسرا پیج: اسٹاک (آئٹمز) جو اب کامیابی سے جڑ گیا ہے!
                 ],
               ),
             ),
