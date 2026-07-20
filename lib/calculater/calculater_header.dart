@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'calculater_controller.dart'; 
 
 class CalculaterHeader extends StatelessWidget {
   const CalculaterHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = Provider.of<CalculaterController>(context);
+
     return Container(
       color: Colors.white,
       child: Column(
         children: [
-          // سرخ ہیڈر پٹی
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             color: const Color(0xFFE53935),
@@ -31,7 +34,7 @@ class CalculaterHeader extends StatelessWidget {
                   height: 40,
                   child: TextField(
                     textAlign: TextAlign.center,
-                    autofocus: true, 
+                    onChanged: (value) => controller.setTotalAmount(value),
                     decoration: const InputDecoration(
                       hintText: "موبائل کی نقد رقم درج کریں",
                       contentPadding: EdgeInsets.symmetric(vertical: 0),
@@ -45,6 +48,7 @@ class CalculaterHeader extends StatelessWidget {
                   height: 40,
                   child: TextField(
                     textAlign: TextAlign.center,
+                    onChanged: (value) => controller.setAdvanceAmount(value),
                     decoration: const InputDecoration(
                       hintText: "ایڈوانس رقم درج کریں",
                       contentPadding: EdgeInsets.symmetric(vertical: 0),
@@ -56,7 +60,6 @@ class CalculaterHeader extends StatelessWidget {
                 
                 const SizedBox(height: 15),
                 
-                // سوئچ اور جملہ - سوئچ کا رنگ بلیو کر دیا ہے
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -66,8 +69,8 @@ class CalculaterHeader extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Switch(
-                      value: false,
-                      onChanged: (bool value) {},
+                      value: controller.hasSecurityCheck,
+                      onChanged: (bool value) => controller.toggleSecurityCheck(value),
                       activeTrackColor: Colors.blue.withValues(alpha: 0.5),
                       activeThumbColor: Colors.blue,
                     ),
@@ -76,7 +79,6 @@ class CalculaterHeader extends StatelessWidget {
                 
                 const SizedBox(height: 10),
 
-                // رابطہ نمبر سیکشن
                 InkWell(
                   onTap: () async {
                     final Uri launchUri = Uri(scheme: 'tel', path: '03012700351');
