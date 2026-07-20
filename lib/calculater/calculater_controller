@@ -1,0 +1,28 @@
+import 'package:flutter/material.dart';
+
+class CalculaterController extends ChangeNotifier {
+  double mobilePrice = 0.0;
+  double advancePayment = 0.0;
+  bool isSecurityChecked = false;
+
+  void updateValues({double? price, double? advance, bool? security}) {
+    if (price != null) mobilePrice = price;
+    if (advance != null) advancePayment = advance;
+    if (security != null) isSecurityChecked = security;
+    notifyListeners();
+  }
+
+  double calculateInstallment(int months) {
+    if (mobilePrice <= 0) return 0.0;
+    double percentage = isSecurityChecked ? 0.25 : 0.35;
+    double totalPrice = mobilePrice + (mobilePrice * percentage);
+    
+    if (advancePayment > 0) {
+      double remainingAmount = totalPrice - advancePayment;
+      int divisor = months - 1;
+      return remainingAmount / (divisor > 0 ? divisor : 1);
+    } else {
+      return totalPrice / months;
+    }
+  }
+}
