@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'customer_ledger/top.dart'; // ٹاپ وزٹ کو امپورٹ کر لیا
+import 'customer_ledger/top.dart';    // ٹاپ فائل امپورٹڈ
+import 'customer_ledger/middle.dart'; // مڈل فائل امپورٹڈ
 
 class CustomerLedgerPage extends StatelessWidget {
   const CustomerLedgerPage({super.key});
@@ -10,15 +11,16 @@ class CustomerLedgerPage extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // ٹاپ والا حصہ (ہیڈر، بیلنس، بٹنز)
+          // ۱۔ ٹاپ والا حصہ (ہیڈر، بیلنس، بٹنز)
           LedgerTopWidget(),
           
-          // مڈل اور باٹم ابھی خالی ہیں، ان پر بعد میں کام ہوگا
+          // ۲۔ مڈل والا حصہ (سرچ، ہیڈر اور لسٹ)
+          // Expanded استعمال کیا ہے تاکہ لسٹ باقی ساری جگہ لے لے
           Expanded(
-            child: Center(
-              child: Text("مڈل لسٹ کی جگہ (بعد میں بنے گی)"),
-            ),
+            child: LedgerMiddleWidget(),
           ),
+          
+          // نوٹ: باٹم (bottom.dart) ابھی باقی ہے، وہ بعد میں یہاں لگے گا
         ],
       ),
     );

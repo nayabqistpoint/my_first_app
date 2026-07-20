@@ -9,97 +9,105 @@ class LedgerTopWidget extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ۱۔ سب سے اوپر والا لال ہیڈر (نام اور فون آئکن)
+        // ۱۔ ہیڈر (ایرو + سینٹر نام + تصویر)
         Container(
-          color: const Color(0xFFE53935), // تصویر والا لال رنگ
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: const SafeArea(
+          color: const Color(0xFFE53935),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: SafeArea(
             bottom: false,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // بائیں طرف فون کا آئکن
-                Icon(Icons.phone, color: Colors.white, size: 24),
-                // دائیں طرف کسٹمر کا نام
-                Text(
+                // بیک ایرو (فعال کر دیا ہے)
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
+                ),
+                const Spacer(),
+                const Text(
                   "خلیل سبزی والا",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const Spacer(),
+                // بڑا پروفائل آئکن
+                const CircleAvatar(
+                  radius: 20, // سائز بڑھا دیا
+                  backgroundColor: Colors.white24, 
+                  child: Icon(Icons.person, color: Colors.white, size: 25),
                 ),
               ],
             ),
           ),
         ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
 
-        // ۲۔ بڑا ٹوٹل بیلنس والا باکس (Rs 161,630)
+        // ۲۔ بیلنس باکس
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFE53935), width: 1.5), // لال بارڈر
-              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE53935), width: 1.2),
+              borderRadius: BorderRadius.circular(8),
               color: Colors.white,
             ),
             child: const Text(
               "Rs 161,630",
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFE53935), // لال رنگ کی رقم
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFE53935)),
             ),
           ),
         ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
 
-        // ۳۔ چار بٹنز والی رو (ایس ایم ایس، ریمائنڈر، تاریخ، رپورٹ)
+        // ۳۔ سمارٹ کیپسولز
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              _buildActionButton(text: "رپورٹ", isSelected: false),
-              const SizedBox(width: 8),
-              _buildActionButton(text: "تاریخ", isSelected: false),
-              const SizedBox(width: 8),
-              _buildActionButton(text: "ریمائنڈر", isSelected: false),
-              const SizedBox(width: 8),
-              _buildActionButton(text: "ایس ایم ایس", isSelected: true),
+              _buildActionCapsule(text: "رپورٹ"),
+              const SizedBox(width: 6),
+              _buildActionCapsule(text: "تاریخ"),
+              const SizedBox(width: 6),
+              _buildActionCapsule(text: "ریمائنڈر"),
+              const SizedBox(width: 6),
+              _buildActionCapsule(text: "ایس ایم ایس"),
             ],
           ),
         ),
         
-        const SizedBox(height: 12),
-        // یہاں black24 کو بدل کر black26 کر دیا ہے تاکہ ایرر ختم ہو جائے
-        const Divider(color: Colors.black26, height: 1),
+        const SizedBox(height: 10),
+        const Divider(color: Colors.black12, height: 1, thickness: 0.8),
       ],
     );
   }
 
-  // چار بٹنز بنانے کا ٹول
-  Widget _buildActionButton({required String text, required bool isSelected}) {
+  // کیپسول ڈیزائن (جو دبنے پر واپس اپنی حالت میں آ جائے)
+  Widget _buildActionCapsule({required String text}) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE53935) : Colors.white,
-          border: Border.all(color: const Color(0xFFE53935)),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20), // کیپسول شیپ
+        child: InkWell(
+          onTap: () {}, // یہاں فنکشن آئے گا
           borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.white : const Color(0xFFE53935),
+          splashColor: Colors.black12, // دبنے کا احساس
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.black26),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
           ),
         ),
       ),
