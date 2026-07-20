@@ -41,21 +41,25 @@ class CalculaterController extends ChangeNotifier {
     return (total - effectiveAdvance) / (months - 1);
   }
 
+  // نیا بہتر کردہ میسج فنکشن
   String? getValidationMessage() {
-    if (_totalAmount > 50000) return "50 ہزار سے زائد کے لیے حافظ صابر سے رابطہ کریں۔";
+    // اگر ٹوٹل رقم صفر ہے یا یوزر نے کچھ نہیں لکھا تو کوئی میسج نہیں
+    if (_totalAmount <= 0) return null; 
     
     double base6MonthInstallment = getTotalWithProfit(6) / 6;
     double minAdvanceRequired = base6MonthInstallment * 0.8;
 
-    if (_advanceAmount == 0 || _advanceAmount < minAdvanceRequired) {
-      return "کم از کم ایڈوانس: ${minAdvanceRequired.toStringAsFixed(0)} روپے درکار ہیں۔";
+    // اگر ایڈوانس صفر ہے یا حد سے کم ہے تو میسج دکھائیں
+    if (_advanceAmount > 0 && _advanceAmount < minAdvanceRequired) {
+      return "یا تو ایڈوانس صفر رکھیں یا کم از کم ${minAdvanceRequired.toStringAsFixed(0)} روپے رکھیں۔";
     }
+    
     return null;
   }
 
-  // لسٹ کو ڈیٹا فراہم کرنے والا فنکشن
   List<Map<String, String>> calculateInstallments() {
     List<Map<String, String>> results = [];
+    if (_totalAmount <= 0) return results;
     
     for (int i = 6; i <= 12; i++) {
       double total = getTotalWithProfit(i);

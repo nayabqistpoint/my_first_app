@@ -58,6 +58,21 @@ class CalculaterHeader extends StatelessWidget {
                   ),
                 ),
                 
+                // یہ وہ حصہ ہے جو ویلیڈیشن کا میسج دکھائے گا
+                Consumer<CalculaterController>(
+                  builder: (context, controller, child) {
+                    final message = controller.getValidationMessage();
+                    if (message == null) return const SizedBox.shrink(); 
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        message,
+                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                      ),
+                    );
+                  },
+                ),
+                
                 const SizedBox(height: 15),
                 
                 Row(
