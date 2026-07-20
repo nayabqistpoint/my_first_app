@@ -1,7 +1,8 @@
-import 'package:flutter/gestures.dart'; // ماؤس اور ٹچ سپورٹ کے لیے ضروری ہے
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'dashboard_page.dart';
 
+// آپ کے پروجیکٹ کے بالکل سیدھے اور محفوظ امپورٹ راستے
 import 'home_page/sections/top.dart';
 import 'home_page/sections/middle.dart';
 import 'home_page/sections/bottom.dart';
@@ -10,12 +11,12 @@ import 'home_page/views/customers_list.dart';
 import 'home_page/views/items.dart';
 import 'home_page/views/transactions.dart';
 
-// 1. یہ کسٹم بیہیویئر کمپیوٹر کے ماؤس (Mouse) اور موبائل کے ٹچ (Touch) دونوں سے سلائیڈنگ کو ممکن بنائے گا
+// ماؤس اور ٹچ دونوں سے سلائیڈنگ کو ممکن بنانے کے لیے کسٹم بیہیویئر
 class AppScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch, // موبائل کا انگلی سے سوائپ
-        PointerDeviceKind.mouse, // کمپیوٹر کا ماؤس / کرسر سے ڈریگ
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
       };
 }
 
@@ -27,14 +28,13 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // مڈل سیکشن کے کیپسول بٹنز کے لیے انڈیکس اسٹیٹ
   int _currentHomeTab = 0;
 
-  // مڈل پیجز کے لیے کنٹرولر
+  // مڈل پیجز کی سوائپنگ کے لیے اندرونی پیج کنٹرولر
   final PageController _homePageController = PageController(initialPage: 0);
-  
-  // ماسٹر کنٹرولر: ایپ ہمیشہ ہوم پیج (Index 1) پر کھلے گی تاکہ بائیں طرف ڈیش بورڈ (Index 0) موجود رہے
-  final PageController _masterSwipeController = PageController(initialPage: 1);
 
+  // صفحات کی لسٹ (پارٹیز پیج سفید بیک گراؤنڈ کے ساتھ بحال ہے)
   late final List<Widget> _homeViews;
 
   @override
@@ -53,24 +53,25 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _homePageController.dispose();
-    _masterSwipeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // masterSwipeController: ایپ ہمیشہ ہوم پیج (Index 1) پر کھلے گی تاکہ بائیں طرف ڈیش بورڈ رہے
+    final PageController masterSwipeController = PageController(initialPage: 1);
+
     return Scaffold(
-      // یہاں ہم نے کسٹم سکرول بیہیویئر لاگو کر دیا تاکہ پوری اسکرین پر ماؤس ڈریگ کام کرے
       body: ScrollConfiguration(
         behavior: AppScrollBehavior(),
         child: PageView(
-          controller: _masterSwipeController,
-          physics: const BouncingScrollPhysics(),
+          controller: masterSwipeController,
+          physics: const BouncingScrollPhysics(), // ڈیش بورڈ کے لیے مین سوائپ
           children: [
-            // 1. بالکل بائیں (Left) طرف آپ کا ڈیش بورڈ پیج
+            // 1. بالکل بائیں طرف آپ کا فنانشل بورڈ (ڈیش بورڈ) پیج
             const DashboardPage(),
 
-            // 2. دائیں (Right) طرف آپ کا مین ہوم پیج
+            // 2. دائیں طرف آپ کا مین ہوم پیج اپنے تمام سیکشنز کے ساتھ
             SafeArea(
               child: Container(
                 color: Colors.white,
@@ -79,7 +80,7 @@ class _HomePageState extends State<HomePage> {
                     // ٹاپ فروزن ایریا
                     const TopSection(), 
                     
-                    // مڈل سیکشن کے کیپسول بٹنز
+                    // مڈل سیکشن (بٹنز اور سلائیڈنگ کنیکٹڈ ہیں)
                     MiddleSection(
                       selectedIndex: _currentHomeTab,
                       onTabSelected: (index) {
@@ -94,7 +95,7 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                     
-                    // مڈل کا متحرک ایریا (پارٹیز، ٹرانزیکشن، اسٹاک)
+                    // متحرک ایریا (پارٹیز، ٹرانزیکشن، اسٹاک کی سوائپنگ)
                     Expanded(
                       child: PageView(
                         controller: _homePageController,
