@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// کسٹمر لیجر کے مین پیج کو یہاں امپورٹ کر لیا تاکہ کلک ایکشن کام کر سکے
+import 'package:my_first_app/customer_ledger_page.dart';
 
 class CustomersListView extends StatelessWidget {
   const CustomersListView({super.key});
@@ -104,46 +106,57 @@ class CustomersListView extends StatelessWidget {
               Color amountColor = isAmountGreen ? Colors.green : Colors.red;
               Color dateColor = isDateExpired ? Colors.red : Colors.green;
 
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 155,
-                          child: Row(
-                            children: [
-                              Text("Rs ${(index + 1) * 2000}", style: TextStyle(color: amountColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                              const Spacer(flex: 2),
-                              Container(width: 1, height: 22, color: Colors.black),
-                              const Spacer(flex: 3),
-                              Text("2026-07-25", style: TextStyle(color: dateColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                              const Spacer(),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  const Text("Party Name", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                  const Text("2026-07-19 06:17 PM", style: TextStyle(color: Colors.grey, fontSize: 11)),
-                                ],
-                              ),
-                              const SizedBox(width: 10),
-                              const CircleAvatar(radius: 15, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 18, color: Colors.black54)),
-                            ],
-                          ),
-                        ),
-                      ],
+              // یہاں پوری رو کو InkWell سے لک کر دیا ہے تاکہ کلک ایبل بن جائے
+              return InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CustomerLedgerPage(),
                     ),
-                  ),
-                  const Divider(color: Colors.black26, thickness: 0.5, height: 1),
-                ],
+                  );
+                },
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 155,
+                            child: Row(
+                              children: [
+                                Text("Rs ${(index + 1) * 2000}", style: TextStyle(color: amountColor, fontWeight: FontWeight.bold, fontSize: 15)),
+                                const Spacer(flex: 2),
+                                Container(width: 1, height: 22, color: Colors.black),
+                                const Spacer(flex: 3),
+                                Text("2026-07-25", style: TextStyle(color: dateColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                                const Spacer(),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    const Text("Party Name", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                    const Text("2026-07-19 06:17 PM", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                                  ],
+                                ),
+                                const SizedBox(width: 10),
+                                const CircleAvatar(radius: 15, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 18, color: Colors.black54)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(color: Colors.black26, thickness: 0.5, height: 1),
+                  ],
+                ),
               );
             },
           ),
