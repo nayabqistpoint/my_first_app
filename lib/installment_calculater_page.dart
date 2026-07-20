@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // پرووائیڈر کو امپورٹ کریں
+import 'calculater/calculater_controller.dart'; // کنٹرولر کو امپورٹ کریں
 import 'calculater/calculater_header.dart';
 import 'calculater/calculater_list.dart';
 
@@ -7,14 +9,17 @@ class InstallmentCalculaterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      // AppBar کو یہاں سے مکمل ہٹا دیا ہے
-      body: SafeArea(
-        child: Column(
-          children: [
-            CalculaterHeader(), // اوپر والا حصہ اب پوری اسکرین کی ٹاپ پر آئے گا
-            Expanded(child: CalculaterList()), // نیچے لسٹ والا حصہ
-          ],
+    // یہاں Provider کو لپیٹنا (Wrap) ضروری ہے تاکہ ڈیٹا کنٹرولر تک پہنچے
+    return ChangeNotifierProvider(
+      create: (context) => CalculaterController(),
+      child: const Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              CalculaterHeader(), 
+              Expanded(child: CalculaterList()), 
+            ],
+          ),
         ),
       ),
     );
