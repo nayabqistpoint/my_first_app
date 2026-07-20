@@ -93,7 +93,7 @@ class CalculaterHeader extends StatelessWidget {
               ],
             ),
           ),
-        ],
+      ],
       ),
     );
   }
