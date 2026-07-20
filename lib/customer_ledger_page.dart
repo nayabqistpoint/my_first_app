@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'customer_ledger/top.dart';    // ٹاپ فائل امپورٹڈ
-import 'customer_ledger/middle.dart'; // مڈل فائل امپورٹڈ
+
+// اپنی فائلز کے پاتھ کے مطابق امپورٹ کریں
+import 'customer_ledger/top.dart';
+import 'customer_ledger/middle.dart';
+import 'customer_ledger/bottom.dart';
 
 class CustomerLedgerPage extends StatelessWidget {
   const CustomerLedgerPage({super.key});
@@ -9,18 +12,19 @@ class CustomerLedgerPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       backgroundColor: Colors.white,
+      // آپ نے جو AppBar والا حصہ ہٹانے کو کہا تھا، وہ میں نے یہاں سے مکمل نکال دیا ہے
       body: Column(
         children: [
-          // ۱۔ ٹاپ والا حصہ (ہیڈر، بیلنس، بٹنز)
+          // اوپر والا حصہ (ٹاپ) - اب یہ سیدھا خلیل سبزی والا سے شروع ہوگا
           LedgerTopWidget(),
           
-          // ۲۔ مڈل والا حصہ (سرچ، ہیڈر اور لسٹ)
-          // Expanded استعمال کیا ہے تاکہ لسٹ باقی ساری جگہ لے لے
+          // بیچ والا حصہ (لائنز اور تفصیل)
           Expanded(
             child: LedgerMiddleWidget(),
           ),
           
-          // نوٹ: باٹم (bottom.dart) ابھی باقی ہے، وہ بعد میں یہاں لگے گا
+          // نیچے والا حصہ (پیمنٹ ان اور پیمنٹ آؤٹ بٹن)
+          LedgerBottomWidget(),
         ],
       ),
     );
