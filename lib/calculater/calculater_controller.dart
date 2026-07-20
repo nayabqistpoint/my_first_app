@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'calculater_config.dart';
 
 class CalculaterController extends ChangeNotifier {
   double _totalAmount = 0.0;
@@ -25,9 +26,11 @@ class CalculaterController extends ChangeNotifier {
   }
 
   double getProfitPercentage(int months) {
-    // یہاں ہم نے فی الحال ڈائریک트 ویلیوز رکھ دی ہیں تاکہ چیک کریں کہ نمبر بدلتے ہیں یا نہیں
-    double baseProfit = _hasSecurityCheck ? 0.25 : 0.35; 
-    return baseProfit + ((months - 6) * 0.05);
+    // یہاں اب ویلیوز ڈائریکٹ CalculaterConfig سے آئیں گی
+    double baseProfit = _hasSecurityCheck 
+        ? CalculaterConfig.baseProfitSecurityCheck 
+        : CalculaterConfig.baseProfitNoSecurityCheck;
+    return baseProfit + ((months - 6) * CalculaterConfig.profitIncrementPerMonth);
   }
 
   double getTotalWithProfit(int months) => _totalAmount + (_totalAmount * getProfitPercentage(months));

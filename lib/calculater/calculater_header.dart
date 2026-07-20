@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'calculater_controller.dart'; 
+import 'calculater_config.dart';
 
 class CalculaterHeader extends StatelessWidget {
   const CalculaterHeader({super.key});
@@ -96,14 +97,14 @@ class CalculaterHeader extends StatelessWidget {
 
                 InkWell(
                   onTap: () async {
-                    final Uri launchUri = Uri(scheme: 'tel', path: '03012700351');
+                    final Uri launchUri = Uri(scheme: 'tel', path: CalculaterConfig.contactNumber);
                     await launchUrl(launchUri);
                   },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
-                      "رابطہ: حافظ محمد صابر - 03012700351",
-                      style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 18, decoration: TextDecoration.underline),
+                      "رابطہ: ${CalculaterConfig.contactName} - ${CalculaterConfig.contactNumber}",
+                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 18, decoration: TextDecoration.underline),
                     ),
                   ),
                 ),
