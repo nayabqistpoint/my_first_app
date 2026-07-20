@@ -17,12 +17,13 @@ class LedgerTopWidget extends StatelessWidget {
             bottom: false,
             child: Row(
               children: [
-                // بیک ایرو (فعال کر دیا ہے)
+                // بیک ایرو
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
                 ),
                 const Spacer(),
+                // نام (خلیل سبزی والا)
                 const Text(
                   "خلیل سبزی والا",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
@@ -30,7 +31,7 @@ class LedgerTopWidget extends StatelessWidget {
                 const Spacer(),
                 // بڑا پروفائل آئکن
                 const CircleAvatar(
-                  radius: 20, // سائز بڑھا دیا
+                  radius: 20,
                   backgroundColor: Colors.white24, 
                   child: Icon(Icons.person, color: Colors.white, size: 25),
                 ),
@@ -83,16 +84,16 @@ class LedgerTopWidget extends StatelessWidget {
     );
   }
 
-  // کیپسول ڈیزائن (جو دبنے پر واپس اپنی حالت میں آ جائے)
+  // کیپسول ڈیزائن
   Widget _buildActionCapsule({required String text}) {
     return Expanded(
       child: Material(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20), // کیپسول شیپ
+        borderRadius: BorderRadius.circular(20),
         child: InkWell(
-          onTap: () {}, // یہاں فنکشن آئے گا
+          onTap: () {},
           borderRadius: BorderRadius.circular(20),
-          splashColor: Colors.black12, // دبنے کا احساس
+          splashColor: Colors.black12,
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
