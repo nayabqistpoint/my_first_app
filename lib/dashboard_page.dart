@@ -93,131 +93,129 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       backgroundColor: const Color(0xfff8f9fa),
       body: SafeArea(
-        // یہاں ہم نے سنگل چائلڈ اسکرول ویو واپس لگا دیا ہے تاکہ سکرین پر لوڈ نہ آئے
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. ڈیٹ فلٹر پٹی
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                height: 38,
-                decoration: const BoxDecoration(
-                  color: Colors.white, 
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12, 
-                      blurRadius: 1,
-                      offset: Offset(0, 1),
-                    )
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                      height: 26,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black12),
-                        borderRadius: BorderRadius.circular(4),
-                        color: const Color(0xFFFAFAFA),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: selectedFilter,
-                          icon: const Icon(Icons.arrow_drop_down, color: Colors.black54, size: 18),
-                          style: const TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold),
-                          dropdownColor: Colors.white,
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              selectedFilter = newValue!;
-                              if (selectedFilter == 'آج') {
-                                fromDate = DateTime.now();
-                                toDate = DateTime.now();
-                              } else if (selectedFilter == 'یہ ہفتہ') {
-                                fromDate = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
-                                toDate = DateTime.now();
-                              } else if (selectedFilter == 'یہ مہینہ') {
-                                fromDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
-                                toDate = DateTime.now();
-                              } else if (selectedFilter == 'کسٹم') {
-                                _pickCustomDateRange(context);
-                              }
-                            });
-                          },
-                          items: <String>['آج', 'یہ ہفتہ', 'یہ مہینہ', 'کسٹم']
-                              .map<DropdownMenuItem<String>>((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                            );
-                          }).toList(),
+        // LayoutBuilder اسکرین کا اصل سائز معلوم کر کے لے آؤٹ کو فکس رکھتا ہے
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 1. ڈیٹ فلٹر پٹی (Height: 38)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                  height: 38,
+                  decoration: const BoxDecoration(
+                    color: Colors.white, 
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12, 
+                        blurRadius: 1,
+                        offset: Offset(0, 1),
+                      )
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                        height: 26,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black12),
+                          borderRadius: BorderRadius.circular(4),
+                          color: const Color(0xFFFAFAFA),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: selectedFilter,
+                            icon: const Icon(Icons.arrow_drop_down, color: Colors.black54, size: 18),
+                            style: const TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold),
+                            dropdownColor: Colors.white,
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                selectedFilter = newValue!;
+                                if (selectedFilter == 'آج') {
+                                  fromDate = DateTime.now();
+                                  toDate = DateTime.now();
+                                } else if (selectedFilter == 'یہ ہفتہ') {
+                                  fromDate = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+                                  toDate = DateTime.now();
+                                } else if (selectedFilter == 'یہ مہینہ') {
+                                  fromDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
+                                  toDate = DateTime.now();
+                                } else if (selectedFilter == 'کسٹم') {
+                                  _pickCustomDateRange(context);
+                                }
+                              });
+                            },
+                            items: <String>['آج', 'یہ ہفتہ', 'یہ مہینہ', 'کسٹم']
+                                .map<DropdownMenuItem<String>>((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              );
+                            }).toList(),
+                          ),
                         ),
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: () => _pickCustomDateRange(context),
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_month, size: 14, color: Colors.grey[700]),
-                          const SizedBox(width: 4),
-                          Text(
-                            "From: ${_formatDate(fromDate)}  To: ${_formatDate(toDate)}",
-                            style: TextStyle(
-                              fontSize: 11, 
-                              fontWeight: FontWeight.bold, 
-                              color: Colors.grey[800],
+                      GestureDetector(
+                        onTap: () => _pickCustomDateRange(context),
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_month, size: 14, color: Colors.grey[700]),
+                            const SizedBox(width: 4),
+                            Text(
+                              "From: ${_formatDate(fromDate)}  To: ${_formatDate(toDate)}",
+                              style: TextStyle(
+                                fontSize: 11, 
+                                fontWeight: FontWeight.bold, 
+                                color: Colors.grey[800],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 2. پرافٹ لاس بلاک
+                const ProfitLossWidget(),
+
+                // 3. کیش اور بینک لسٹ بلاک (ساری فالتو جگہ ختم کر کےExpanded)
+                // یہ سکرین پر بینک بلاک کو بڑا رکھے گا بغیر کسی اوور فلو کے
+                const Expanded(
+                  child: CashWidget(),
+                ),
+
+                // 4. اخراجات کا بلاک (بغیر فالتو جگہ کے بالکل نیچے سیٹ)
+                const ExpensesWidget(),
+
+                // 5. ایڈ ایکسپینس بٹن (صرف ضروری پیڈنگ کے ساتھ)
+                Padding(
+                  padding: const EdgeInsets.only(left: 12, right: 12, top: 4, bottom: 8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE53935),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        "Add Expenses",
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                     ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 4),
-
-              // 2. پرافٹ لاس بلاک
-              const ProfitLossWidget(),
-              
-              const SizedBox(height: 4),
-
-              // 3. کیش اور بینک لسٹ بلاک (واپس اپنی پہلی جگہ پر)
-              const CashWidget(),
-              
-              const SizedBox(height: 4),
-
-              // 4. اخراجات کا بلاک (واپس اپنی پہلی جگہ پر)
-              const ExpensesWidget(),
-              
-              const SizedBox(height: 12),
-              
-              // 5. ایڈ ایکسپینس بٹن
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE53935),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    "Add Expenses",
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
-              ),
-              
-              const SizedBox(height: 16),
-            ],
-          ),
+              ],
+            );
+          },
         ),
       ),
     );

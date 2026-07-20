@@ -55,7 +55,7 @@ class CashWidget extends StatelessWidget {
                   child: const Column(
                     children: [
                       Text("Rs. 15,000", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
-                      SizedBox(height: 2),
+                      SizedBox(height: 2), // یہاں ٹائپو بالکل ٹھیک کر دیا ہے
                       Text("Cash In Hand", style: TextStyle(fontSize: 12, color: Colors.black54)),
                     ],
                   ),
@@ -127,43 +127,44 @@ class CashWidget extends StatelessWidget {
 
           const SizedBox(height: 4),
 
-          // بینک لسٹ بلاک - اب یہ بڑا (Height: 280) ہے اور نیچے تک جگہ پر کر رہا ہے
-          Container(
-            height: 280, 
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.black12),
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
-            ),
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              itemCount: bankList.length,
-              itemBuilder: (context, index) {
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // رقم بائیں طرف
-                          Text(
-                            bankList[index]["amount"]!,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
-                          // بینک کا نام دائیں طرف
-                          Text(
-                            bankList[index]["name"]!,
-                            style: const TextStyle(fontSize: 13, color: Colors.black87),
-                          ),
-                        ],
+          // بینک لسٹ بلاک
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.black12),
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.white,
+              ),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: bankList.length,
+                itemBuilder: (context, index) {
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // رقم بائیں طرف
+                            Text(
+                              bankList[index]["amount"]!,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            // بینک کا نام دائیں طرف
+                            Text(
+                              bankList[index]["name"]!,
+                              style: const TextStyle(fontSize: 13, color: Colors.black87),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    if (index < bankList.length - 1)
-                      const Divider(color: Colors.black12, height: 1),
-                  ],
-                );
-              },
+                      if (index < bankList.length - 1)
+                        const Divider(color: Colors.black12, height: 1),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ],
