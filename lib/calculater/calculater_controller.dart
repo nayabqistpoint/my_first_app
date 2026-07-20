@@ -25,7 +25,8 @@ class CalculaterController extends ChangeNotifier {
   }
 
   double getProfitPercentage(int months) {
-    double baseProfit = _hasSecurityCheck ? 0.25 : 0.35;
+    // یہاں ہم نے فی الحال ڈائریک트 ویلیوز رکھ دی ہیں تاکہ چیک کریں کہ نمبر بدلتے ہیں یا نہیں
+    double baseProfit = _hasSecurityCheck ? 0.25 : 0.35; 
     return baseProfit + ((months - 6) * 0.05);
   }
 
@@ -41,15 +42,12 @@ class CalculaterController extends ChangeNotifier {
     return (total - effectiveAdvance) / (months - 1);
   }
 
-  // نیا بہتر کردہ میسج فنکشن
   String? getValidationMessage() {
-    // اگر ٹوٹل رقم صفر ہے یا یوزر نے کچھ نہیں لکھا تو کوئی میسج نہیں
     if (_totalAmount <= 0) return null; 
     
     double base6MonthInstallment = getTotalWithProfit(6) / 6;
     double minAdvanceRequired = base6MonthInstallment * 0.8;
 
-    // اگر ایڈوانس صفر ہے یا حد سے کم ہے تو میسج دکھائیں
     if (_advanceAmount > 0 && _advanceAmount < minAdvanceRequired) {
       return "یا تو ایڈوانس صفر رکھیں یا کم از کم ${minAdvanceRequired.toStringAsFixed(0)} روپے رکھیں۔";
     }
