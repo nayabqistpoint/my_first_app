@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// یہ پاتھ درست ہے: ایک بار ../ سے lib فولڈر میں اور پھر مین فائل تک
+import '../../installment_calculater_page.dart'; 
 
 class BottomSection extends StatelessWidget {
   const BottomSection({super.key});
@@ -10,31 +12,41 @@ class BottomSection extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _buildFilledButton("قسط کیلکولیٹر", Colors.blue),
+            child: _buildFilledButton(
+              context, 
+              "قسط کیلکولیٹر", 
+              Colors.blue, 
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const InstallmentCalculaterPage()),
+                );
+              }
+            ),
           ),
           const SizedBox(width: 15),
           Expanded(
-            child: _buildFilledButton("خرید و فروخت", Colors.green),
+            child: _buildFilledButton(context, "خرید و فروخت", Colors.green, () {
+              // یہاں دوسرے بٹن کا ایکشن آئے گا
+            }),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilledButton(String title, Color color) {
+  Widget _buildFilledButton(BuildContext context, String title, Color color, VoidCallback onPressed) {
     return SizedBox(
-      height: 45, // یہ ہائٹ ہے، اگر مزید نیرو کرنا ہو تو اسے 40 کر دیں
+      height: 45,
       child: ElevatedButton(
-        onPressed: () {
-          // یہاں بٹن کا ایکشن آئے گا
-        },
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          foregroundColor: Colors.white, // لکھائی کا رنگ سفید
+          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8), // مستطیل شکل (تھوڑے گول کونے)
+            borderRadius: BorderRadius.circular(8),
           ),
-          elevation: 2, // بٹن ابھرا ہوا محسوس ہو
+          elevation: 2,
         ),
         child: Text(
           title,
