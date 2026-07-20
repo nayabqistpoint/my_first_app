@@ -5,11 +5,13 @@ class ExpensesWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ایکسپنسز لسٹ ڈیٹا
+    // ایکسپنسز لسٹ ڈیٹا (ٹیسٹ کرنے کے لیے زیادہ ڈیٹا ہے تاکہ آپ اسکرول چیک کر سکیں)
     final List<Map<String, String>> defaultExpenses = [
       {"name": "Direct Expense", "amount": "Rs. 250"},
       {"name": "Indirect Expense", "amount": "Rs. 200"},
       {"name": "Discounts", "amount": "Rs. 0"},
+      {"name": "Office Rent", "amount": "Rs. 15,000"}, // چوتھی لائن (اسکرول کرنے پر اوپر آئے گی)
+      {"name": "Electricity Bill", "amount": "Rs. 4,500"},
     ];
 
     return Column(
@@ -22,7 +24,7 @@ class ExpensesWidget extends StatelessWidget {
           children: [
             Row(
               children: [
-                // اب یہ پلس بٹن بھی بالکل اپنے ساتھ ہی سفید بیک گراؤنڈ والا پاپ اپ کھولے گا
+                // پلس بٹن جو بالکل اپنے ساتھ ہی سفید بیک گراؤنڈ والا پاپ اپ کھولے گا
                 PopupMenuButton<int>(
                   offset: const Offset(0, 30), // پاپ اپ کو بالکل بٹن کے نیچے لانے کے لیے
                   color: Colors.white, // سفید بیک گراؤنڈ
@@ -73,7 +75,7 @@ class ExpensesWidget extends StatelessWidget {
                 const SizedBox(width: 8),
                 // گرینڈ ٹوٹل رقم (فل بولڈ)
                 const Text(
-                  "Rs. 450",
+                  "Rs. 19,950",
                   style: TextStyle(
                     fontSize: 16, 
                     fontWeight: FontWeight.w900, 
@@ -91,9 +93,9 @@ class ExpensesWidget extends StatelessWidget {
 
         const SizedBox(height: 4),
 
-        // 2. ایکسپنسز بلاک (بیچ میں ڈیوائیڈر لائنز کے ساتھ)
+        // 2. ایکسپنسز بلاک: اب یہ اندر سے لاک اور اسکرول ایبل ہے
         Container(
-          height: 125, 
+          height: 125, // ہائٹ فکس کر دی تاکہ صرف 3 لائنیں آئیں اور اسکرین کا ٹریفک کنٹرول میں رہے
           decoration: BoxDecoration(
             border: Border.all(color: Colors.black12),
             borderRadius: BorderRadius.circular(8),
@@ -102,6 +104,8 @@ class ExpensesWidget extends StatelessWidget {
           child: ListView.builder(
             padding: EdgeInsets.zero,
             itemCount: defaultExpenses.length,
+            // یہاں ہم نے اسکرول فزکس کو آزاد کر دیا ہے تاکہ یہ صرف اپنے ڈبے کے اندر گھومے
+            physics: const AlwaysScrollableScrollPhysics(), 
             itemBuilder: (context, index) {
               return Column(
                 children: [
