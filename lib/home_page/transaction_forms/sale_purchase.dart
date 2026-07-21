@@ -248,6 +248,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
               ),
               const SizedBox(height: 10),
 
+              // ٹوٹلز اور مائینس ہونے والا بقیہ بیلنس باکس
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -286,12 +287,20 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                         Text('Rs ${salePurchaseController.finalPayableAmount.toStringAsFixed(0)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFFE53935))),
                       ],
                     ),
+                    const SizedBox(height: 6),
+                    // یہاں اب کیش اور بینک مائینس ہو کر ریمیننگ بیلنس شو ہوگا
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('بقیہ واجب الادا (Remaining):', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                        Text('Rs ${salePurchaseController.remainingBalance.toStringAsFixed(0)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue)),
+                      ],
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 10),
 
-              // یہاں سورس سلیکٹر جڑ گیا ہے جو کنٹرولر کو ڈیٹا بھیج رہا ہے
               SourceSelecter(
                 onSplitPaymentChanged: (bankSource, cashAmount, bankAmount) {
                   salePurchaseController.setSplitPayment(bankSource, cashAmount, bankAmount);
@@ -305,7 +314,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                     child: SizedBox(
                       height: 42,
                       child: ElevatedButton.icon(
-                        onPressed: () => salePurchaseController.saveData(),
+                        onPressed: () => salePurchaseController.saveData(context),
                         icon: const Icon(Icons.share, color: Colors.white, size: 16),
                         label: const Text('محفوظ اور شیئر', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
                         style: ElevatedButton.styleFrom(
@@ -320,7 +329,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                     child: SizedBox(
                       height: 42,
                       child: ElevatedButton.icon(
-                        onPressed: () => salePurchaseController.saveData(),
+                        onPressed: () => salePurchaseController.saveData(context),
                         icon: const Icon(Icons.save, color: Colors.white, size: 16),
                         label: const Text('محفوظ کریں', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
                         style: ElevatedButton.styleFrom(

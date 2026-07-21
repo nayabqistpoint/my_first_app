@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../dashboard/controller.dart';
 
 class SalePurchaseController extends ChangeNotifier {
   int selectedMode = 0;
@@ -10,7 +11,7 @@ class SalePurchaseController extends ChangeNotifier {
     text: "${DateTime.now().day}-${DateTime.now().month}-${DateTime.now().year}",
   );
 
-  final List<Map<String, TextEditingController>> itemsList = [
+  List<Map<String, TextEditingController>> itemsList = [
     {
       'model': TextEditingController(),
       'imei': TextEditingController(),
@@ -26,10 +27,10 @@ class SalePurchaseController extends ChangeNotifier {
   double grandTotal = 0;
   double finalPayableAmount = 0;
 
-  // سورس سلیکٹر سے آنے والی ویلیوز کو محفوظ کرنے کے لیے ویری ایبلز
   String? selectedBankSource;
   double cashAmount = 0;
   double bankAmount = 0;
+  double remainingBalance = 0;
 
   SalePurchaseController() {
     discountController.addListener(_calculateTotals);
@@ -101,26 +102,105 @@ class SalePurchaseController extends ChangeNotifier {
     double finalAmount = grandTotal - discount;
     finalPayableAmount = finalAmount < 0 ? 0 : finalAmount;
 
+    remainingBalance = finalPayableAmount - (cashAmount + bankAmount);
+    if (remainingBalance < 0) remainingBalance = 0;
+
     notifyListeners();
   }
 
-  // سورس سلیکٹر کا ڈیٹا یہاں فیچ ہو کر سیو ہو رہا ہے
   void setSplitPayment(String? bankSource, double cashAmt, double bankAmt) {
     selectedBankSource = bankSource;
     cashAmount = cashAmt;
     bankAmount = bankAmt;
-    notifyListeners();
+    _calculateTotals();
   }
 
-  void saveData() {
-    debugPrint("--- انوائس ڈیٹا محفوظ ہو رہا ہے ---");
-    debugPrint("پارٹی کا نام: ${partyNameController.text}");
-    debugPrint("واٹس ایپ: ${whatsappController.text}");
-    debugPrint("تاریخ: ${dateController.text}");
-    debugPrint("فائنل کل رقم: $finalPayableAmount");
-    debugPrint("کیش رقم: $cashAmount");
-    debugPrint("منتخب بینک: $selectedBankSource");
-    debugPrint("بینک رقم: $bankAmount");
+  void saveData(BuildContext context) {
+    // 1. پارٹی کے نام کی ویلیڈیشن
+    if (partyNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('براہ کرم پارٹی کا نام درج کریں!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    // 2. بینک سلیکشن ویلیڈیشن (اگر بینک رقم دی ہے تو بینک لازمی سلیکٹ ہونا چاہیے)
+    if (bankAmount > 0 && (selectedBankSource == null || selectedBankSource!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('خراب ان پٹ: براہ کرم بینک کی رقم کٹنے کے لیے پہلے متعلقہ بینک منتخب کریں!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 3. کیش ان ہینڈ بیلنس چیک اور کٹوتی
+    if (cashAmount > 0) {
+      double currentCash = dashboardController.cashInHand; // فرض کریں ڈیش بورڈ میں cashInHand موجود ہے
+      if (currentCash >= cashAmount) {
+        dashboardController.cashInHand = currentCash - cashAmount;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('كیش ان ہینڈ میں ناکافی رقم ہے! (موجودہ: Rs $currentCash)'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    // 4. بینک بیلنس چیک اور کٹوتی
+    if (bankAmount > 0 && selectedBankSource != null) {
+      if (dashboardController.bankBalances.containsKey(selectedBankSource)) {
+        double currentBankBal = dashboardController.bankBalances[selectedBankSource] ?? 0;
+        
+        if (currentBankBal >= bankAmount) {
+          dashboardController.bankBalances[selectedBankSource!] = currentBankBal - bankAmount;
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('منتخب کردہ بینک ($selectedBankSource) میں اتنی رقم موجود نہیں ہے! (موجودہ: Rs $currentBankBal)'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+      }
+    }
+
+    // ڈیش بورڈ کو ریفریش کرنا تاکہ کیش اور بینک دونوں کے لائیو بیلنس اپ ڈیٹ ہو جائیں
+    dashboardController.notifyListeners();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('انوائس محفوظ ہو گئی اور کیش و بینک سے رقم کاٹ دی گئی!'), backgroundColor: Colors.green),
+    );
+
+    _resetForm();
+  }
+
+  void _resetForm() {
+    partyNameController.clear();
+    whatsappController.clear();
+    discountController.clear();
+    cashAmount = 0;
+    bankAmount = 0;
+    // نوٹ: selectedBankSource کو کلیر نہیں کیا تاکہ آخری یوزڈ بینک سلیکٹڈ رہے
+    
+    itemsList = [
+      {
+        'model': TextEditingController(),
+        'imei': TextEditingController(),
+        'color': TextEditingController(),
+        'qty': TextEditingController(text: '1'),
+        'purchasePrice': TextEditingController(),
+        'salePrice': TextEditingController(),
+      }
+    ];
+    
+    _attachItemListeners();
+    _calculateTotals();
     notifyListeners();
   }
 
