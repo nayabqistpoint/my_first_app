@@ -291,6 +291,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
               ),
               const SizedBox(height: 10),
 
+              // یہاں سورس سلیکٹر جڑ گیا ہے جو کنٹرولر کو ڈیٹا بھیج رہا ہے
               SourceSelecter(
                 onSplitPaymentChanged: (bankSource, cashAmount, bankAmount) {
                   salePurchaseController.setSplitPayment(bankSource, cashAmount, bankAmount);
