@@ -26,8 +26,9 @@ class SalePurchaseController extends ChangeNotifier {
   double grandTotal = 0;
   double finalPayableAmount = 0;
 
+  // سورس سلیکٹر سے آنے والی ویلیوز کو محفوظ کرنے کے لیے ویری ایبلز
+  String? selectedBankSource;
   double cashAmount = 0;
-  String? selectedBank;
   double bankAmount = 0;
 
   SalePurchaseController() {
@@ -103,15 +104,23 @@ class SalePurchaseController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setSplitPayment(String? bank, double cash, double bankAmt) {
-    selectedBank = bank;
-    cashAmount = cash;
+  // سورس سلیکٹر کا ڈیٹا یہاں فیچ ہو کر سیو ہو رہا ہے
+  void setSplitPayment(String? bankSource, double cashAmt, double bankAmt) {
+    selectedBankSource = bankSource;
+    cashAmount = cashAmt;
     bankAmount = bankAmt;
     notifyListeners();
   }
 
   void saveData() {
-    debugPrint("ڈیٹا محفوظ ہو رہا ہے... فائنل اماؤنٹ: $finalPayableAmount");
+    debugPrint("--- انوائس ڈیٹا محفوظ ہو رہا ہے ---");
+    debugPrint("پارٹی کا نام: ${partyNameController.text}");
+    debugPrint("واٹس ایپ: ${whatsappController.text}");
+    debugPrint("تاریخ: ${dateController.text}");
+    debugPrint("فائنل کل رقم: $finalPayableAmount");
+    debugPrint("کیش رقم: $cashAmount");
+    debugPrint("منتخب بینک: $selectedBankSource");
+    debugPrint("بینک رقم: $bankAmount");
     notifyListeners();
   }
 
