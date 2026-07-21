@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-// یہ پاتھ درست ہے: ایک بار ../ سے lib فولڈر میں اور پھر مین فائل تک
 import '../../installment_calculater_page.dart'; 
+import '../transaction_forms/sale_purchase.dart';
 
 class BottomSection extends StatelessWidget {
   const BottomSection({super.key});
@@ -21,14 +21,22 @@ class BottomSection extends StatelessWidget {
                   context,
                   MaterialPageRoute(builder: (context) => const InstallmentCalculaterPage()),
                 );
-              }
+              },
             ),
           ),
           const SizedBox(width: 15),
           Expanded(
-            child: _buildFilledButton(context, "خرید و فروخت", Colors.green, () {
-              // یہاں دوسرے بٹن کا ایکشن آئے گا
-            }),
+            child: _buildFilledButton(
+              context, 
+              "خرید و فروخت", 
+              Colors.green, 
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SalePurchaseScreen()),
+                );
+              },
+            ),
           ),
         ],
       ),
