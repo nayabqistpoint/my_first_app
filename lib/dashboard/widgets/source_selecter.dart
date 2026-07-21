@@ -2,64 +2,145 @@ import 'package:flutter/material.dart';
 import '../controller.dart';
 
 class SourceSelecter extends StatefulWidget {
-  final Function(String selectedSource) onSourceChanged;
+  final Function(String? bankSource, double cashAmount, double bankAmount) onSplitPaymentChanged;
 
-  const SourceSelecter({super.key, required this.onSourceChanged});
+  const SourceSelecter({
+    super.key,
+    required this.onSplitPaymentChanged,
+  });
 
   @override
   State<SourceSelecter> createState() => _SourceSelecterState();
 }
 
 class _SourceSelecterState extends State<SourceSelecter> {
-  String? _selectedSource;
+  String? _selectedBankSource;
+
+  final TextEditingController _cashAmountController = TextEditingController(text: '0');
+  final TextEditingController _bankAmountController = TextEditingController(text: '0');
+
+  @override
+  void initState() {
+    super.initState();
+    _cashAmountController.addListener(_notifyChanges);
+    _bankAmountController.addListener(_notifyChanges);
+  }
+
+  void _notifyChanges() {
+    double cashAmt = double.tryParse(_cashAmountController.text) ?? 0;
+    double bankAmt = double.tryParse(_bankAmountController.text) ?? 0;
+    widget.onSplitPaymentChanged(_selectedBankSource, cashAmt, bankAmt);
+  }
+
+  @override
+  void dispose() {
+    _cashAmountController.dispose();
+    _bankAmountController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: dashboardController,
       builder: (context, child) {
-        // کنٹرولر سے کیش اور لائیو ایڈ شدہ بینکس کی لسٹ بنانا
-        // اگر کوئی بینک یا کیش نہ ہو تو کم از کم 'Cash in Hand' دکھائے گا تاکہ ڈراپ ڈاؤن خالی نہ رہے
-        final List<String> allSources = [
-          'Cash in Hand',
-          ...dashboardController.bankBalances.keys,
-        ];
+        // ڈیش بورڈ سے صرف لائیو بینکوں کی لسٹ
+        final List<String> bankSources = dashboardController.bankBalances.keys.toList();
 
-        if (_selectedSource == null || !allSources.contains(_selectedSource)) {
-          _selectedSource = allSources.first;
+        if (_selectedBankSource != null && !bankSources.contains(_selectedBankSource)) {
+          _selectedBankSource = null;
         }
 
-        return InputDecorator(
-          decoration: const InputDecoration(
-            labelText: "ادائیگی کا ذریعہ (Payment Source)",
-            border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.account_balance_wallet, color: Color(0xFFE53935)),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFFE53935), width: 2),
-            ),
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFE53935), width: 1.5),
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedSource,
-              isDense: true,
-              items: allSources.map((sourceName) {
-                return DropdownMenuItem<String>(
-                  value: sourceName,
-                  child: Text(
-                    sourceName,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "ادائیگی کے ذرائع (اسپلٹ پیمنٹ: کیش + بینک)",
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+              const SizedBox(height: 12),
+
+              // --- 1. کیش ان ہینڈ (فکسڈ نام اور رقم کا باکس - کوئی ڈراپ ڈاؤن نہیں) ---
+              Row(
+                children: [
+                  const Expanded(
+                    flex: 3,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        "Cash in Hand",
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black54),
+                      ),
+                    ),
                   ),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedSource = newValue;
-                });
-                if (newValue != null) {
-                  widget.onSourceChanged(newValue);
-                }
-              },
-            ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: _cashAmountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "کیش رقم",
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // --- 2. بینک سورس (بینک کی ڈراپ ڈاؤن + بینک کی رقم کا باکس) ---
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedBankSource,
+                      isDense: true,
+                      decoration: const InputDecoration(
+                        labelText: "بینک منتخب کریں",
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      ),
+                      hint: const Text('کوئی بینک نہیں', style: TextStyle(fontSize: 13)),
+                      items: bankSources.map((bank) {
+                        return DropdownMenuItem<String>(
+                          value: bank,
+                          child: Text(bank, style: const TextStyle(fontSize: 14)),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedBankSource = val;
+                        });
+                        _notifyChanges();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: _bankAmountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "بینک رقم",
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },
