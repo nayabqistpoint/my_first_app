@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
-import '../../dashboard/widgets/source_selecter.dart';
+import 'common_widgets/party_selector_widget.dart';
+import 'common_widgets/item_selector_row_widget.dart'; // ایڈ آئٹم ویجٹ کا امپورٹ
 
 class SalePurchaseForm extends StatefulWidget {
   const SalePurchaseForm({super.key});
@@ -10,338 +11,157 @@ class SalePurchaseForm extends StatefulWidget {
 }
 
 class _SalePurchaseFormState extends State<SalePurchaseForm> {
+  final TextEditingController _partyNameController = TextEditingController();
+  final TextEditingController _partyPhoneController = TextEditingController();
+
+  // عارضی کانٹیکٹس لسٹ
+  final List<Map<String, String>> _dummyContacts = const [
+    {'name': 'علی خان', 'phone': '03001234567'},
+    {'name': 'محمد احمد', 'phone': '03219876543'},
+    {'name': 'عمران حیدر', 'phone': '03335557788'},
+    {'name': 'بلال جنرل سٹور', 'phone': '03124445566'},
+  ];
+
+  // عارضی اسٹیٹ (آیا کوئی آئٹم ایڈ ہوا ہے یا نہیں)
+  bool _hasItems = false;
+  String _selectedItemName = '';
+  int _itemQty = 0;
+  double _itemSubTotal = 0.0;
+
+  @override
+  void dispose() {
+    _partyNameController.dispose();
+    _partyPhoneController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: salePurchaseController,
       builder: (context, child) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                decoration: BoxDecoration(
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ==========================================
+                // 1. ٹاپ ہیڈر (نایاب قسط پوائنٹ اور ٹوگل شیفٹر)
+                // ==========================================
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   color: const Color(0xFFE53935),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'خرید و فروخت (انواٹس بل)',
-                      style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              Center(
-                child: SegmentedButton<int>(
-                  segments: const [
-                    ButtonSegment<int>(
-                      value: 0,
-                      label: Text('صرف پرچیز', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                    ),
-                    ButtonSegment<int>(
-                      value: 1,
-                      label: Text('صرف سیل', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                    ),
-                    ButtonSegment<int>(
-                      value: 2,
-                      label: Text('پرچیز اینڈ سیل', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                  selected: {salePurchaseController.selectedMode},
-                  onSelectionChanged: (Set<int> newSelection) {
-                    salePurchaseController.setMode(newSelection.first);
-                  },
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Divider(thickness: 1.2),
-              const SizedBox(height: 8),
-
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: TextField(
-                      controller: salePurchaseController.partyNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'پارٹی کا نام *',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                        prefixIcon: Icon(Icons.person, size: 18, color: Color(0xFFE53935)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+                        onPressed: () => Navigator.of(context).pop(),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: TextField(
-                      controller: salePurchaseController.whatsappController,
-                      decoration: const InputDecoration(
-                        labelText: 'واٹس ایپ نمبر *',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                        prefixIcon: Icon(Icons.phone, size: 16, color: Color(0xFFE53935)),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              Row(
-                children: [
-                  SizedBox(
-                    width: 170,
-                    child: TextField(
-                      controller: salePurchaseController.dateController,
-                      decoration: InputDecoration(
-                        labelText: 'تاریخ',
-                        border: const OutlineInputBorder(),
-                        isDense: true,
-                        prefixIcon: IconButton(
-                          icon: const Icon(Icons.calendar_today, size: 18, color: Color(0xFFE53935)),
-                          onPressed: () => salePurchaseController.pickDate(context),
+                      const Text(
+                        'نایاب قسط پوائنٹ',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      readOnly: true,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: salePurchaseController.itemsList.length,
-                itemBuilder: (context, index) {
-                  var item = salePurchaseController.itemsList[index];
-                  double qty = double.tryParse(item['qty']?.text ?? '0') ?? 0;
-                  double price = double.tryParse(item['purchasePrice']?.text ?? '0') ?? 0;
-                  double subTotal = qty * price;
-
-                  return Card(
-                    elevation: 1,
-                    margin: const EdgeInsets.only(bottom: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '#${index + 1} آئٹم کی تفصیل',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFE53935)),
-                              ),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.shade50,
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: Colors.green.shade200),
-                                    ),
-                                    child: Text(
-                                      'سب ٹوٹل: Rs ${subTotal.toStringAsFixed(0)}',
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade800),
-                                    ),
-                                  ),
-                                  if (salePurchaseController.itemsList.length > 1) ...[
-                                    const SizedBox(width: 4),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                      onPressed: () => salePurchaseController.removeItemRow(index),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: TextField(
-                                  controller: item['model'],
-                                  decoration: const InputDecoration(labelText: 'موبائل ماڈل *', border: OutlineInputBorder(), isDense: true),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                flex: 2,
-                                child: TextField(
-                                  controller: item['imei'],
-                                  decoration: const InputDecoration(labelText: 'IMEI نمبر *', border: OutlineInputBorder(), isDense: true),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                flex: 1,
-                                child: TextField(
-                                  controller: item['color'],
-                                  decoration: const InputDecoration(labelText: 'کلر', border: OutlineInputBorder(), isDense: true),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: item['qty'],
-                                  decoration: const InputDecoration(labelText: 'تعداد', border: OutlineInputBorder(), isDense: true),
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: TextField(
-                                  controller: item['purchasePrice'],
-                                  decoration: const InputDecoration(labelText: 'خرید قیمت', border: OutlineInputBorder(), isDense: true),
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: TextField(
-                                  controller: item['salePrice'],
-                                  decoration: const InputDecoration(labelText: 'فروخت قیمت', border: OutlineInputBorder(), isDense: true),
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 4),
-              
-              SizedBox(
-                height: 36,
-                child: OutlinedButton.icon(
-                  onPressed: () => salePurchaseController.addItemRow(),
-                  icon: const Icon(Icons.add, size: 16, color: Color(0xFFE53935)),
-                  label: const Text('مزید آئٹم شامل کریں', style: TextStyle(fontSize: 12, color: Color(0xFFE53935))),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFE53935)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // ٹوٹلز اور مائینس ہونے والا بقیہ بیلنس باکس
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('گرانڈ ٹوٹل (خرید):', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        Text('Rs ${salePurchaseController.grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFE53935))),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        const Expanded(flex: 2, child: Text('رعایت (دکاندار کی طرف سے):', style: TextStyle(fontSize: 12))),
-                        Expanded(
-                          flex: 3,
-                          child: TextField(
-                            controller: salePurchaseController.discountController,
-                            decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true, prefixText: 'Rs '),
-                            keyboardType: TextInputType.number,
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: SegmentedButton<int>(
+                          segments: const [
+                            ButtonSegment<int>(
+                              value: 0,
+                              label: Text('خرید', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                            ),
+                            ButtonSegment<int>(
+                              value: 1,
+                              label: Text('فروخت', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                          selected: {salePurchaseController.selectedMode == 1 ? 1 : 0},
+                          onSelectionChanged: (Set<int> newSelection) {
+                            salePurchaseController.setMode(newSelection.first);
+                          },
+                          style: ButtonStyle(
+                            backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                              if (states.contains(WidgetState.selected)) {
+                                return Colors.white;
+                              }
+                              return Colors.transparent;
+                            }),
+                            foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                              if (states.contains(WidgetState.selected)) {
+                                return const Color(0xFFE53935);
+                              }
+                              return Colors.white;
+                            }),
+                            visualDensity: VisualDensity.compact,
                           ),
                         ),
-                      ],
-                    ),
-                    const Divider(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('فائنل ادائیگی کل رقم:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                        Text('Rs ${salePurchaseController.finalPayableAmount.toStringAsFixed(0)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFFE53935))),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    // یہاں اب کیش اور بینک مائینس ہو کر ریمیننگ بیلنس شو ہوگا
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('بقیہ واجب الادا (Remaining):', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-                        Text('Rs ${salePurchaseController.remainingBalance.toStringAsFixed(0)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue)),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
 
-              SourceSelecter(
-                onSplitPaymentChanged: (bankSource, cashAmount, bankAmount) {
-                  salePurchaseController.setSplitPayment(bankSource, cashAmount, bankAmount);
-                },
-              ),
-              const SizedBox(height: 14),
+                // 2. فارم کا باڈی حصہ
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 10),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 42,
-                      child: ElevatedButton.icon(
-                        onPressed: () => salePurchaseController.saveData(context),
-                        icon: const Icon(Icons.share, color: Colors.white, size: 16),
-                        label: const Text('محفوظ اور شیئر', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        // ==========================================
+                        // پارٹی سلیکٹر ویجٹ
+                        // ==========================================
+                        PartySelectorWidget(
+                          nameController: _partyNameController,
+                          phoneController: _partyPhoneController,
+                          invoiceNo: 'INV-001',
+                          currentDate: '22-07-2026',
+                          currentTime: '11:55 PM',
+                          phoneContacts: _dummyContacts,
+                          onNewPartyAdded: (name, phone) {
+                            // نئی پارٹی ایڈ کرنے کی لاجک
+                          },
                         ),
-                      ),
+
+                        const SizedBox(height: 12),
+
+                        // ==========================================
+                        // ایڈ آئٹم رو ویجٹ (پارٹی سلیکٹر کے بالکل نیچے)
+                        // ==========================================
+                        ItemSelectorRowWidget(
+                          hasItems: _hasItems,
+                          itemName: _selectedItemName,
+                          totalQty: _itemQty,
+                          subTotal: _itemSubTotal,
+                          onTap: () {
+                            // یہاں آئٹم سلیکشن ونڈو پر جانے کا کوڈ آئے گا
+                            // فی الحال چیک کرنے کے لیے ہم اسے ٹیسٹ ڈیٹا سے بھر سکتے ہیں
+                            setState(() {
+                              _hasItems = true;
+                              _selectedItemName = 'Samsung Galaxy A54';
+                              _itemQty = 1;
+                              _itemSubTotal = 75000.0;
+                            });
+                          },
+                        ),
+
+                        const SizedBox(height: 20),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SizedBox(
-                      height: 42,
-                      child: ElevatedButton.icon(
-                        onPressed: () => salePurchaseController.saveData(context),
-                        icon: const Icon(Icons.save, color: Colors.white, size: 16),
-                        label: const Text('محفوظ کریں', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE53935),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         );
       },

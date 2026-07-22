@@ -33,35 +33,10 @@ class BottomSection extends StatelessWidget {
               "خرید و فروخت", 
               Colors.green, 
               () {
-                // یہاں خرید و فروخت کا ڈائیلاگ پاپ اپ بالکل درست طریقے سے کھل جائے گا
-                showDialog(
-                  context: context,
-                  builder: (context) => Dialog(
-                    insetPadding: const EdgeInsets.all(10),
-                    child: Container(
-                      width: MediaQuery.of(context).size.width * 0.9,
-                      height: MediaQuery.of(context).size.height * 0.9,
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.close, color: Color(0xFFE53935)),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ],
-                          ),
-                          const Expanded(
-                            child: SingleChildScrollView(
-                              child: SalePurchaseForm(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                // اب یہ قسط کیلکولیٹر کی طرح بالکل فل سکرین پیج کے طور پر کھلے گا
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SalePurchaseForm()),
                 );
               },
             ),
