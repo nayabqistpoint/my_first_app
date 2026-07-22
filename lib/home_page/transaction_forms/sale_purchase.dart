@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
-import 'common_widgets/party_selector_widget.dart';
-import 'common_widgets/item_selector_row_widget.dart'; // ایڈ آئٹم ویجٹ کا امپورٹ
+import 'common/party_selector_widget.dart';
+import 'common/item_selector_row_widget.dart';
 
 class SalePurchaseForm extends StatefulWidget {
   const SalePurchaseForm({super.key});
@@ -14,7 +14,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
   final TextEditingController _partyNameController = TextEditingController();
   final TextEditingController _partyPhoneController = TextEditingController();
 
-  // عارضی کانٹیکٹس لسٹ
   final List<Map<String, String>> _dummyContacts = const [
     {'name': 'علی خان', 'phone': '03001234567'},
     {'name': 'محمد احمد', 'phone': '03219876543'},
@@ -22,7 +21,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     {'name': 'بلال جنرل سٹور', 'phone': '03124445566'},
   ];
 
-  // عارضی اسٹیٹ (آیا کوئی آئٹم ایڈ ہوا ہے یا نہیں)
   bool _hasItems = false;
   String _selectedItemName = '';
   int _itemQty = 0;
@@ -46,9 +44,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ==========================================
-                // 1. ٹاپ ہیڈر (نایاب قسط پوائنٹ اور ٹوگل شیفٹر)
-                // ==========================================
+                // ٹاپ ہیڈر
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   color: const Color(0xFFE53935),
@@ -109,7 +105,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                   ),
                 ),
 
-                // 2. فارم کا باڈی حصہ
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(12.0),
@@ -118,34 +113,25 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                       children: [
                         const SizedBox(height: 10),
 
-                        // ==========================================
-                        // پارٹی سلیکٹر ویجٹ
-                        // ==========================================
                         PartySelectorWidget(
                           nameController: _partyNameController,
                           phoneController: _partyPhoneController,
                           invoiceNo: 'INV-001',
-                          currentDate: '22-07-2026',
-                          currentTime: '11:55 PM',
+                          currentDate: '23-07-2026',
+                          currentTime: '1:36 AM',
                           phoneContacts: _dummyContacts,
-                          onNewPartyAdded: (name, phone) {
-                            // نئی پارٹی ایڈ کرنے کی لاجک
-                          },
+                          onNewPartyAdded: (name, phone) {},
                         ),
 
                         const SizedBox(height: 12),
 
-                        // ==========================================
-                        // ایڈ آئٹم رو ویجٹ (پارٹی سلیکٹر کے بالکل نیچے)
-                        // ==========================================
                         ItemSelectorRowWidget(
                           hasItems: _hasItems,
                           itemName: _selectedItemName,
                           totalQty: _itemQty,
                           subTotal: _itemSubTotal,
                           onTap: () {
-                            // یہاں آئٹم سلیکشن ونڈو پر جانے کا کوڈ آئے گا
-                            // فی الحال چیک کرنے کے لیے ہم اسے ٹیسٹ ڈیٹا سے بھر سکتے ہیں
+                            // فی الحال ٹیسٹ کے لیے ڈمی ڈیٹا، جب آپ چاہیں گے تو الگ فارম لگالیں گے
                             setState(() {
                               _hasItems = true;
                               _selectedItemName = 'Samsung Galaxy A54';
@@ -153,6 +139,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                               _itemSubTotal = 75000.0;
                             });
                           },
+                          onScanTap: () {},
                         ),
 
                         const SizedBox(height: 20),
