@@ -6,6 +6,7 @@ import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
 import 'common/discount_widget.dart';
 import 'common/transaction_summary_widget.dart';
+import 'common/sale_purchase_toggle_widget.dart';
 import '../../dashboard/widgets/source_selecter.dart';
 
 class SalePurchaseForm extends StatefulWidget {
@@ -167,7 +168,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   color: const Color(0xFFE53935),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
                         constraints: const BoxConstraints(),
@@ -175,54 +175,22 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                         icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-                      const Text(
-                        'نایاب قسط پوائنٹ',
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      // --- یہاں ٹوگل کے سائز کو فکس اور بالکل بیلنس کیا گیا ہے ---
-                      SizedBox(
-                        height: 32,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: SegmentedButton<int>(
-                            segments: const [
-                              ButtonSegment<int>(
-                                value: 0, 
-                                label: Text('خرید', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))
-                              ),
-                              ButtonSegment<int>(
-                                value: 1, 
-                                label: Text('فروخت', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))
-                              ),
-                            ],
-                            selected: {salePurchaseController.selectedMode},
-                            onSelectionChanged: (Set<int> newSelection) {
-                              int selectedVal = newSelection.first;
-                              salePurchaseController.setMode(selectedVal);
-
-                              if (selectedVal == 1) {
-                                _navigateToSalePageSmoothly();
-                              }
-                            },
-                            style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
-                                if (states.contains(WidgetState.selected)) return Colors.white;
-                                return Colors.transparent;
-                              }),
-                              foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
-                                if (states.contains(WidgetState.selected)) return const Color(0xFFE53935);
-                                return Colors.white;
-                              }),
-                              padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 10, vertical: 0)),
-                              visualDensity: VisualDensity.compact,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'نایاب قسط پوائنٹ',
+                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
+                      // خوبصورت ٹوگل وجٹ
+                      SalePurchaseToggleWidget(
+                        isSaleSelected: false,
+                        onPurchaseTap: () {},
+                        onSaleTap: () {
+                          salePurchaseController.setMode(1);
+                          _navigateToSalePageSmoothly();
+                        },
                       ),
                     ],
                   ),
@@ -258,6 +226,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                               final item = itemList[index];
                               final isLastItem = (index == itemList.length - 1);
                               final qty = item['qty'] as int;
+                              // پرچیز موڈ میں خرید قیمت دکھائیں گے اور سیل موڈ میں سیل قیمت
                               final unitPrice = isPurchaseMode 
                                   ? (item['purchasePrice'] as double) 
                                   : (item['salePrice'] as double);

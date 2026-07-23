@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'item_detail_widget.dart';
 
 class ItemSelectorRowWidget extends StatelessWidget {
   final bool hasItems;
@@ -30,28 +29,8 @@ class ItemSelectorRowWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!hasItems) {
-      // جب کوئی آئٹم شامل نہ ہو (شروع کی حالت)
       return InkWell(
-        onTap: onTap ?? () {
-          // براہ راست یہیں سے آئٹم ڈیٹیل پیج یا پاپ اپ کھولیں
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ItemDetailWidget(
-                initialModel: '',
-                initialQty: 1,
-                initialPurchasePrice: 0.0,
-                initialSalePrice: 0.0,
-                initialDescription: '',
-                initialImei: '',
-                initialCategory: 'موبائل فون (Mobile Phone)',
-                onItemSaved: (model, qty, purchasePrice, salePrice, desc, imei, category) {
-                  // یہاں ڈیٹا سیو ہونے کا پروسیس آئے گا
-                },
-              ),
-            ),
-          );
-        },
+        onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
@@ -66,7 +45,7 @@ class ItemSelectorRowWidget extends StatelessWidget {
               Icon(Icons.add_circle_outline, color: Color(0xFFE53935), size: 20),
               SizedBox(width: 8),
               Text(
-                'آئٹم شامل کریں (Item Add करें)',
+                'آئٹم شامل کریں (Item Add کریں)',
                 style: TextStyle(
                   color: Color(0xFFE53935),
                   fontWeight: FontWeight.bold,
@@ -78,7 +57,6 @@ class ItemSelectorRowWidget extends StatelessWidget {
         ),
       );
     } else {
-      // جب آئٹم لسٹ میں موجود ہو
       return Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -141,7 +119,7 @@ class ItemSelectorRowWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'تعداد: $totalQty x قیمت: $unitPrice',
+                  'تعداد: $totalQty x قیمت: ${unitPrice?.toStringAsFixed(0) ?? '0'}',
                   style: const TextStyle(fontSize: 13, color: Colors.black54),
                 ),
                 Row(
