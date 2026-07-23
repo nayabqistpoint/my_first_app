@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
+import 'sale_page.dart'; // یہاں نیا سیل پیج امپورٹ کر دیا گیا ہے
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
@@ -120,6 +121,12 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
 
     salePurchaseController.shiftToSaveAndSellMode();
 
+    // --- یہاں سیل پیج کو لنک اور اوپن کر دیا گیا ہے ---
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SalePage()),
+    );
+
     setState(() {
       _partyNameController.clear();
       _partyPhoneController.clear();
@@ -128,7 +135,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('انٹری سیو ہو گئی اور موڈ فروخت پر شفٹ ہو گیا!')),
+      const SnackBar(content: Text('انٹری سیو ہو گئی اور سیل پیج کھل گیا!')),
     );
   }
 
