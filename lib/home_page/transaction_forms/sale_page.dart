@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'sale_purchase_controller.dart';
 import 'sale_purchase.dart';
-import 'sale_purchase_controller.dart'; // کنٹرولر کی فائل کو امپورٹ کریں
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
 import 'common/discount_widget.dart';
 import 'common/transaction_summary_widget.dart';
-import 'package:my_first_app/dashboard/widgets/source_selecter.dart';
+import 'common/sale_purchase_toggle_widget.dart';
+import '../../dashboard/widgets/source_selecter.dart';
 
 class SalePage extends StatefulWidget {
   const SalePage({super.key});
@@ -21,6 +22,10 @@ class _SalePageState extends State<SalePage> {
   final TextEditingController _receivedController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
+  String? _selectedBankSource;
+  double _cashAmount = 0.0;
+  double _bankAmount = 0.0;
+
   final List<Map<String, String>> _dummyContacts = const [
     {'name': 'علی خان', 'phone': '03001234567'},
     {'name': 'محمد احمد', 'phone': '03219876543'},
@@ -31,13 +36,11 @@ class _SalePageState extends State<SalePage> {
   @override
   void initState() {
     super.initState();
-    // 🔴 نوٹ: یہاں سے `setMode(1)` ہٹا دیا گیا ہے کیونکہ `shiftToSaveAndSellMode` 
-    // پہلے ہی موڈ اور ڈیٹا سیٹ کر کے لایا ہے، دوبارہ سیٹ کرنے سے ڈیٹا اڑ رہا تھا۔
+    _receivedController.addListener(_onReceivedAmountChanged);
+  }
 
-    // یوزر جب وصولی والے خانے میں رقم لکھے تو سکرین فورا اپ ڈیٹ ہو
-    _receivedController.addListener(() {
-      setState(() {});
-    });
+  void _onReceivedAmountChanged() {
+    setState(() {});
   }
 
   @override
@@ -49,21 +52,10 @@ class _SalePageState extends State<SalePage> {
     super.dispose();
   }
 
-  // خرید والے پیج کی طرز پر effective amount معلوم کرنے کا فنکشن
-  double get _effectiveAmountForSource {
-    if (_receivedController.text.isNotEmpty) {
-      double? val = double.tryParse(_receivedController.text);
-      if (val != null) {
-        return val;
-      }
-    }
-    return salePurchaseController.grandTotal;
-  }
-
   void _openItemDetail({int? editIndex}) {
     final isEditing = editIndex != null;
-    final currentList = salePurchaseController.itemList;
-    final item = isEditing ? currentList[editIndex] : null;
+    final itemList = salePurchaseController.itemList;
+    final item = isEditing ? itemList[editIndex] : null;
 
     Navigator.push(
       context,
@@ -77,7 +69,6 @@ class _SalePageState extends State<SalePage> {
           initialImei: isEditing ? item!['imei'] : '',
           initialCategory: isEditing ? item!['category'] : 'موبائل فون (Mobile Phone)',
           onItemSaved: (model, qty, purchasePrice, salePrice, desc, imei, category) {
-            // براہ راست کنٹرولر کے اندر سیو کریں تاکہ ڈیٹا محفوظ رہے
             salePurchaseController.saveItem(
               editIndex: editIndex,
               model: model,
@@ -94,23 +85,48 @@ class _SalePageState extends State<SalePage> {
     );
   }
 
-  void _switchToPurchase() {
-    // خرید موڈ میں جانے سے پہلے کنٹرولر کا موڈ 0 कर दें
-    salePurchaseController.setMode(0);
-    Navigator.pushAndRemoveUntil(
+  void _onSaveAndSharePressed() {
+    bool success = salePurchaseController.completeTransaction(
+      bankSource: _selectedBankSource,
+      cashAmount: _cashAmount,
+      bankAmount: _bankAmount,
+    );
+
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('کم از کم ایک آئٹم شامل کرنا ضروری ہے')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('سیل انٹری کامیابی سے محفوظ اور شیئر کر دی گئی ہے')),
+    );
+
+    Navigator.pop(context);
+  }
+
+  void _navigateToPurchasePageSmoothly() {
+    Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const SalePurchaseForm()),
-      (route) => false,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const SalePurchaseForm(),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // AnimatedBuilder کے ذریعے کنٹرولر کو سنیں تاکہ ڈیٹا بدلنے پر سکرین فورا اپ ڈیٹ ہو
-    return AnimatedBuilder(
-      animation: salePurchaseController,
+    return ListenableBuilder(
+      listenable: salePurchaseController,
       builder: (context, child) {
-        final saleItems = salePurchaseController.itemList;
+        final itemList = salePurchaseController.itemList;
+        final isPurchaseMode = salePurchaseController.selectedMode == 0;
+        final grandTotal = salePurchaseController.grandTotal;
+
+        double currentReceivedAmount = double.tryParse(_receivedController.text) ?? 0.0;
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -119,7 +135,7 @@ class _SalePageState extends State<SalePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   color: const Color(0xFFE53935),
                   child: Row(
                     children: [
@@ -127,53 +143,27 @@ class _SalePageState extends State<SalePage> {
                         constraints: const BoxConstraints(),
                         padding: EdgeInsets.zero,
                         icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () {
+                          // 🔴 بیک جاتے وقت موڈ کو واپس خرید (0) پر سیٹ کریں تاکہ قیمتیں درست رہیں
+                          salePurchaseController.setMode(0);
+                          Navigator.of(context).pop();
+                        },
                       ),
                       const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
-                          'نایاب قسط پوائنٹ',
+                          'نایاب قسط پوائنٹ - فروخت',
                           style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Container(
-                        height: 34,
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            InkWell(
-                              onTap: _switchToPurchase,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.transparent,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Text(
-                                  'خرید',
-                                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: const Text(
-                                'فروخت',
-                                style: TextStyle(color: Color(0xFFE53935), fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                        ),
+                      SalePurchaseToggleWidget(
+                        isSaleSelected: true,
+                        onPurchaseTap: () {
+                          salePurchaseController.setMode(0);
+                          _navigateToPurchasePageSmoothly();
+                        },
+                        onSaleTap: () {},
                       ),
                     ],
                   ),
@@ -190,12 +180,12 @@ class _SalePageState extends State<SalePage> {
                           phoneController: _partyPhoneController,
                           invoiceNo: 'INV-002',
                           currentDate: '23-07-2026',
-                          currentTime: '10:05 PM',
+                          currentTime: '4:37 AM',
                           phoneContacts: _dummyContacts,
                           onNewPartyAdded: (name, phone) {},
                         ),
                         const SizedBox(height: 12),
-                        if (saleItems.isEmpty)
+                        if (itemList.isEmpty)
                           ItemSelectorRowWidget(
                             hasItems: false,
                             onTap: () => _openItemDetail(),
@@ -204,12 +194,14 @@ class _SalePageState extends State<SalePage> {
                           ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            itemCount: saleItems.length,
+                            itemCount: itemList.length,
                             itemBuilder: (context, index) {
-                              final item = saleItems[index];
-                              final isLastItem = (index == saleItems.length - 1);
+                              final item = itemList[index];
+                              final isLastItem = (index == itemList.length - 1);
                               final qty = item['qty'] as int;
-                              final unitPrice = item['salePrice'] as double;
+                              final unitPrice = isPurchaseMode 
+                                  ? (item['purchasePrice'] as double) 
+                                  : (item['salePrice'] as double);
 
                               final colorDesc = item['desc'] ?? '';
                               final imeiText = (item['imei'] != null && item['imei'].toString().isNotEmpty) 
@@ -233,7 +225,7 @@ class _SalePageState extends State<SalePage> {
                               );
                             },
                           ),
-                        if (saleItems.isNotEmpty) ...[
+                        if (itemList.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           DiscountWidget(
                             onDiscountChanged: (value, isPercentage) {
@@ -244,35 +236,37 @@ class _SalePageState extends State<SalePage> {
                           TransactionSummaryWidget(
                             subTotal: salePurchaseController.subTotal,
                             discountAmount: salePurchaseController.discountAmount,
-                            grandTotal: salePurchaseController.grandTotal,
+                            grandTotal: grandTotal,
                             receivedController: _receivedController,
                             descriptionController: _descriptionController,
                             onAddPhotoPressed: () {},
                           ),
                           const SizedBox(height: 12),
                           SourceSelecter(
-                            defaultAmount: _effectiveAmountForSource,
-                            onSplitPaymentChanged: (primaryBankSource, totalCash, totalBank, detailedSplits) {},
+                            defaultAmount: currentReceivedAmount,
+                            onSplitPaymentChanged: (primaryBankSource, totalCash, totalBank, detailedSplits) {
+                              setState(() {
+                                _selectedBankSource = primaryBankSource;
+                                _cashAmount = totalCash;
+                                _bankAmount = totalBank;
+                              });
+                            },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 20),
                           SizedBox(
                             width: double.infinity,
-                            height: 48,
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFE53935),
                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
-                              onPressed: () {
-                                Navigator.pop(context);
-                              },
-                              icon: const Icon(Icons.share, size: 20),
+                              onPressed: _onSaveAndSharePressed,
+                              icon: const Icon(Icons.check_circle, size: 18),
                               label: const Text(
-                                'محفوظ کریں اور شیئر کریں',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                "سیل مکمل کریں اور محفوظ کریں",
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
