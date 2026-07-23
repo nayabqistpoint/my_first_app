@@ -17,39 +17,48 @@ class SourceSelecter extends StatefulWidget {
 
 class _SourceSelecterState extends State<SourceSelecter> {
   bool _isSplitMode = false;
+  
+  String _selectedSourceType = 'Cash in Hand'; 
   String? _selectedBankSource;
 
-  late final TextEditingController _cashAmountController;
+  late final TextEditingController _amountController;
   final TextEditingController _bankAmountController = TextEditingController(text: '0');
 
   @override
   void initState() {
     super.initState();
-    // بائی ڈیفالٹ ساری رقم کیش ان ہینڈ میں آ جائے گی
-    _cashAmountController = TextEditingController(text: widget.defaultAmount.toStringAsFixed(0));
+    _amountController = TextEditingController(text: widget.defaultAmount.toStringAsFixed(0));
     
-    _cashAmountController.addListener(_notifyChanges);
+    _amountController.addListener(_notifyChanges);
     _bankAmountController.addListener(_notifyChanges);
   }
 
   @override
   void didUpdateWidget(covariant SourceSelecter oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // اگر باہر سے گرینڈ ٹوٹل تبدیل ہو اور سپلٹ موڈ آن نہ ہو، تو کیش خود بخود اپ ڈیٹ ہو جائے
     if (!_isSplitMode && widget.defaultAmount != oldWidget.defaultAmount) {
-      _cashAmountController.text = widget.defaultAmount.toStringAsFixed(0);
+      _amountController.text = widget.defaultAmount.toStringAsFixed(0);
     }
   }
 
   void _notifyChanges() {
-    double cashAmt = double.tryParse(_cashAmountController.text) ?? 0;
-    double bankAmt = _isSplitMode ? (double.tryParse(_bankAmountController.text) ?? 0) : 0;
-    widget.onSplitPaymentChanged(_isSplitMode ? _selectedBankSource : null, cashAmt, bankAmt);
+    double amt1 = double.tryParse(_amountController.text) ?? 0;
+    double amt2 = _isSplitMode ? (double.tryParse(_bankAmountController.text) ?? 0) : 0;
+
+    if (!_isSplitMode) {
+      if (_selectedSourceType == 'Cash in Hand') {
+        widget.onSplitPaymentChanged(null, amt1, 0);
+      } else {
+        widget.onSplitPaymentChanged(_selectedSourceType, amt1, 0);
+      }
+    } else {
+      widget.onSplitPaymentChanged(_selectedBankSource, amt1, amt2);
+    }
   }
 
   @override
   void dispose() {
-    _cashAmountController.dispose();
+    _amountController.dispose();
     _bankAmountController.dispose();
     super.dispose();
   }
@@ -60,8 +69,12 @@ class _SourceSelecterState extends State<SourceSelecter> {
       listenable: dashboardController,
       builder: (context, child) {
         final List<String> bankSources = dashboardController.bankBalances.keys.toList();
+        final List<String> allSources = ['Cash in Hand', ...bankSources];
 
-        if (_selectedBankSource != null && !bankSources.contains(_selectedBankSource)) {
+        if (!_isSplitMode && !allSources.contains(_selectedSourceType)) {
+          _selectedSourceType = 'Cash in Hand';
+        }
+        if (_isSplitMode && _selectedBankSource != null && !bankSources.contains(_selectedBankSource)) {
           _selectedBankSource = null;
         }
 
@@ -75,6 +88,7 @@ class _SourceSelecterState extends State<SourceSelecter> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // اوپر والی لائن: عنوان اور دوسرا سورس (پلس بٹن)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -82,59 +96,76 @@ class _SourceSelecterState extends State<SourceSelecter> {
                     "ادائیگی کا ذریعہ (Payment Source)",
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
-                  if (!(_isSplitMode && bankSources.isEmpty))
-                    TextButton.icon(
-                      onPressed: () {
-                        if (bankSources.isEmpty && !_isSplitMode) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('پہلے ڈیش بورڈ سے کوئی بینک ایڈ کریں')),
-                          );
-                          return;
+                  TextButton.icon(
+                    onPressed: () {
+                      if (bankSources.isEmpty && !_isSplitMode) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('پہلے ڈیش بورڈ سے کوئی بینک ایڈ کریں')),
+                        );
+                        return;
+                      }
+                      setState(() {
+                        _isSplitMode = !_isSplitMode;
+                        if (!_isSplitMode) {
+                          _selectedBankSource = null;
+                          _bankAmountController.text = '0';
+                          _amountController.text = widget.defaultAmount.toStringAsFixed(0);
+                        } else {
+                          _selectedSourceType = 'Cash in Hand';
+                          _amountController.text = widget.defaultAmount.toStringAsFixed(0);
+                          _bankAmountController.text = '0';
                         }
-                        setState(() {
-                          _isSplitMode = !_isSplitMode;
-                          if (!_isSplitMode) {
-                            _selectedBankSource = null;
-                            _bankAmountController.text = '0';
-                            _cashAmountController.text = widget.defaultAmount.toStringAsFixed(0);
-                          } else {
-                            _cashAmountController.text = widget.defaultAmount.toStringAsFixed(0);
-                            _bankAmountController.text = '0';
-                          }
-                        });
-                        _notifyChanges();
-                      },
-                      icon: Icon(_isSplitMode ? Icons.remove : Icons.add, size: 16, color: const Color(0xFFE53935)),
-                      label: Text(
-                        _isSplitMode ? "سنگل کیش پر آئें" : "+ دوسرا سورس (بینک) شامل کریں",
-                        style: const TextStyle(fontSize: 12, color: Color(0xFFE53935)),
-                      ),
+                      });
+                      _notifyChanges();
+                    },
+                    icon: Icon(_isSplitMode ? Icons.remove : Icons.add, size: 16, color: const Color(0xFFE53935)),
+                    label: Text(
+                      _isSplitMode ? "سنگل سورس پر آئें" : "+ دوسرا سورس",
+                      style: const TextStyle(fontSize: 12, color: Color(0xFFE53935)),
                     ),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
 
-              // --- ہمیشہ ظاہر ہونے والا کیش والا خانہ ---
+              // --- پہلا سورس (ڈراپ ڈاؤن + رقم) ---
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     flex: 3,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: Text(
-                        "Cash in Hand",
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54),
+                    child: DropdownButtonFormField<String>(
+                      // یہاں ڈپیکیٹ 'value' کی جگہ 'initialValue' استعمال کیا گیا ہے
+                      initialValue: _isSplitMode ? 'Cash in Hand' : _selectedSourceType,
+                      isDense: true,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                        isDense: true,
                       ),
+                      items: (_isSplitMode ? ['Cash in Hand'] : allSources).map((source) {
+                        return DropdownMenuItem<String>(
+                          value: source,
+                          child: Text(source, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                        );
+                      }).toList(),
+                      onChanged: _isSplitMode ? null : (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedSourceType = val;
+                          });
+                          _notifyChanges();
+                        }
+                      },
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     flex: 2,
                     child: TextField(
-                      controller: _cashAmountController,
+                      controller: _amountController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: "کیش رقم",
+                        labelText: "رقم",
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),
@@ -143,7 +174,7 @@ class _SourceSelecterState extends State<SourceSelecter> {
                 ],
               ),
 
-              // --- صرف اسپلٹ موڈ آن ہونے پر بینک کا خانہ ظاہر ہوگا ---
+              // --- اگر سپلٹ موڈ آن ہو تو دوسرا بینک سورس ظاہر ہوگا ---
               if (_isSplitMode) ...[
                 const SizedBox(height: 12),
                 Row(
@@ -151,10 +182,11 @@ class _SourceSelecterState extends State<SourceSelecter> {
                     Expanded(
                       flex: 3,
                       child: DropdownButtonFormField<String>(
-                        initialValue: _selectedBankSource, // یہاں 'value' کو 'initialValue' سے بدل دیا گیا ہے
+                        // یہاں بھی 'value' کی جگہ 'initialValue' کر دیا گیا ہے
+                        initialValue: _selectedBankSource,
                         isDense: true,
                         decoration: const InputDecoration(
-                          labelText: "بینک منتخب کریں",
+                          labelText: "دوسرا بینک منتخب کریں",
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                         ),
