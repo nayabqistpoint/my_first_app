@@ -5,7 +5,7 @@ import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
 import 'common/discount_widget.dart';
 import 'common/transaction_summary_widget.dart';
-import '../../dashboard/widgets/source_selecter.dart'; // سورس سلیکٹر کا درست پاتھ
+import '../../dashboard/widgets/source_selecter.dart';
 
 class SalePurchaseForm extends StatefulWidget {
   const SalePurchaseForm({super.key});
@@ -20,7 +20,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
   final TextEditingController _receivedController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
-  // پیمنٹ سورس کے عارضی ویری ایبلز جو صرف یوزر ان پٹ ہولڈ کریں گے
   String? _selectedBankSource;
   double _cashAmount = 0.0;
   double _bankAmount = 0.0;
@@ -31,6 +30,16 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     {'name': 'عمران حیدر', 'phone': '03335557788'},
     {'name': 'بلال جنرل سٹور', 'phone': '03124445566'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _receivedController.addListener(_onReceivedAmountChanged);
+  }
+
+  void _onReceivedAmountChanged() {
+    setState(() {});
+  }
 
   @override
   void dispose() {
@@ -74,7 +83,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     );
   }
 
-  // ٹرانزیکشن سیو کرنے کا حکم کنٹرولر کو دیا جائے گا
   void _onSavePressed() {
     bool success = salePurchaseController.completeTransaction(
       bankSource: _selectedBankSource,
@@ -105,13 +113,15 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
         final isPurchaseMode = salePurchaseController.selectedMode == 0;
         final grandTotal = salePurchaseController.grandTotal;
 
+        // اگر وصول شدہ خانہ خالی یا زیرو ہو تو 0 جائے گا، ورنہ یوزر کی لکھی ہوئی رقم
+        double currentReceivedAmount = double.tryParse(_receivedController.text) ?? 0.0;
+
         return Scaffold(
           backgroundColor: Colors.white,
           body: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ہیڈر
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   color: const Color(0xFFE53935),
@@ -157,8 +167,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                     ],
                   ),
                 ),
-
-                // باڈی
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(12.0),
@@ -166,8 +174,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 10),
-
-                        // پارٹی سلیکٹر
                         PartySelectorWidget(
                           nameController: _partyNameController,
                           phoneController: _partyPhoneController,
@@ -177,10 +183,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                           phoneContacts: _dummyContacts,
                           onNewPartyAdded: (name, phone) {},
                         ),
-
                         const SizedBox(height: 12),
-
-                        // آئٹم سیکشن
                         if (itemList.isEmpty)
                           ItemSelectorRowWidget(
                             hasItems: false,
@@ -221,8 +224,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                               );
                             },
                           ),
-
-                        // ڈسکاؤنٹ، سمری، سورس سلیکٹر اور سیو بٹن - صرف اس وقت ظاہر ہوں جب آئٹم موجود ہوں
                         if (itemList.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           DiscountWidget(
@@ -240,20 +241,17 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                             onAddPhotoPressed: () {},
                           ),
                           const SizedBox(height: 12),
-
-                          // سورس سلیکٹر
                           SourceSelecter(
-                            defaultAmount: grandTotal,
-                            onSplitPaymentChanged: (bankSource, cashAmount, bankAmount) {
-                              _selectedBankSource = bankSource;
-                              _cashAmount = cashAmount;
-                              _bankAmount = bankAmount;
+                            defaultAmount: currentReceivedAmount,
+                            onSplitPaymentChanged: (primaryBankSource, totalCash, totalBank, detailedSplits) {
+                              setState(() {
+                                _selectedBankSource = primaryBankSource;
+                                _cashAmount = totalCash;
+                                _bankAmount = totalBank;
+                              });
                             },
                           ),
-                          
                           const SizedBox(height: 20),
-
-                          // محفوظ کرنے کا بٹن
                           SizedBox(
                             width: double.infinity,
                             height: 48,
@@ -271,7 +269,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                             ),
                           ),
                         ],
-
                         const SizedBox(height: 20),
                       ],
                     ),

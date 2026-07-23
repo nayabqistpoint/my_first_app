@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import '../controller.dart';
 
+class PaymentSourceRow {
+  String sourceType;
+  TextEditingController amountController;
+
+  PaymentSourceRow({required this.sourceType, required double initialAmount})
+      : amountController = TextEditingController(text: initialAmount == 0 ? '' : initialAmount.toStringAsFixed(0));
+}
+
 class SourceSelecter extends StatefulWidget {
   final double defaultAmount;
-  final Function(String? bankSource, double cashAmount, double bankAmount) onSplitPaymentChanged;
+  final Function(String? primaryBankSource, double totalCash, double totalBank, List<Map<String, dynamic>> detailedSplits) onSplitPaymentChanged;
 
   const SourceSelecter({
     super.key,
@@ -16,50 +24,64 @@ class SourceSelecter extends StatefulWidget {
 }
 
 class _SourceSelecterState extends State<SourceSelecter> {
-  bool _isSplitMode = false;
-  
-  String _selectedSourceType = 'Cash in Hand'; 
-  String? _selectedBankSource;
-
-  late final TextEditingController _amountController;
-  final TextEditingController _bankAmountController = TextEditingController(text: '0');
+  final List<PaymentSourceRow> _sourcesList = [];
 
   @override
   void initState() {
     super.initState();
-    _amountController = TextEditingController(text: widget.defaultAmount.toStringAsFixed(0));
+    _sourcesList.add(
+      PaymentSourceRow(
+        sourceType: 'Cash in Hand',
+        initialAmount: widget.defaultAmount,
+      ),
+    );
     
-    _amountController.addListener(_notifyChanges);
-    _bankAmountController.addListener(_notifyChanges);
+    for (var source in _sourcesList) {
+      source.amountController.addListener(_notifyChanges);
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _notifyChanges();
+    });
   }
 
   @override
   void didUpdateWidget(covariant SourceSelecter oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!_isSplitMode && widget.defaultAmount != oldWidget.defaultAmount) {
-      _amountController.text = widget.defaultAmount.toStringAsFixed(0);
+    if (widget.defaultAmount != oldWidget.defaultAmount && _sourcesList.length == 1) {
+      _sourcesList[0].amountController.text = widget.defaultAmount == 0 ? '' : widget.defaultAmount.toStringAsFixed(0);
     }
   }
 
   void _notifyChanges() {
-    double amt1 = double.tryParse(_amountController.text) ?? 0;
-    double amt2 = _isSplitMode ? (double.tryParse(_bankAmountController.text) ?? 0) : 0;
+    double totalCash = 0;
+    double totalBank = 0;
+    String? primaryBank;
+    List<Map<String, dynamic>> detailedSplits = [];
 
-    if (!_isSplitMode) {
-      if (_selectedSourceType == 'Cash in Hand') {
-        widget.onSplitPaymentChanged(null, amt1, 0);
+    for (var row in _sourcesList) {
+      double amt = double.tryParse(row.amountController.text) ?? 0;
+      detailedSplits.add({
+        'source': row.sourceType,
+        'amount': amt,
+      });
+
+      if (row.sourceType == 'Cash in Hand') {
+        totalCash += amt;
       } else {
-        widget.onSplitPaymentChanged(_selectedSourceType, amt1, 0);
+        totalBank += amt;
+        primaryBank ??= row.sourceType;
       }
-    } else {
-      widget.onSplitPaymentChanged(_selectedBankSource, amt1, amt2);
     }
+
+    widget.onSplitPaymentChanged(primaryBank, totalCash, totalBank, detailedSplits);
   }
 
   @override
   void dispose() {
-    _amountController.dispose();
-    _bankAmountController.dispose();
+    for (var row in _sourcesList) {
+      row.amountController.dispose();
+    }
     super.dispose();
   }
 
@@ -71,13 +93,6 @@ class _SourceSelecterState extends State<SourceSelecter> {
         final List<String> bankSources = dashboardController.bankBalances.keys.toList();
         final List<String> allSources = ['Cash in Hand', ...bankSources];
 
-        if (!_isSplitMode && !allSources.contains(_selectedSourceType)) {
-          _selectedSourceType = 'Cash in Hand';
-        }
-        if (_isSplitMode && _selectedBankSource != null && !bankSources.contains(_selectedBankSource)) {
-          _selectedBankSource = null;
-        }
-
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -88,139 +103,118 @@ class _SourceSelecterState extends State<SourceSelecter> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // اوپر والی لائن: عنوان اور دوسرا سورس (پلس بٹن)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    "ادائیگی کا ذریعہ (Payment Source)",
+                    "ادائیگی کے ذرائع (Payment Sources)",
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
                   TextButton.icon(
                     onPressed: () {
-                      if (bankSources.isEmpty && !_isSplitMode) {
+                      if (bankSources.isEmpty && allSources.length <= 1) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('پہلے ڈیش بورڈ سے کوئی بینک ایڈ کریں')),
                         );
                         return;
                       }
                       setState(() {
-                        _isSplitMode = !_isSplitMode;
-                        if (!_isSplitMode) {
-                          _selectedBankSource = null;
-                          _bankAmountController.text = '0';
-                          _amountController.text = widget.defaultAmount.toStringAsFixed(0);
-                        } else {
-                          _selectedSourceType = 'Cash in Hand';
-                          _amountController.text = widget.defaultAmount.toStringAsFixed(0);
-                          _bankAmountController.text = '0';
-                        }
+                        String defaultNewSource = allSources.firstWhere(
+                          (src) => !_sourcesList.any((r) => r.sourceType == src),
+                          orElse: () => allSources.first,
+                        );
+                        
+                        _sourcesList.add(
+                          PaymentSourceRow(
+                            sourceType: defaultNewSource,
+                            initialAmount: 0,
+                          ),
+                        );
+                        _sourcesList.last.amountController.addListener(_notifyChanges);
                       });
                       _notifyChanges();
                     },
-                    icon: Icon(_isSplitMode ? Icons.remove : Icons.add, size: 16, color: const Color(0xFFE53935)),
-                    label: Text(
-                      _isSplitMode ? "سنگل سورس پر آئें" : "+ دوسرا سورس",
-                      style: const TextStyle(fontSize: 12, color: Color(0xFFE53935)),
+                    icon: const Icon(Icons.add, size: 16, color: Color(0xFFE53935)),
+                    label: const Text(
+                      "+ مزید سورس",
+                      style: TextStyle(fontSize: 12, color: Color(0xFFE53935)),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _sourcesList.length,
+                itemBuilder: (context, index) {
+                  final row = _sourcesList[index];
 
-              // --- پہلا سورس (ڈراپ ڈاؤن + رقم) ---
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: DropdownButtonFormField<String>(
-                      // یہاں ڈپیکیٹ 'value' کی جگہ 'initialValue' استعمال کیا گیا ہے
-                      initialValue: _isSplitMode ? 'Cash in Hand' : _selectedSourceType,
-                      isDense: true,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                        isDense: true,
-                      ),
-                      items: (_isSplitMode ? ['Cash in Hand'] : allSources).map((source) {
-                        return DropdownMenuItem<String>(
-                          value: source,
-                          child: Text(source, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                        );
-                      }).toList(),
-                      onChanged: _isSplitMode ? null : (val) {
-                        if (val != null) {
-                          setState(() {
-                            _selectedSourceType = val;
-                          });
-                          _notifyChanges();
-                        }
-                      },
+                  if (!allSources.contains(row.sourceType)) {
+                    row.sourceType = 'Cash in Hand';
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: row.sourceType, // یہاں value کی جگہ initialValue کر دیا گیا ہے
+                            isDense: true,
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                              isDense: true,
+                            ),
+                            items: allSources.map((source) {
+                              return DropdownMenuItem<String>(
+                                value: source,
+                                child: Text(source, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() {
+                                  row.sourceType = val;
+                                });
+                                _notifyChanges();
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: row.amountController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: "رقم",
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                        if (_sourcesList.length > 1) ...[
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 22),
+                            onPressed: () {
+                              setState(() {
+                                row.amountController.dispose();
+                                _sourcesList.removeAt(index);
+                              });
+                              _notifyChanges();
+                            },
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: TextField(
-                      controller: _amountController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "رقم",
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
-
-              // --- اگر سپلٹ موڈ آن ہو تو دوسرا بینک سورس ظاہر ہوگا ---
-              if (_isSplitMode) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: DropdownButtonFormField<String>(
-                        // یہاں بھی 'value' کی جگہ 'initialValue' کر دیا گیا ہے
-                        initialValue: _selectedBankSource,
-                        isDense: true,
-                        decoration: const InputDecoration(
-                          labelText: "دوسرا بینک منتخب کریں",
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                        ),
-                        hint: const Text('بینک منتخب کریں', style: TextStyle(fontSize: 13)),
-                        items: bankSources.map((bank) {
-                          return DropdownMenuItem<String>(
-                            value: bank,
-                            child: Text(bank, style: const TextStyle(fontSize: 14)),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedBankSource = val;
-                          });
-                          _notifyChanges();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        controller: _bankAmountController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: "بینک رقم",
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ],
           ),
         );
