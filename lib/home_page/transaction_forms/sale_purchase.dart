@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
-import 'sale_page.dart'; // یہاں نیا سیل پیج امپورٹ کر دیا گیا ہے
+import 'sale_page.dart';
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
@@ -35,6 +35,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
   @override
   void initState() {
     super.initState();
+    salePurchaseController.setMode(0); // ہمیشہ خرید سے شروعات
     _receivedController.addListener(_onReceivedAmountChanged);
   }
 
@@ -121,11 +122,17 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
 
     salePurchaseController.shiftToSaveAndSellMode();
 
-    // --- یہاں سیل پیج کو لنک اور اوپن کر دیا گیا ہے ---
+    // سیل پیج پر جاتے وقت موڈ کو 1 (فروخت) کر دیں تاکہ وہاں جا کر ٹوگل فروخت پر کھڑا ہو
+    salePurchaseController.setMode(1);
+
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SalePage()),
-    );
+    ).then((_) {
+      if (mounted) {
+        salePurchaseController.setMode(0); // واپس آنے پر خرید
+      }
+    });
 
     setState(() {
       _partyNameController.clear();
@@ -133,10 +140,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
       _receivedController.clear();
       _descriptionController.clear();
     });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('انٹری سیو ہو گئی اور سیل پیج کھل گیا!')),
-    );
   }
 
   @override
@@ -156,6 +159,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ہیڈر بمعہ ٹوگل
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   color: const Color(0xFFE53935),
@@ -183,7 +187,19 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                           ],
                           selected: {salePurchaseController.selectedMode},
                           onSelectionChanged: (Set<int> newSelection) {
-                            salePurchaseController.setMode(newSelection.first);
+                            int selectedVal = newSelection.first;
+                            salePurchaseController.setMode(selectedVal);
+
+                            if (selectedVal == 1) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const SalePage()),
+                              ).then((_) {
+                                if (mounted) {
+                                  salePurchaseController.setMode(0);
+                                }
+                              });
+                            }
                           },
                           style: ButtonStyle(
                             backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
