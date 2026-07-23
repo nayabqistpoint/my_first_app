@@ -90,8 +90,14 @@ class _SourceSelecterState extends State<SourceSelecter> {
     return ListenableBuilder(
       listenable: dashboardController,
       builder: (context, child) {
-        final List<String> bankSources = dashboardController.bankBalances.keys.toList();
-        final List<String> allSources = ['Cash in Hand', ...bankSources];
+        // ڈیش بورڈ سے تمام بینکوں کے نام اور ان کے بیلنس حاصل کریں
+        final Map<String, double> bankBalances = dashboardController.bankBalances;
+        final List<String> bankNames = bankBalances.keys.toList();
+        
+        // کیش بیلنس کو سیف طریقے سے حاصل کرنا (اگر بینک میپ میں موجود ہو یا 0)
+        final double cashBalance = bankBalances['Cash in Hand'] ?? 0.0;
+
+        final List<String> allSources = ['Cash in Hand', ...bankNames];
 
         return Container(
           padding: const EdgeInsets.all(12),
@@ -108,11 +114,11 @@ class _SourceSelecterState extends State<SourceSelecter> {
                 children: [
                   const Text(
                     "ادائیگی کے ذرائع (Payment Sources)",
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
                   TextButton.icon(
                     onPressed: () {
-                      if (bankSources.isEmpty && allSources.length <= 1) {
+                      if (bankNames.isEmpty && allSources.length <= 1) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('پہلے ڈیش بورڈ سے کوئی بینک ایڈ کریں')),
                         );
@@ -134,15 +140,15 @@ class _SourceSelecterState extends State<SourceSelecter> {
                       });
                       _notifyChanges();
                     },
-                    icon: const Icon(Icons.add, size: 16, color: Color(0xFFE53935)),
+                    icon: const Icon(Icons.add, size: 14, color: Color(0xFFE53935)),
                     label: const Text(
                       "+ مزید سورس",
-                      style: TextStyle(fontSize: 12, color: Color(0xFFE53935)),
+                      style: TextStyle(fontSize: 11, color: Color(0xFFE53935)),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -155,59 +161,103 @@ class _SourceSelecterState extends State<SourceSelecter> {
                   }
 
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
+                    padding: const EdgeInsets.only(bottom: 6.0),
                     child: Row(
                       children: [
+                        // سمارٹ اور چھوٹا ڈراپ ڈاؤن (سفید بیک گراؤنڈ کے ساتھ)
                         Expanded(
-                          flex: 3,
-                          child: DropdownButtonFormField<String>(
-                            initialValue: row.sourceType, // یہاں value کی جگہ initialValue کر دیا گیا ہے
-                            isDense: true,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                              isDense: true,
+                          flex: 4,
+                          child: Container(
+                            height: 42,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.grey.shade400),
+                              borderRadius: BorderRadius.circular(6),
                             ),
-                            items: allSources.map((source) {
-                              return DropdownMenuItem<String>(
-                                value: source,
-                                child: Text(source, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() {
-                                  row.sourceType = val;
-                                });
-                                _notifyChanges();
-                              }
-                            },
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: row.sourceType,
+                                isExpanded: true,
+                                icon: const Icon(Icons.arrow_drop_down, size: 20, color: Colors.grey),
+                                items: allSources.map((source) {
+                                  // بیلنس کا حساب کتاب
+                                  String balanceText = '';
+                                  if (source == 'Cash in Hand') {
+                                    balanceText = '(${cashBalance.toStringAsFixed(0)} Rs)';
+                                  } else {
+                                    double bVal = bankBalances[source] ?? 0.0;
+                                    balanceText = '(${bVal.toStringAsFixed(0)} Rs)';
+                                  }
+
+                                  return DropdownMenuItem<String>(
+                                    value: source,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          source,
+                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          balanceText,
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade700),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() {
+                                      row.sourceType = val;
+                                    });
+                                    _notifyChanges();
+                                  }
+                                },
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
+                        
+                        // رقم کا خانہ
                         Expanded(
                           flex: 2,
-                          child: TextField(
-                            controller: row.amountController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: "رقم",
-                              border: OutlineInputBorder(),
-                              isDense: true,
+                          child: SizedBox(
+                            height: 42,
+                            child: TextField(
+                              controller: row.amountController,
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(fontSize: 13),
+                              decoration: const InputDecoration(
+                                labelText: "رقم",
+                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                              ),
                             ),
                           ),
                         ),
+
+                        // ڈیلیٹ کرنے کی باسکٹ
                         if (_sourcesList.length > 1) ...[
                           const SizedBox(width: 4),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 22),
-                            onPressed: () {
-                              setState(() {
-                                row.amountController.dispose();
-                                _sourcesList.removeAt(index);
-                              });
-                              _notifyChanges();
-                            },
+                          SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                              onPressed: () {
+                                setState(() {
+                                  row.amountController.dispose();
+                                  _sourcesList.removeAt(index);
+                                });
+                                _notifyChanges();
+                              },
+                            ),
                           ),
                         ],
                       ],

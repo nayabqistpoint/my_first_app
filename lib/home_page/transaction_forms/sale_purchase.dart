@@ -83,7 +83,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     );
   }
 
-  void _onSavePressed() {
+  void _onSaveAndSharePressed() {
     bool success = salePurchaseController.completeTransaction(
       bankSource: _selectedBankSource,
       cashAmount: _cashAmount,
@@ -98,10 +98,38 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ٹرانزیکشن کامیابی سے محفوظ ہو گئی ہے')),
+      const SnackBar(content: Text('انٹری کامیابی سے محفوظ اور شیئر کر دی گئی ہے')),
     );
 
     Navigator.pop(context);
+  }
+
+  void _onSaveAndSellPressed() {
+    bool success = salePurchaseController.completeTransaction(
+      bankSource: _selectedBankSource,
+      cashAmount: _cashAmount,
+      bankAmount: _bankAmount,
+    );
+
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('کم از کم ایک آئٹم شامل کرنا ضروری ہے')),
+      );
+      return;
+    }
+
+    salePurchaseController.shiftToSaveAndSellMode();
+
+    setState(() {
+      _partyNameController.clear();
+      _partyPhoneController.clear();
+      _receivedController.clear();
+      _descriptionController.clear();
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('انٹری سیو ہو گئی اور موڈ فروخت پر شفٹ ہو گیا!')),
+    );
   }
 
   @override
@@ -113,7 +141,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
         final isPurchaseMode = salePurchaseController.selectedMode == 0;
         final grandTotal = salePurchaseController.grandTotal;
 
-        // اگر وصول شدہ خانہ خالی یا زیرو ہو تو 0 جائے گا، ورنہ یوزر کی لکھی ہوئی رقم
         double currentReceivedAmount = double.tryParse(_receivedController.text) ?? 0.0;
 
         return Scaffold(
@@ -252,21 +279,42 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                             },
                           ),
                           const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFE53935),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey.shade800,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  onPressed: _onSaveAndSharePressed,
+                                  icon: const Icon(Icons.share, size: 18),
+                                  label: const Text(
+                                    "محفوظ اور شیئر",
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
                               ),
-                              onPressed: _onSavePressed,
-                              child: const Text(
-                                'ٹرانزیکشن محفوظ کریں',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFE53935),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  onPressed: _onSaveAndSellPressed,
+                                  icon: const Icon(Icons.swap_horiz, size: 18),
+                                  label: const Text(
+                                    "محفوظ اور سیل کریں",
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ],
                         const SizedBox(height: 20),
