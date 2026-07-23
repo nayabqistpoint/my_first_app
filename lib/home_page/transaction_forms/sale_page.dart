@@ -5,6 +5,7 @@ import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
 import 'common/discount_widget.dart';
 import 'common/transaction_summary_widget.dart';
+import 'package:my_first_app/dashboard/widgets/source_selecter.dart';
 
 class SalePage extends StatefulWidget {
   const SalePage({super.key});
@@ -19,11 +20,10 @@ class _SalePageState extends State<SalePage> {
   final TextEditingController _receivedController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
-  // سیلز کا اپنا لوکل ڈیٹا اور لاجک جو صرف اسی پیج کے اندر رہے گی
   final List<Map<String, dynamic>> _saleItemList = [];
   double _discountValue = 0.0;
   bool _isDiscountPercentage = false;
-  int _selectedMode = 1; // 1 مطلب فروخت
+  final int _selectedMode = 1;
 
   final List<Map<String, String>> _dummyContacts = const [
     {'name': 'علی خان', 'phone': '03001234567'},
@@ -31,16 +31,6 @@ class _SalePageState extends State<SalePage> {
     {'name': 'عمران حیدر', 'phone': '03335557788'},
     {'name': 'بلال جنرل سٹور', 'phone': '03124445566'},
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    _receivedController.addListener(_onReceivedAmountChanged);
-  }
-
-  void _onReceivedAmountChanged() {
-    setState(() {});
-  }
 
   @override
   void dispose() {
@@ -51,7 +41,6 @@ class _SalePageState extends State<SalePage> {
     super.dispose();
   }
 
-  // آئٹم سیভ یا ایڈ کرنے کا خود مختار فنکشن
   void _saveSaleItem({
     int? editIndex,
     required String model,
@@ -81,14 +70,12 @@ class _SalePageState extends State<SalePage> {
     });
   }
 
-  // آئٹم ڈیلیٹ کرنے کا فنکشن
   void _deleteSaleItem(int index) {
     setState(() {
       _saleItemList.removeAt(index);
     });
   }
 
-  // ڈسکاؤنٹ سیٹ کرنے کا فنکشن
   void _setDiscount(double value, bool isPercentage) {
     setState(() {
       _discountValue = value;
@@ -96,7 +83,6 @@ class _SalePageState extends State<SalePage> {
     });
   }
 
-  // کلکولیشنز (سب ٹوٹل، ڈسکاؤنٹ اور گرینڈ ٹوٹل)
   double get _subTotal {
     double total = 0.0;
     for (var item in _saleItemList) {
@@ -119,7 +105,16 @@ class _SalePageState extends State<SalePage> {
     return finalVal < 0 ? 0 : finalVal;
   }
 
-  // آئٹم ڈیٹیل ڈائیلاگ یا سکرین کھولنے کا طریقہ
+  double get _effectiveAmountForSource {
+    if (_receivedController.text.isNotEmpty) {
+      double? val = double.tryParse(_receivedController.text);
+      if (val != null) {
+        return val;
+      }
+    }
+    return _grandTotal;
+  }
+
   void _openItemDetail({int? editIndex}) {
     final isEditing = editIndex != null;
     final item = isEditing ? _saleItemList[editIndex] : null;
@@ -171,7 +166,6 @@ class _SalePageState extends State<SalePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ہیڈر اور ٹوگل
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               color: const Color(0xFFE53935),
@@ -185,7 +179,7 @@ class _SalePageState extends State<SalePage> {
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   const Text(
-                    'نایاب قسط پوائنٹ',
+                    'نایاب قسط پوائنٹ - فروخت',
                     style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(
@@ -209,10 +203,8 @@ class _SalePageState extends State<SalePage> {
                         ],
                         selected: {_selectedMode},
                         onSelectionChanged: (Set<int> newSelection) {
-                          setState(() {
-                            _selectedMode = newSelection.first;
-                          });
-                          if (_selectedMode == 0) {
+                          int mode = newSelection.first;
+                          if (mode == 0) {
                             _navigateToSalePurchaseSmoothly();
                           }
                         },
@@ -235,7 +227,6 @@ class _SalePageState extends State<SalePage> {
                 ],
               ),
             ),
-            // باڈی کا حصہ
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(12.0),
@@ -248,12 +239,11 @@ class _SalePageState extends State<SalePage> {
                       phoneController: _partyPhoneController,
                       invoiceNo: 'INV-002',
                       currentDate: '23-07-2026',
-                      currentTime: '10:00 PM',
+                      currentTime: '10:05 PM',
                       phoneContacts: _dummyContacts,
                       onNewPartyAdded: (name, phone) {},
                     ),
                     const SizedBox(height: 12),
-                    // آئٹم لسٹ کی بنیاد پر وزگیٹ دکھانا
                     if (_saleItemList.isEmpty)
                       ItemSelectorRowWidget(
                         hasItems: false,
@@ -307,6 +297,13 @@ class _SalePageState extends State<SalePage> {
                         receivedController: _receivedController,
                         descriptionController: _descriptionController,
                         onAddPhotoPressed: () {},
+                      ),
+                      const SizedBox(height: 12),
+                      SourceSelecter(
+                        defaultAmount: _effectiveAmountForSource,
+                        onSplitPaymentChanged: (primaryBankSource, totalCash, totalBank, detailedSplits) {
+                          // یہاں آپ کا پیمنٹ سورس ڈیٹا باآسانی ہینڈل ہو رہا ہے
+                        },
                       ),
                     ],
                     const SizedBox(height: 20),
