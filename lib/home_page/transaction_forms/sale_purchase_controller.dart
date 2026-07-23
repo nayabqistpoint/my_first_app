@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../dashboard/controller.dart';
 
 class SalePurchaseController extends ChangeNotifier {
-  int _selectedMode = 0;
+  int _selectedMode = 0; // 0 = خرید (Purchase), 1 = فروخت (Sale)
   int get selectedMode => _selectedMode;
 
   void setMode(int mode) {
@@ -80,6 +81,35 @@ class SalePurchaseController extends ChangeNotifier {
 
   double get grandTotal {
     return (subTotal - discountAmount).clamp(0.0, double.infinity);
+  }
+
+  // --- ٹرانزیکشن مکمل کرنے اور کیش/بینک اپ ڈیٹ کرنے کا فنکشن ---
+  bool completeTransaction({
+    required String? bankSource,
+    required double cashAmount,
+    required double bankAmount,
+  }) {
+    if (_itemList.isEmpty) return false;
+
+    final isPurchase = _selectedMode == 0;
+    double multiplier = isPurchase ? -1.0 : 1.0;
+
+    // کیش بیلنس اپ ڈیٹ کریں
+    if (cashAmount > 0) {
+      dashboardController.updateCash(cashAmount * multiplier);
+    }
+
+    // اگر بینک منتخب ہے تو بینک بیلنس اپ ڈیٹ کریں
+    if (bankSource != null && bankAmount > 0) {
+      dashboardController.adjustBankBalance(bankSource, bankAmount * multiplier);
+    }
+
+    // ٹرانزیکشن مکمل ہونے کے بعد آئٹمز اور ڈسکاؤنٹ صاف کر دیں
+    _itemList.clear();
+    _discountValue = 0.0;
+    notifyListeners();
+
+    return true;
   }
 }
 

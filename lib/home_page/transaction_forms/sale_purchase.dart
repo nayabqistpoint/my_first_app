@@ -5,6 +5,7 @@ import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
 import 'common/discount_widget.dart';
 import 'common/transaction_summary_widget.dart';
+import '../../dashboard/widgets/source_selecter.dart'; // سورس سلیکٹر کا درست پاتھ
 
 class SalePurchaseForm extends StatefulWidget {
   const SalePurchaseForm({super.key});
@@ -18,6 +19,11 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
   final TextEditingController _partyPhoneController = TextEditingController();
   final TextEditingController _receivedController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+
+  // پیمنٹ سورس کے عارضی ویری ایبلز جو صرف یوزر ان پٹ ہولڈ کریں گے
+  String? _selectedBankSource;
+  double _cashAmount = 0.0;
+  double _bankAmount = 0.0;
 
   final List<Map<String, String>> _dummyContacts = const [
     {'name': 'علی خان', 'phone': '03001234567'},
@@ -68,6 +74,28 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     );
   }
 
+  // ٹرانزیکشن سیو کرنے کا حکم کنٹرولر کو دیا جائے گا
+  void _onSavePressed() {
+    bool success = salePurchaseController.completeTransaction(
+      bankSource: _selectedBankSource,
+      cashAmount: _cashAmount,
+      bankAmount: _bankAmount,
+    );
+
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('کم از کم ایک آئٹم شامل کرنا ضروری ہے')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('ٹرانزیکشن کامیابی سے محفوظ ہو گئی ہے')),
+    );
+
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -75,6 +103,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
       builder: (context, child) {
         final itemList = salePurchaseController.itemList;
         final isPurchaseMode = salePurchaseController.selectedMode == 0;
+        final grandTotal = salePurchaseController.grandTotal;
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -193,7 +222,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                             },
                           ),
 
-                        // ڈسکاؤنٹ اور سمری - صرف اس وقت ظاہر ہوں جب آئٹم موجود ہوں
+                        // ڈسکاؤنٹ، سمری، سورس سلیکٹر اور سیو بٹن - صرف اس وقت ظاہر ہوں جب آئٹم موجود ہوں
                         if (itemList.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           DiscountWidget(
@@ -205,12 +234,41 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                           TransactionSummaryWidget(
                             subTotal: salePurchaseController.subTotal,
                             discountAmount: salePurchaseController.discountAmount,
-                            grandTotal: salePurchaseController.grandTotal,
+                            grandTotal: grandTotal,
                             receivedController: _receivedController,
                             descriptionController: _descriptionController,
-                            onAddPhotoPressed: () {
-                              // فوٹو کا فنکشن
+                            onAddPhotoPressed: () {},
+                          ),
+                          const SizedBox(height: 12),
+
+                          // سورس سلیکٹر
+                          SourceSelecter(
+                            defaultAmount: grandTotal,
+                            onSplitPaymentChanged: (bankSource, cashAmount, bankAmount) {
+                              _selectedBankSource = bankSource;
+                              _cashAmount = cashAmount;
+                              _bankAmount = bankAmount;
                             },
+                          ),
+                          
+                          const SizedBox(height: 20),
+
+                          // محفوظ کرنے کا بٹن
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFE53935),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: _onSavePressed,
+                              child: const Text(
+                                'ٹرانزیکشن محفوظ کریں',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ),
                           ),
                         ],
 
