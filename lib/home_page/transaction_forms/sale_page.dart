@@ -33,6 +33,11 @@ class _SalePageState extends State<SalePage> {
     super.initState();
     // پیج کھلتے ہی کنٹرولر کو بتائیں کہ اب ہم فروخت (Sale) موڈ یعنی 1 میں ہیں
     salePurchaseController.setMode(1);
+
+    // یوزر جب وصولی والے خانے میں رقم لکھے تو سکرین فورا اپ ڈیٹ ہو
+    _receivedController.addListener(() {
+      setState(() {});
+    });
   }
 
   @override
@@ -42,6 +47,17 @@ class _SalePageState extends State<SalePage> {
     _receivedController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  // خرید والے پیج کی طرز پر effective amount معلوم کرنے کا فنکشن
+  double get _effectiveAmountForSource {
+    if (_receivedController.text.isNotEmpty) {
+      double? val = double.tryParse(_receivedController.text);
+      if (val != null) {
+        return val;
+      }
+    }
+    return salePurchaseController.grandTotal;
   }
 
   void _openItemDetail({int? editIndex}) {
@@ -61,7 +77,7 @@ class _SalePageState extends State<SalePage> {
           initialImei: isEditing ? item!['imei'] : '',
           initialCategory: isEditing ? item!['category'] : 'موبائل فون (Mobile Phone)',
           onItemSaved: (model, qty, purchasePrice, salePrice, desc, imei, category) {
-            // براہ راست کنٹرولر کے اندر سیو کریں تاکہ ڈیٹا پرامن محفوظ رہے
+            // براہ راست کنٹرولر کے اندر سیو کریں تاکہ ڈیٹا محفوظ رہے
             salePurchaseController.saveItem(
               editIndex: editIndex,
               model: model,
@@ -235,10 +251,32 @@ class _SalePageState extends State<SalePage> {
                           ),
                           const SizedBox(height: 12),
                           SourceSelecter(
-                            defaultAmount: (_receivedController.text.isNotEmpty && double.tryParse(_receivedController.text) != null) 
-                                ? double.parse(_receivedController.text) 
-                                : salePurchaseController.grandTotal,
+                            defaultAmount: _effectiveAmountForSource,
                             onSplitPaymentChanged: (primaryBankSource, totalCash, totalBank, detailedSplits) {},
+                          ),
+                          const SizedBox(height: 16),
+                          // محفوظ کریں اور شیئر کریں کا بٹن
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFE53935),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () {
+                                // یہاں آپ بل سیو اور شیئر کرنے کا کوڈ لکھ سکتے ہیں
+                                Navigator.pop(context);
+                              },
+                              icon: const Icon(Icons.share, size: 20),
+                              label: const Text(
+                                'محفوظ کریں اور شیئر کریں',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ),
                           ),
                         ],
                         const SizedBox(height: 20),
