@@ -35,7 +35,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
   @override
   void initState() {
     super.initState();
-    salePurchaseController.setMode(0); // ہمیشہ خرید سے شروعات
     _receivedController.addListener(_onReceivedAmountChanged);
   }
 
@@ -106,6 +105,17 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     Navigator.pop(context);
   }
 
+  void _navigateToSalePageSmoothly() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const SalePage(),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
+  }
+
   void _onSaveAndSellPressed() {
     bool success = salePurchaseController.completeTransaction(
       bankSource: _selectedBankSource,
@@ -122,17 +132,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
 
     salePurchaseController.shiftToSaveAndSellMode();
 
-    // سیل پیج پر جاتے وقت موڈ کو 1 (فروخت) کر دیں تاکہ وہاں جا کر ٹوگل فروخت پر کھڑا ہو
-    salePurchaseController.setMode(1);
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SalePage()),
-    ).then((_) {
-      if (mounted) {
-        salePurchaseController.setMode(0); // واپس آنے پر خرید
-      }
-    });
+    _navigateToSalePageSmoothly();
 
     setState(() {
       _partyNameController.clear();
@@ -140,6 +140,10 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
       _receivedController.clear();
       _descriptionController.clear();
     });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('انٹری سیو ہو گئی اور سیل پیج کھل گیا!')),
+    );
   }
 
   @override
@@ -159,14 +163,15 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ہیڈر بمعہ ٹوگل
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   color: const Color(0xFFE53935),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
                         icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
@@ -174,43 +179,48 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                         'نایاب قسط پوائنٹ',
                         style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: SegmentedButton<int>(
-                          segments: const [
-                            ButtonSegment<int>(value: 0, label: Text('خرید', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                            ButtonSegment<int>(value: 1, label: Text('فروخت', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                          ],
-                          selected: {salePurchaseController.selectedMode},
-                          onSelectionChanged: (Set<int> newSelection) {
-                            int selectedVal = newSelection.first;
-                            salePurchaseController.setMode(selectedVal);
+                      // --- یہاں ٹوگل کے سائز کو فکس اور بالکل بیلنس کیا گیا ہے ---
+                      SizedBox(
+                        height: 32,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: SegmentedButton<int>(
+                            segments: const [
+                              ButtonSegment<int>(
+                                value: 0, 
+                                label: Text('خرید', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))
+                              ),
+                              ButtonSegment<int>(
+                                value: 1, 
+                                label: Text('فروخت', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))
+                              ),
+                            ],
+                            selected: {salePurchaseController.selectedMode},
+                            onSelectionChanged: (Set<int> newSelection) {
+                              int selectedVal = newSelection.first;
+                              salePurchaseController.setMode(selectedVal);
 
-                            if (selectedVal == 1) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const SalePage()),
-                              ).then((_) {
-                                if (mounted) {
-                                  salePurchaseController.setMode(0);
-                                }
-                              });
-                            }
-                          },
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
-                              if (states.contains(WidgetState.selected)) return Colors.white;
-                              return Colors.transparent;
-                            }),
-                            foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
-                              if (states.contains(WidgetState.selected)) return const Color(0xFFE53935);
-                              return Colors.white;
-                            }),
-                            visualDensity: VisualDensity.compact,
+                              if (selectedVal == 1) {
+                                _navigateToSalePageSmoothly();
+                              }
+                            },
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                                if (states.contains(WidgetState.selected)) return Colors.white;
+                                return Colors.transparent;
+                              }),
+                              foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                                if (states.contains(WidgetState.selected)) return const Color(0xFFE53935);
+                                return Colors.white;
+                              }),
+                              padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 10, vertical: 0)),
+                              visualDensity: VisualDensity.compact,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
                           ),
                         ),
                       ),
