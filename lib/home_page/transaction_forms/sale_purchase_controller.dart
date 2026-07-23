@@ -11,12 +11,12 @@ class SalePurchaseController extends ChangeNotifier {
   double discountValue = 0.0;
   bool isPercentageDiscount = false;
 
-  // 🔴 سب سے اہم: پرانے UI کی بقا کے لیے گیٹر تاکہ جہاں بھی 'itemList' استعمال ہو رہا ہے وہ ایرر نہ دے
+  // پرانے UI کی بقا کے لیے گیٹر تاکہ جہاں بھی 'itemList' استعمال ہو رہا ہے وہ ایرر نہ دے
   List<Map<String, dynamic>> get itemList {
     return selectedMode == 0 ? purchaseItemList : saleItemList;
   }
 
-  // موڈ سیٹ کرنے کا فنکشن
+  // موڈ سیٹ کرنے کا فنکشن (ٹॉगल کے ذریعے عام سوئچنگ)
   void setMode(int mode) {
     selectedMode = mode;
     notifyListeners();
@@ -83,7 +83,7 @@ class SalePurchaseController extends ChangeNotifier {
   // سب ٹوٹل نکالنے کا حساب
   double get subTotal {
     double total = 0.0;
-    final list = itemList; // اب یہ خود بخود موجودہ موڈ کی لسٹ اٹھائے گا
+    final list = itemList; 
     for (var item in list) {
       int qty = (item['qty'] as num?)?.toInt() ?? 0;
       double price = (selectedMode == 0) 
@@ -128,9 +128,18 @@ class SalePurchaseController extends ChangeNotifier {
     return true;
   }
 
-  // --- "محفوظ اور سیل کریں" کے لیے مطلوبہ فنکشن ---
+  // --- "محفوظ کریں اور سیل کریں" کا مضبوط اور درست فنکشن ---
   void shiftToSaveAndSellMode() {
+    // 1. پرچیز لسٹ کا گہرا کاپی (Deep copy) بنائیں تاکہ ڈیٹا محفوظ طریقے سے سیل لسٹ میں جائے
+    saleItemList = purchaseItemList.map((item) => Map<String, dynamic>.from(item)).toList();
+    
+    // 2. موڈ کو فروخت (1) پر سیٹ کریں
     selectedMode = 1; 
+    
+    // 3. ڈسکاؤنٹ ری سیٹ کریں
+    discountValue = 0.0;
+    isPercentageDiscount = false;
+
     notifyListeners();
   }
 }

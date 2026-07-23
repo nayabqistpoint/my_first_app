@@ -31,8 +31,8 @@ class _SalePageState extends State<SalePage> {
   @override
   void initState() {
     super.initState();
-    // پیج کھلتے ہی کنٹرولر کو بتائیں کہ اب ہم فروخت (Sale) موڈ یعنی 1 میں ہیں
-    salePurchaseController.setMode(1);
+    // 🔴 نوٹ: یہاں سے `setMode(1)` ہٹا دیا گیا ہے کیونکہ `shiftToSaveAndSellMode` 
+    // پہلے ہی موڈ اور ڈیٹا سیٹ کر کے لایا ہے، دوبارہ سیٹ کرنے سے ڈیٹا اڑ رہا تھا۔
 
     // یوزر جب وصولی والے خانے میں رقم لکھے تو سکرین فورا اپ ڈیٹ ہو
     _receivedController.addListener(() {
@@ -95,7 +95,7 @@ class _SalePageState extends State<SalePage> {
   }
 
   void _switchToPurchase() {
-    // خرید موڈ میں جانے سے پہلے کنٹرولر کا موڈ 0 کر دیں
+    // خرید موڈ میں جانے سے پہلے کنٹرولر کا موڈ 0 कर दें
     salePurchaseController.setMode(0);
     Navigator.pushAndRemoveUntil(
       context,
@@ -255,7 +255,6 @@ class _SalePageState extends State<SalePage> {
                             onSplitPaymentChanged: (primaryBankSource, totalCash, totalBank, detailedSplits) {},
                           ),
                           const SizedBox(height: 16),
-                          // محفوظ کریں اور شیئر کریں کا بٹن
                           SizedBox(
                             width: double.infinity,
                             height: 48,
@@ -268,7 +267,6 @@ class _SalePageState extends State<SalePage> {
                                 ),
                               ),
                               onPressed: () {
-                                // یہاں آپ بل سیو اور شیئر کرنے کا کوڈ لکھ سکتے ہیں
                                 Navigator.pop(context);
                               },
                               icon: const Icon(Icons.share, size: 20),

@@ -118,23 +118,21 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
   }
 
   void _onSaveAndSellPressed() {
-    bool success = salePurchaseController.completeTransaction(
-      bankSource: _selectedBankSource,
-      cashAmount: _cashAmount,
-      bankAmount: _bankAmount,
-    );
-
-    if (!success) {
+    // 1. پہلے چیک کریں کہ لسٹ خالی تو نہیں ہے
+    if (salePurchaseController.itemList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('کم از کم ایک آئٹم شامل کرنا ضروری ہے')),
       );
       return;
     }
 
+    // 2. ڈیٹا کو سیل موڈ میں منتقل کریں (completeTransaction ہٹا دیا گیا ہے تاکہ ڈیٹا صاف نہ ہو)
     salePurchaseController.shiftToSaveAndSellMode();
 
+    // 3. سیل پیج پر جائیں
     _navigateToSalePageSmoothly();
 
+    // 4. فارم کے فیلڈز صاف کریں
     setState(() {
       _partyNameController.clear();
       _partyPhoneController.clear();
@@ -143,7 +141,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('انٹری سیو ہو گئی اور سیل پیج کھل گیا!')),
+      const SnackBar(content: Text('انٹری سیل موڈ میں منتقل کر دی گئی ہے!')),
     );
   }
 
@@ -183,7 +181,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      // خوبصورت ٹوگل وجٹ
                       SalePurchaseToggleWidget(
                         isSaleSelected: false,
                         onPurchaseTap: () {},
@@ -226,7 +223,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                               final item = itemList[index];
                               final isLastItem = (index == itemList.length - 1);
                               final qty = item['qty'] as int;
-                              // پرچیز موڈ میں خرید قیمت دکھائیں گے اور سیل موڈ میں سیل قیمت
                               final unitPrice = isPurchaseMode 
                                   ? (item['purchasePrice'] as double) 
                                   : (item['salePrice'] as double);
