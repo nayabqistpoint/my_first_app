@@ -8,6 +8,7 @@ class ItemDetailWidget extends StatefulWidget {
   final String initialDescription;
   final String initialImei;
   final String initialCategory;
+  final bool isSaleMode; // نیا موڈ فلیگ (سیل ہے یا پرچیز)
   
   final Function(
     String model, 
@@ -28,6 +29,7 @@ class ItemDetailWidget extends StatefulWidget {
     this.initialDescription = '',
     this.initialImei = '',
     this.initialCategory = 'موبائل فون (Mobile Phone)',
+    this.isSaleMode = false, // بائی ڈیফলت پرچیز موڈ رہے گا
     required this.onItemSaved,
   });
 
@@ -125,13 +127,18 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
     final purchasePrice = double.tryParse(_purchasePriceController.text) ?? 0.0;
     final activePrice = salePrice > 0 ? salePrice : purchasePrice;
     final liveSubTotal = qty * activePrice;
+    
+    // پرافٹ کا لائیو حساب (اگر سیل موڈ ہو تو پرافٹ نکلے گا)
+    final liveProfit = widget.isSaleMode ? (qty * (salePrice - purchasePrice)) : 0.0;
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: const Color(0xFFE53935),
         title: Text(
-          isEditing ? 'آئٹم میں ترمیم کریں' : 'نیا آئٹم درج کریں',
+          widget.isSaleMode 
+              ? 'آئٹم سیل کی تفصیل' 
+              : (isEditing ? 'آئٹم میں ترمیم کریں' : 'نیا آئٹم درج کریں'),
           style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -141,7 +148,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. کیٹیگری اور ماڈل کا نام (ایک ہی لائن میں سمارٹ انداز سے)
+            // 1. کیٹیگری اور ماڈل کا نام
             Row(
               children: [
                 Expanded(
@@ -184,6 +191,8 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                     height: 48,
                     child: TextField(
                       controller: _modelController,
+                      // اگر سیل موڈ ہے تو ماڈل کا نام بھی صرف پڑھنے کے لیے ہو سکتا ہے یا ایڈیٹیبل، 
+                      // آپ کی ضرورت کے مطابق یہ ایڈیٹیبل رکھا ہے تاکہ سرچ ہو سکے
                       onChanged: (value) => setState(() {}),
                       decoration: InputDecoration(
                         labelText: 'ماڈل / آئٹم کا نام',
@@ -207,15 +216,16 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
             ),
             const SizedBox(height: 12),
 
-            // 2. قیمتِ خرید و فروخت
+            // 2. قیمتِ خرید و فروخت (سیل موڈ میں پرچیز پرائس ریڈ آؤٹ / لاک ہوگی)
             Row(
               children: [
                 Expanded(
                   child: _buildTextField(
                     controller: _purchasePriceController,
-                    label: 'قیمتِ خرید (Rs)',
+                    label: widget.isSaleMode ? 'قیمتِ خرید (پڑی ہوئی ہے)' : 'قیمتِ خرید (Rs)',
                     icon: Icons.account_balance_wallet_outlined,
                     keyboardType: TextInputType.number,
+                    readOnly: widget.isSaleMode, // سیل موڈ میں خرید قیمت تبدیل نہیں ہو گی
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -231,7 +241,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
             ),
             const SizedBox(height: 12),
 
-            // 3. تعداد (Qty) اور سمارٹ رنگ ڈراپ ڈاؤن (وائٹ بیک گراؤنڈ کے ساتھ)
+            // 3. تعداد (Qty) اور رنگ ڈراپ ڈاؤن
             Row(
               children: [
                 Expanded(
@@ -289,7 +299,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
             ),
             const SizedBox(height: 16),
 
-            // 5. لائیو سب ٹوٹل
+            // 5. لائیو سب ٹوٹل اور پرافٹ باکس
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(10),
@@ -298,24 +308,44 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
-                  const Text(
-                    'کل رقم (Subtotal):',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'کل رقم (Subtotal):',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                      ),
+                      Text(
+                        'Rs ${liveSubTotal.toStringAsFixed(0)}',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFE53935)),
+                      ),
+                    ],
                   ),
-                  Text(
-                    'Rs ${liveSubTotal.toStringAsFixed(0)}',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFE53935)),
-                  ),
+                  if (widget.isSaleMode) ...[
+                    const Divider(height: 12, thickness: 1),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'تخمینہ پرافٹ (Estimated Profit):',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
+                        ),
+                        Text(
+                          'Rs ${liveProfit.toStringAsFixed(0)}',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
             // بٹنز
-            if (!isEditing) ...[
+            if (!isEditing && !widget.isSaleMode) ...[
               Row(
                 children: [
                   Expanded(
@@ -382,9 +412,9 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                       Navigator.pop(context);
                     }
                   },
-                  child: const Text(
-                    'تبدیلیاں محفوظ کریں',
-                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  child: Text(
+                    widget.isSaleMode ? 'سیل میں شامل کریں' : 'تبدیلیاں محفوظ کریں',
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -400,17 +430,21 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
     required String label,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
+    bool readOnly = false,
   }) {
     return SizedBox(
       height: 48,
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
+        readOnly: readOnly, // اگر یہ ٹرو ہو تو فیلڈ ایڈٹ نہیں ہو گی (جیسے سیل موڈ میں پرچیز پرائس)
         onChanged: (value) => setState(() {}),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(fontSize: 11, color: Colors.grey),
           prefixIcon: Icon(icon, size: 16, color: const Color(0xFFE53935)),
+          filled: readOnly,
+          fillColor: readOnly ? Colors.grey.shade100 : Colors.white,
           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
           enabledBorder: OutlineInputBorder(
