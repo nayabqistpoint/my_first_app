@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
 import 'sale_purchase.dart';
-import '../controllers/item_controller.dart'; // <--- اسٹاک کو اپڈیٹ کرنے کے لیے امپورٹ ایڈ کر دیا ہے
+import '../controllers/item_controller.dart'; // <--- اسٹاک کو اپڈیٹ کرنے کے لیے امپورٹ
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
@@ -86,24 +86,17 @@ class _SalePageState extends State<SalePage> {
     );
   }
 
+  // --- یہاں ہم نے ترتیب ٹھیک کی ہے: پہلے اسٹاک مائنس ہوگا پھر ٹرانزیکشن سیভ ہوگی ---
   void _onSaveAndSharePressed() {
-    bool success = salePurchaseController.completeTransaction(
-      bankSource: _selectedBankSource,
-      cashAmount: _cashAmount,
-      bankAmount: _bankAmount,
-    );
-
-    if (!success) {
+    if (salePurchaseController.itemList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('کم از کم ایک آئٹم شامل کرنا ضروری ہے')),
       );
       return;
     }
 
-    // --- سیل ہونے پر اسٹاک میں سے مقدار مائنس (Reduce) کرنے کا لوپ ---
+    // 1. پہلے اسٹاک میں سے مقدار مائنس کریں (جب تک لسٹ میں آئٹمز موجود ہیں)
     for (var item in salePurchaseController.itemList) {
-      // فرض کریں itemController میں آئٹم کم کرنے یا ایڈجस्ट کرنے کا فنکشن موجود ہے
-      // یہاں ہم موجودہ اسٹاک میں سے کوয়ানٹیٹی کو کم کر رہے ہیں
       itemController.reduceItemStock(
         name: item['model'],
         imei: item['imei'] ?? '',
@@ -111,11 +104,19 @@ class _SalePageState extends State<SalePage> {
       );
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('سیل انٹری کامیابی سے محفوظ اور اسٹاک اپڈیٹ کر دیا گیا ہے')),
+    // 2. اس کے بعد ٹرانزیکشن مکمل اور محفوظ کریں
+    bool success = salePurchaseController.completeTransaction(
+      bankSource: _selectedBankSource,
+      cashAmount: _cashAmount,
+      bankAmount: _bankAmount,
     );
 
-    Navigator.pop(context);
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('سیل انٹری کامیابی سے محفوظ اور اسٹاک اپڈیٹ کر دیا گیا ہے')),
+      );
+      Navigator.pop(context);
+    }
   }
 
   void _navigateToPurchasePageSmoothly() {
