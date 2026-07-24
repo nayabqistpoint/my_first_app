@@ -8,7 +8,8 @@ class ItemDetailWidget extends StatefulWidget {
   final String initialDescription;
   final String initialImei;
   final String initialCategory;
-  final bool isSaleMode; // نیا موڈ فلیگ (سیل ہے یا پرچیز)
+  final String initialSupplierName; // نیا فیلڈ: سپلائر کا نام
+  final bool isSaleMode;
   
   final Function(
     String model, 
@@ -17,7 +18,8 @@ class ItemDetailWidget extends StatefulWidget {
     double salePrice, 
     String description, 
     String imei, 
-    String category
+    String category,
+    String supplierName
   ) onItemSaved;
 
   const ItemDetailWidget({
@@ -29,7 +31,8 @@ class ItemDetailWidget extends StatefulWidget {
     this.initialDescription = '',
     this.initialImei = '',
     this.initialCategory = 'موبائل فون (Mobile Phone)',
-    this.isSaleMode = false, // بائی ڈیফলت پرچیز موڈ رہے گا
+    this.initialSupplierName = '',
+    this.isSaleMode = false,
     required this.onItemSaved,
   });
 
@@ -43,6 +46,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
   late TextEditingController _purchasePriceController;
   late TextEditingController _salePriceController;
   late TextEditingController _imeiController;
+  late TextEditingController _supplierController; // نیا کنٹرولر سپلائر کے لیے
   
   late String _selectedCategory;
   final List<String> _categories = [
@@ -76,6 +80,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
       text: widget.initialSalePrice > 0 ? widget.initialSalePrice.toStringAsFixed(0) : '',
     );
     _imeiController = TextEditingController(text: widget.initialImei);
+    _supplierController = TextEditingController(text: widget.initialSupplierName);
     
     _selectedCategory = _categories.contains(widget.initialCategory) 
         ? widget.initialCategory 
@@ -95,6 +100,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
     _purchasePriceController.dispose();
     _salePriceController.dispose();
     _imeiController.dispose();
+    _supplierController.dispose();
     super.dispose();
   }
 
@@ -106,9 +112,12 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
     final imei = _imeiController.text.trim();
     final description = _selectedColor ?? '';
     final category = _selectedCategory;
+    final supplierName = _supplierController.text.trim().isEmpty 
+        ? 'نامعلوم' 
+        : _supplierController.text.trim();
 
     if (model.isNotEmpty) {
-      widget.onItemSaved(model, qty, purchasePrice, salePrice, description, imei, category);
+      widget.onItemSaved(model, qty, purchasePrice, salePrice, description, imei, category, supplierName);
       return true;
     }
     
@@ -128,7 +137,6 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
     final activePrice = salePrice > 0 ? salePrice : purchasePrice;
     final liveSubTotal = qty * activePrice;
     
-    // پرافٹ کا لائیو حساب (اگر سیل موڈ ہو تو پرافٹ نکلے گا)
     final liveProfit = widget.isSaleMode ? (qty * (salePrice - purchasePrice)) : 0.0;
 
     return Scaffold(
@@ -191,8 +199,6 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                     height: 48,
                     child: TextField(
                       controller: _modelController,
-                      // اگر سیل موڈ ہے تو ماڈل کا نام بھی صرف پڑھنے کے لیے ہو سکتا ہے یا ایڈیٹیبل، 
-                      // آپ کی ضرورت کے مطابق یہ ایڈیٹیبل رکھا ہے تاکہ سرچ ہو سکے
                       onChanged: (value) => setState(() {}),
                       decoration: InputDecoration(
                         labelText: 'ماڈل / آئٹم کا نام',
@@ -216,7 +222,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
             ),
             const SizedBox(height: 12),
 
-            // 2. قیمتِ خرید و فروخت (سیل موڈ میں پرچیز پرائس ریڈ آؤٹ / لاک ہوگی)
+            // 2. قیمتِ خرید و فروخت
             Row(
               children: [
                 Expanded(
@@ -225,7 +231,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                     label: widget.isSaleMode ? 'قیمتِ خرید (پڑی ہوئی ہے)' : 'قیمتِ خرید (Rs)',
                     icon: Icons.account_balance_wallet_outlined,
                     keyboardType: TextInputType.number,
-                    readOnly: widget.isSaleMode, // سیل موڈ میں خرید قیمت تبدیل نہیں ہو گی
+                    readOnly: widget.isSaleMode,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -290,12 +296,27 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
             ),
             const SizedBox(height: 12),
 
-            // 4. IMEI نمبر
-            _buildTextField(
-              controller: _imeiController,
-              label: 'IMEI نمبر (15 ہندسے)',
-              icon: Icons.qr_code,
-              keyboardType: TextInputType.number,
+            // 4. IMEI نمبر اور سپلائر کا نام (دونوں ایک لائن میں)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTextField(
+                    controller: _imeiController,
+                    label: 'IMEI نمبر (15 ہندسے)',
+                    icon: Icons.qr_code,
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildTextField(
+                    controller: _supplierController,
+                    label: 'سپلائر کا نام (Supplier)',
+                    icon: Icons.person_outline,
+                    keyboardType: TextInputType.text,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
@@ -385,6 +406,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                               _purchasePriceController.clear();
                               _salePriceController.clear();
                               _imeiController.clear();
+                              _supplierController.clear();
                               _selectedColor = _commonColors.first;
                             });
                           }
@@ -437,7 +459,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        readOnly: readOnly, // اگر یہ ٹرو ہو تو فیلڈ ایڈٹ نہیں ہو گی (جیسے سیل موڈ میں پرچیز پرائس)
+        readOnly: readOnly,
         onChanged: (value) => setState(() {}),
         decoration: InputDecoration(
           labelText: label,

@@ -69,16 +69,19 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
           initialDescription: isEditing ? item!['desc'] : '',
           initialImei: isEditing ? item!['imei'] : '',
           initialCategory: isEditing ? item!['category'] : 'موبائل فون (Mobile Phone)',
-          onItemSaved: (model, qty, purchasePrice, salePrice, desc, imei, category) {
+          initialSupplierName: isEditing ? (item!['supplier'] ?? '') : '',
+          onItemSaved: (model, qty, purchasePrice, salePrice, description, imei, category, supplierName) {
             salePurchaseController.saveItem(
               editIndex: editIndex,
               model: model,
               qty: qty,
               purchasePrice: purchasePrice,
               salePrice: salePrice,
-              desc: desc,
+              desc: description,
               imei: imei,
               category: category,
+              supplier: supplierName,
+              color: description,
             );
           },
         ),
@@ -86,15 +89,21 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     );
   }
 
-  // --- مشترکہ فنکشن جو دونوں جگہ ڈیٹا اسٹاک میں بھیجے گا ---
   void _saveItemsToStock() {
     for (var item in salePurchaseController.itemList) {
+      final String modelName = (item['model'] != null && item['model'].toString().trim().isNotEmpty) 
+          ? item['model'] 
+          : 'نامعلوم ماڈل';
+
       itemController.addItem(
-        name: item['model'],
+        name: modelName,
         imei: item['imei'] ?? '',
-        quantity: item['qty'],
-        purchasePrice: item['purchasePrice'],
-        salePrice: item['salePrice'],
+        quantity: item['qty'] ?? 1,
+        purchasePrice: item['purchasePrice'] ?? 0.0,
+        salePrice: item['salePrice'] ?? 0.0,
+        category: item['category'] ?? 'جنرل',
+        supplierName: item['supplier'] ?? 'نامعلوم',
+        color: item['desc'] ?? 'نامعلوم',
       );
     }
   }
@@ -107,10 +116,8 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
       return;
     }
 
-    // 1. پہلے اسٹاک میں ڈیٹا محفوظ کریں
     _saveItemsToStock();
 
-    // 2. پھر ٹرانزیکشن مکمل کریں
     bool success = salePurchaseController.completeTransaction(
       bankSource: _selectedBankSource,
       cashAmount: _cashAmount,
@@ -144,10 +151,8 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
       return;
     }
 
-    // 1. اسٹاک میں ڈیٹا محفوظ کریں
     _saveItemsToStock();
 
-    // 2. سیل موڈ میں شفٹ کریں
     salePurchaseController.shiftToSaveAndSellMode();
     _navigateToSalePageSmoothly();
 

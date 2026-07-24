@@ -8,7 +8,7 @@ import 'common/discount_widget.dart';
 import 'common/transaction_summary_widget.dart';
 import 'common/sale_purchase_toggle_widget.dart';
 import '../../dashboard/widgets/source_selecter.dart';
-import 'common/quick_sell_widget.dart'; // <--- درست فولڈر پاتھ کے ساتھ امپورٹ
+import 'common/quick_sell_widget.dart';
 
 class SalePage extends StatefulWidget {
   const SalePage({super.key});
@@ -69,6 +69,7 @@ class _SalePageState extends State<SalePage> {
           initialDescription: isEditing ? item!['desc'] : '',
           initialImei: isEditing ? item!['imei'] : '',
           initialCategory: isEditing ? item!['category'] : 'موبائل فون (Mobile Phone)',
+          // اب یہاں بالکل 7 پیرامیٹرز ہیں جو دونوں ویجیٹس میں یکساں ہیں
           onItemSaved: (model, qty, purchasePrice, salePrice, desc, imei, category) {
             salePurchaseController.saveItem(
               editIndex: editIndex,

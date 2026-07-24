@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart'; // ہوم پیج کو یہاں امپورٹ کریں
+import 'package:hive_flutter/hive_flutter.dart'; // ہائیو کا پیکیج
+import 'home_page.dart'; 
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // ہائیو کو انیشیلائز کیا
+  await Hive.initFlutter(); 
+
+  // اسٹاک کے لیے ڈیٹا بیس کا باکس کھول رہے ہیں
+  await Hive.openBox('stockBox');
+
   runApp(const MyApp());
 }
 
@@ -17,7 +26,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: const HomePage(), // کنٹرول سیدھا ہوم پیج فائل کو دے دیا
+      home: const HomePage(), 
     );
   }
 }

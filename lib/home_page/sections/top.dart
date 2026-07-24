@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../controllers/item_controller.dart';
 
 class TopSection extends StatefulWidget {
   const TopSection({super.key});
@@ -12,32 +13,44 @@ class _TopSectionState extends State<TopSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          color: Colors.red,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Rs. 0.00", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-              const Text("نایاب قسط پوائنٹ", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(10.0),
-          child: Row(
-            children: [
-              _buildButton("You Will Get", "50,000", Colors.red, "get"),
-              const SizedBox(width: 8),
-              _buildButton("You Will Give", "20,000", Colors.green, "give"),
-              const SizedBox(width: 8),
-              _buildButton("Stock", "10", Colors.blue, "stock"),
-            ],
-          ),
-        ),
-      ],
+    return ListenableBuilder(
+      listenable: itemController,
+      builder: (context, child) {
+        // تمام آئٹمز کے سب ٹوٹل کا گرینڈ ٹوٹل نکالنے کا حساب
+        double totalStockAmount = itemController.items.fold(
+          0.0,
+          (sum, item) => sum + (item.quantity * item.purchasePrice),
+        );
+
+        return Column(
+          children: [
+            Container(
+              color: Colors.red,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("Rs. 0.00", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                  const Text("نایاب قسط پوائنٹ", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Row(
+                children: [
+                  _buildButton("You Will Get", "50,000", Colors.red, "get"),
+                  const SizedBox(width: 8),
+                  _buildButton("You Will Give", "20,000", Colors.green, "give"),
+                  const SizedBox(width: 8),
+                  // یہاں گرینڈ ٹوٹل پاس کر دیا گیا ہے
+                  _buildButton("Stock", totalStockAmount.toInt().toString(), Colors.blue, "stock"),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

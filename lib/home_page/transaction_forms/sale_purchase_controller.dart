@@ -16,13 +16,13 @@ class SalePurchaseController extends ChangeNotifier {
     return selectedMode == 0 ? purchaseItemList : saleItemList;
   }
 
-  // موڈ سیٹ کرنے کا فنکشن (ٹॉगल کے ذریعے عام سوئچنگ)
+  // موڈ سیٹ کرنے کا فنکشن (ٹگل کے ذریعے عام سوئچنگ)
   void setMode(int mode) {
     selectedMode = mode;
     notifyListeners();
   }
 
-  // آئٹم سیو یا ایڈ کرنے کا فنکشن
+  // آئٹم سیو یا ایڈ کرنے کا فنکشن (سپلائر اور کلر/پیکیج کے اضافے کے ساتھ)
   void saveItem({
     int? editIndex,
     required String model,
@@ -32,6 +32,8 @@ class SalePurchaseController extends ChangeNotifier {
     required String desc,
     required String imei,
     required String category,
+    String? supplier,
+    String? color,
   }) {
     final newItem = {
       'model': model,
@@ -41,6 +43,8 @@ class SalePurchaseController extends ChangeNotifier {
       'desc': desc,
       'imei': imei,
       'category': category,
+      'supplier': supplier ?? '',
+      'color': color ?? '',
     };
 
     if (selectedMode == 0) {
