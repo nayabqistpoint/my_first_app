@@ -4,19 +4,25 @@ class SalePurchaseController extends ChangeNotifier {
   // 0 = خرید (Purchase), 1 = فروخت (Sale)
   int selectedMode = 0; 
   
-  // آئٹمز کی لسٹ
-  List<Map<String, dynamic>> itemList = [];
+  // خرید اور فروخت کے لیے الگ الگ لسٹیں تاکہ ڈیٹا محفوظ رہے
+  List<Map<String, dynamic>> purchaseItemList = [];
+  List<Map<String, dynamic>> saleItemList = [];
 
   double discountValue = 0.0;
   bool isPercentageDiscount = false;
 
-  // موڈ سیٹ کرنے کا فنکشن
+  // پرانے UI کی بقا کے لیے گیٹر تاکہ جہاں بھی 'itemList' استعمال ہو رہا ہے وہ ایرر نہ دے
+  List<Map<String, dynamic>> get itemList {
+    return selectedMode == 0 ? purchaseItemList : saleItemList;
+  }
+
+  // موڈ سیٹ کرنے کا فنکشن (ٹॉगल کے ذریعے عام سوئچنگ)
   void setMode(int mode) {
     selectedMode = mode;
     notifyListeners();
   }
 
-  // آئٹম سیو یا ایڈ کرنے کا فنکشن
+  // آئٹم سیو یا ایڈ کرنے کا فنکشن
   void saveItem({
     int? editIndex,
     required String model,
@@ -37,17 +43,33 @@ class SalePurchaseController extends ChangeNotifier {
       'category': category,
     };
 
-    if (editIndex != null) {
-      itemList[editIndex] = newItem;
+    if (selectedMode == 0) {
+      if (editIndex != null && editIndex >= 0 && editIndex < purchaseItemList.length) {
+        purchaseItemList[editIndex] = newItem;
+      } else {
+        purchaseItemList.add(newItem);
+      }
     } else {
-      itemList.add(newItem);
+      if (editIndex != null && editIndex >= 0 && editIndex < saleItemList.length) {
+        saleItemList[editIndex] = newItem;
+      } else {
+        saleItemList.add(newItem);
+      }
     }
     notifyListeners();
   }
 
-  // آئٹم ڈیلیট کرنے کا فنکشن
+  // آئٹم ڈیلیٹ کرنے کا فنکشن
   void deleteItem(int index) {
-    itemList.removeAt(index);
+    if (selectedMode == 0) {
+      if (index >= 0 && index < purchaseItemList.length) {
+        purchaseItemList.removeAt(index);
+      }
+    } else {
+      if (index >= 0 && index < saleItemList.length) {
+        saleItemList.removeAt(index);
+      }
+    }
     notifyListeners();
   }
 
@@ -61,11 +83,12 @@ class SalePurchaseController extends ChangeNotifier {
   // سب ٹوٹل نکالنے کا حساب
   double get subTotal {
     double total = 0.0;
-    for (var item in itemList) {
-      int qty = item['qty'] as int;
+    final list = itemList; 
+    for (var item in list) {
+      int qty = (item['qty'] as num?)?.toInt() ?? 0;
       double price = (selectedMode == 0) 
-          ? (item['purchasePrice'] as double) 
-          : (item['salePrice'] as double);
+          ? ((item['purchasePrice'] as num?)?.toDouble() ?? 0.0) 
+          : ((item['salePrice'] as num?)?.toDouble() ?? 0.0);
       total += qty * price;
     }
     return total;
@@ -86,7 +109,7 @@ class SalePurchaseController extends ChangeNotifier {
     return finalVal < 0 ? 0 : finalVal;
   }
 
-  // انٹری مکمل کرنے اور ڈیٹا بیس میں محفوظ کرنے کا فنکشن
+  // انٹری مکمل کرنے کا فنکشن
   bool completeTransaction({
     String? bankSource,
     required double cashAmount,
@@ -94,22 +117,32 @@ class SalePurchaseController extends ChangeNotifier {
   }) {
     if (itemList.isEmpty) return false;
 
-    // یہاں آپ اپنی ڈیٹا بیس انٹری سیو کرنے کا لاجک لکھ سکتے ہیں
-    
-    // کامیابی کے بعد لسٹ کو کلیئر کر دیں یا جو رول آپ چاہیں
-    itemList.clear();
+    if (selectedMode == 0) {
+      purchaseItemList.clear();
+    } else {
+      saleItemList.clear();
+    }
     discountValue = 0.0;
+    isPercentageDiscount = false;
     notifyListeners();
     return true;
   }
 
-  // --- "محفوظ اور سیل کریں" کے لیے مطلوبہ فنکشن ---
+  // --- "محفوظ کریں اور سیل کریں" کا مضبوط اور درست فنکشن ---
   void shiftToSaveAndSellMode() {
-    selectedMode = 1; // موڈ کو 'فروخت' (Sale) پر شفٹ کر دیا
-    itemList.clear(); // اگر آپ چاہتے ہیں کہ آئٹمز صاف ہو جائیں یا قیمتیں بدلیں
+    // 1. پرچیز لسٹ کا گہرا کاپی (Deep copy) بنائیں تاکہ ڈیٹا محفوظ طریقے سے سیل لسٹ میں جائے
+    saleItemList = purchaseItemList.map((item) => Map<String, dynamic>.from(item)).toList();
+    
+    // 2. موڈ کو فروخت (1) پر سیٹ کریں
+    selectedMode = 1; 
+    
+    // 3. ڈسکاؤنٹ ری سیٹ کریں
+    discountValue = 0.0;
+    isPercentageDiscount = false;
+
     notifyListeners();
   }
 }
 
-// گلوبل کنٹرولر کا انسٹینس تاکہ پورے پروجیکٹ میں ایکسیس ہو سکے
+// گلوبل کنٹرولر کا انسٹینس
 final SalePurchaseController salePurchaseController = SalePurchaseController();

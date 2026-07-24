@@ -9,8 +9,8 @@ class ItemSelectorRowWidget extends StatelessWidget {
   final String? description;
   final VoidCallback? onTap;
   final VoidCallback? onEditTap;
-  final VoidCallback? onPlusTap;
   final VoidCallback? onDeleteTap;
+  final VoidCallback? onPlusTap;
 
   const ItemSelectorRowWidget({
     super.key,
@@ -22,8 +22,8 @@ class ItemSelectorRowWidget extends StatelessWidget {
     this.description,
     this.onTap,
     this.onEditTap,
-    this.onPlusTap,
     this.onDeleteTap,
+    this.onPlusTap,
   });
 
   @override
@@ -33,123 +33,121 @@ class ItemSelectorRowWidget extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.red.shade50,
+            color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE53935)),
+            border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
           ),
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.add_circle_outline, color: Color(0xFFE53935), size: 24),
+            children: const [
+              Icon(Icons.add_circle_outline, color: Color(0xFFE53935), size: 20),
               SizedBox(width: 8),
               Text(
-                'نیا آئٹم درج کریں',
-                style: TextStyle(color: Color(0xFFE53935), fontSize: 13, fontWeight: FontWeight.bold),
+                'آئٹم شامل کریں (Item Add کریں)',
+                style: TextStyle(
+                  color: Color(0xFFE53935),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ],
           ),
         ),
       );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // 1. ماڈل کا نام اور تفصیل
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  itemName ?? '',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (description != null && description!.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    description!,
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
+    } else {
+      return Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade100,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
-          ),
-
-          const SizedBox(width: 8),
-
-          // 2. سب ٹوٹل اور کوانٹٹی ضرب پرائس (نیچے)
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Rs ${(subTotal ?? 0).toStringAsFixed(0)}',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFE53935)),
+                Expanded(
+                  child: Text(
+                    itemName ?? '',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${totalQty ?? 0} × ${(unitPrice ?? 0).toStringAsFixed(0)}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                Row(
+                  children: [
+                    if (onEditTap != null)
+                      IconButton(
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        icon: const Icon(Icons.edit, size: 18, color: Colors.blue),
+                        onPressed: onEditTap,
+                      ),
+                    if (onDeleteTap != null)
+                      IconButton(
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                        onPressed: onDeleteTap,
+                      ),
+                  ],
                 ),
               ],
             ),
-          ),
-
-          const SizedBox(width: 8),
-
-          // 3. ایکشن بٹنز (پینسل، ڈیلیٹ بالٹی، اور مزید بڑا پلس آئکن)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ترمیم (پینسل)
-              InkWell(
-                onTap: onEditTap,
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
-                ),
+            if (description != null && description!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                description!,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
-              const SizedBox(width: 4),
-
-              // ڈیلیٹ (بالٹی / باسکٹ) - اب پینسل کے بالکل ساتھ لازمی نظر آئے گی
-              InkWell(
-                onTap: onDeleteTap,
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.delete_outline, size: 19, color: Colors.red),
-                ),
-              ),
-              const SizedBox(width: 4),
-
-              // مزید بڑا پلس (+) بٹن (صرف آخری رو پر)
-              if (onPlusTap != null)
-                InkWell(
-                  onTap: onPlusTap,
-                  child: const Padding(
-                    padding: EdgeInsets.all(2),
-                    child: Icon(Icons.add_circle, size: 26, color: Color(0xFFE53935)),
-                  ),
-                ),
             ],
-          ),
-        ],
-      ),
-    );
+            const Divider(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'تعداد: $totalQty x قیمت: ${unitPrice?.toStringAsFixed(0) ?? '0'}',
+                  style: const TextStyle(fontSize: 13, color: Colors.black54),
+                ),
+                Row(
+                  children: [
+                    Text(
+                      'کل: ${subTotal?.toStringAsFixed(0) ?? '0'}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFE53935),
+                      ),
+                    ),
+                    if (onPlusTap != null) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.add_circle, color: Color(0xFFE53935), size: 22),
+                        onPressed: onPlusTap,
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
   }
 }

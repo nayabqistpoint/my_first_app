@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
-import 'sale_page.dart';
+import 'sale_purchase.dart';
 import '../controllers/item_controller.dart';
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
-import 'common/item_detail_widget.dart';
 import 'common/discount_widget.dart';
 import 'common/transaction_summary_widget.dart';
 import 'common/sale_purchase_toggle_widget.dart';
 import '../../dashboard/widgets/source_selecter.dart';
+import 'common/quick_sell_widget.dart'; // <--- درست فولڈر پاتھ کے ساتھ امپورٹ
 
-class SalePurchaseForm extends StatefulWidget {
-  const SalePurchaseForm({super.key});
+class SalePage extends StatefulWidget {
+  const SalePage({super.key});
 
   @override
-  State<SalePurchaseForm> createState() => _SalePurchaseFormState();
+  State<SalePage> createState() => _SalePageState();
 }
 
-class _SalePurchaseFormState extends State<SalePurchaseForm> {
+class _SalePageState extends State<SalePage> {
   final TextEditingController _partyNameController = TextEditingController();
   final TextEditingController _partyPhoneController = TextEditingController();
   final TextEditingController _receivedController = TextEditingController();
@@ -53,7 +53,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     super.dispose();
   }
 
-  void _openItemDetail({int? editIndex}) {
+  void _openQuickSellItem({int? editIndex}) {
     final isEditing = editIndex != null;
     final itemList = salePurchaseController.itemList;
     final item = isEditing ? itemList[editIndex] : null;
@@ -61,7 +61,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ItemDetailWidget(
+        builder: (context) => QuickSellWidget(
           initialModel: isEditing ? item!['model'] : '',
           initialQty: isEditing ? item!['qty'] : 1,
           initialPurchasePrice: isEditing ? item!['purchasePrice'] : 0.0,
@@ -86,19 +86,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     );
   }
 
-  // --- مشترکہ فنکشن جو دونوں جگہ ڈیٹا اسٹاک میں بھیجے گا ---
-  void _saveItemsToStock() {
-    for (var item in salePurchaseController.itemList) {
-      itemController.addItem(
-        name: item['model'],
-        imei: item['imei'] ?? '',
-        quantity: item['qty'],
-        purchasePrice: item['purchasePrice'],
-        salePrice: item['salePrice'],
-      );
-    }
-  }
-
   void _onSaveAndSharePressed() {
     if (salePurchaseController.itemList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -107,10 +94,14 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
       return;
     }
 
-    // 1. پہلے اسٹاک میں ڈیٹا محفوظ کریں
-    _saveItemsToStock();
+    for (var item in salePurchaseController.itemList) {
+      itemController.reduceItemStock(
+        name: item['model'],
+        imei: item['imei'] ?? '',
+        quantityToSubtract: item['qty'],
+      );
+    }
 
-    // 2. پھر ٹرانزیکشن مکمل کریں
     bool success = salePurchaseController.completeTransaction(
       bankSource: _selectedBankSource,
       cashAmount: _cashAmount,
@@ -119,47 +110,20 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('انٹری کامیابی سے محفوظ اور شیئر کر دی گئی ہے')),
+        const SnackBar(content: Text('سیل انٹری کامیابی سے محفوظ اور اسٹاک اپڈیٹ کر دیا گیا ہے')),
       );
       Navigator.pop(context);
     }
   }
 
-  void _navigateToSalePageSmoothly() {
-    Navigator.push(
+  void _navigateToPurchasePageSmoothly() {
+    Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const SalePage(),
+        pageBuilder: (context, animation, secondaryAnimation) => const SalePurchaseForm(),
         transitionDuration: Duration.zero,
         reverseTransitionDuration: Duration.zero,
       ),
-    );
-  }
-
-  void _onSaveAndSellPressed() {
-    if (salePurchaseController.itemList.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('کم از کم ایک آئٹم شامل کرنا ضروری ہے')),
-      );
-      return;
-    }
-
-    // 1. اسٹاک میں ڈیٹا محفوظ کریں
-    _saveItemsToStock();
-
-    // 2. سیل موڈ میں شفٹ کریں
-    salePurchaseController.shiftToSaveAndSellMode();
-    _navigateToSalePageSmoothly();
-
-    setState(() {
-      _partyNameController.clear();
-      _partyPhoneController.clear();
-      _receivedController.clear();
-      _descriptionController.clear();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('انٹری سیل موڈ میں منتقل کر دی گئی ہے!')),
     );
   }
 
@@ -189,23 +153,26 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                         constraints: const BoxConstraints(),
                         padding: EdgeInsets.zero,
                         icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () {
+                          salePurchaseController.setMode(0);
+                          Navigator.of(context).pop();
+                        },
                       ),
                       const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
-                          'نایاب قسط پوائنٹ',
+                          'نایاب قسط پوائنٹ - فروخت',
                           style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       SalePurchaseToggleWidget(
-                        isSaleSelected: false,
-                        onPurchaseTap: () {},
-                        onSaleTap: () {
-                          salePurchaseController.setMode(1);
-                          _navigateToSalePageSmoothly();
+                        isSaleSelected: true,
+                        onPurchaseTap: () {
+                          salePurchaseController.setMode(0);
+                          _navigateToPurchasePageSmoothly();
                         },
+                        onSaleTap: () {},
                       ),
                     ],
                   ),
@@ -220,7 +187,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                         PartySelectorWidget(
                           nameController: _partyNameController,
                           phoneController: _partyPhoneController,
-                          invoiceNo: 'INV-001',
+                          invoiceNo: 'INV-002',
                           currentDate: '23-07-2026',
                           currentTime: '4:37 AM',
                           phoneContacts: _dummyContacts,
@@ -230,7 +197,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                         if (itemList.isEmpty)
                           ItemSelectorRowWidget(
                             hasItems: false,
-                            onTap: () => _openItemDetail(),
+                            onTap: () => _openQuickSellItem(),
                           )
                         else
                           ListView.builder(
@@ -260,9 +227,9 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                                   unitPrice: unitPrice,
                                   subTotal: qty * unitPrice,
                                   description: displayDescription.isNotEmpty ? displayDescription : 'کیٹیگری: ${item['category']}',
-                                  onEditTap: () => _openItemDetail(editIndex: index),
+                                  onEditTap: () => _openQuickSellItem(editIndex: index),
                                   onDeleteTap: () => salePurchaseController.deleteItem(index),
-                                  onPlusTap: isLastItem ? () => _openItemDetail() : null,
+                                  onPlusTap: isLastItem ? () => _openQuickSellItem() : null,
                                 ),
                               );
                             },
@@ -295,42 +262,22 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                             },
                           ),
                           const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.grey.shade800,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  onPressed: _onSaveAndSharePressed,
-                                  icon: const Icon(Icons.share, size: 18),
-                                  label: const Text(
-                                    "محفوظ اور شیئر",
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFE53935),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFE53935),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  onPressed: _onSaveAndSellPressed,
-                                  icon: const Icon(Icons.swap_horiz, size: 18),
-                                  label: const Text(
-                                    "محفوظ اور سیل کریں",
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
+                              onPressed: _onSaveAndSharePressed,
+                              icon: const Icon(Icons.check_circle, size: 18),
+                              label: const Text(
+                                "سیل مکمل کریں اور محفوظ کریں",
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                               ),
-                            ],
+                            ),
                           ),
                         ],
                         const SizedBox(height: 20),

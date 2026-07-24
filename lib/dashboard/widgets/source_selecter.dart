@@ -90,13 +90,10 @@ class _SourceSelecterState extends State<SourceSelecter> {
     return ListenableBuilder(
       listenable: dashboardController,
       builder: (context, child) {
-        // ڈیش بورڈ سے تمام بینکوں کے نام اور ان کے بیلنس حاصل کریں
         final Map<String, double> bankBalances = dashboardController.bankBalances;
         final List<String> bankNames = bankBalances.keys.toList();
         
-        // کیش بیلنس کو سیف طریقے سے حاصل کرنا (اگر بینک میپ میں موجود ہو یا 0)
         final double cashBalance = bankBalances['Cash in Hand'] ?? 0.0;
-
         final List<String> allSources = ['Cash in Hand', ...bankNames];
 
         return Container(
@@ -164,7 +161,6 @@ class _SourceSelecterState extends State<SourceSelecter> {
                     padding: const EdgeInsets.only(bottom: 6.0),
                     child: Row(
                       children: [
-                        // سمارٹ اور چھوٹا ڈراپ ڈاؤن (سفید بیک گراؤنڈ کے ساتھ)
                         Expanded(
                           flex: 4,
                           child: Container(
@@ -181,7 +177,6 @@ class _SourceSelecterState extends State<SourceSelecter> {
                                 isExpanded: true,
                                 icon: const Icon(Icons.arrow_drop_down, size: 20, color: Colors.grey),
                                 items: allSources.map((source) {
-                                  // بیلنس کا حساب کتاب
                                   String balanceText = '';
                                   if (source == 'Cash in Hand') {
                                     balanceText = '(${cashBalance.toStringAsFixed(0)} Rs)';
@@ -221,8 +216,6 @@ class _SourceSelecterState extends State<SourceSelecter> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        
-                        // رقم کا خانہ
                         Expanded(
                           flex: 2,
                           child: SizedBox(
@@ -240,8 +233,6 @@ class _SourceSelecterState extends State<SourceSelecter> {
                             ),
                           ),
                         ),
-
-                        // ڈیلیٹ کرنے کی باسکٹ
                         if (_sourcesList.length > 1) ...[
                           const SizedBox(width: 4),
                           SizedBox(

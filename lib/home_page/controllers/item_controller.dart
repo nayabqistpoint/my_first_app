@@ -32,18 +32,76 @@ class ItemController extends ChangeNotifier {
     required double purchasePrice,
     required double salePrice,
   }) {
-    items.add(StockItem(
-      name: name,
-      imei: imei,
-      quantity: quantity,
-      purchasePrice: purchasePrice,
-      salePrice: salePrice,
-    ));
+    int existingIndex = items.indexWhere((item) =>
+        item.name.trim().toLowerCase() == name.trim().toLowerCase() &&
+        item.imei.trim().toLowerCase() == imei.trim().toLowerCase());
+
+    if (existingIndex != -1) {
+      items[existingIndex].quantity += quantity;
+      items[existingIndex].purchasePrice = purchasePrice;
+      items[existingIndex].salePrice = salePrice;
+    } else {
+      items.add(StockItem(
+        name: name,
+        imei: imei,
+        quantity: quantity,
+        purchasePrice: purchasePrice,
+        salePrice: salePrice,
+      ));
+    }
     notifyListeners();
   }
 
   void removeItem(int index) {
     items.removeAt(index);
+    notifyListeners();
+  }
+
+  // --- سمارٹ اسٹاک کم کرنے والا فنکشن جو اب نہیں اٹکے گا ---
+  void reduceItemStock({
+    required String name,
+    required String imei,
+    required int quantityToSubtract,
+  }) {
+    int remainingToSubtract = quantityToSubtract;
+
+    // مرحلہ 1: پہلے مخصوص IMEI والے آئٹم کو تلاش کر کے مائنس کریں
+    if (imei.trim().isNotEmpty) {
+      for (var item in items) {
+        if (item.imei.trim().toLowerCase() == imei.trim().toLowerCase() &&
+            item.name.trim().toLowerCase() == name.trim().toLowerCase()) {
+          
+          int available = item.quantity;
+          if (available >= remainingToSubtract) {
+            item.quantity -= remainingToSubtract;
+            remainingToSubtract = 0;
+          } else {
+            remainingToSubtract -= available;
+            item.quantity = 0;
+          }
+          break;
+        }
+      }
+    }
+
+    // مرحلہ 2: اگر مزید مقدار مائنس کرنی ہو تو نام کی بنیاد پر باری باری اگلی روز (Rows) سے مائنس کریں
+    if (remainingToSubtract > 0) {
+      for (var item in items) {
+        if (item.name.trim().toLowerCase() == name.trim().toLowerCase()) {
+          if (item.quantity > 0) {
+            if (item.quantity >= remainingToSubtract) {
+              item.quantity -= remainingToSubtract;
+              remainingToSubtract = 0;
+              break; 
+            } else {
+              remainingToSubtract -= item.quantity;
+              item.quantity = 0; 
+            }
+          }
+        }
+      }
+    }
+
     notifyListeners();
   }
 
