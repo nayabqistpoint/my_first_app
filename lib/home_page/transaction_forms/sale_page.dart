@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
 import 'sale_purchase.dart';
-import '../controllers/item_controller.dart'; // <--- اسٹاک کو اپڈیٹ کرنے کے لیے امپورٹ
+import '../controllers/item_controller.dart';
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
-import 'common/item_detail_widget.dart';
 import 'common/discount_widget.dart';
 import 'common/transaction_summary_widget.dart';
 import 'common/sale_purchase_toggle_widget.dart';
 import '../../dashboard/widgets/source_selecter.dart';
+import 'common/quick_sell_widget.dart'; // <--- درست فولڈر پاتھ کے ساتھ امپورٹ
 
 class SalePage extends StatefulWidget {
   const SalePage({super.key});
@@ -53,7 +53,7 @@ class _SalePageState extends State<SalePage> {
     super.dispose();
   }
 
-  void _openItemDetail({int? editIndex}) {
+  void _openQuickSellItem({int? editIndex}) {
     final isEditing = editIndex != null;
     final itemList = salePurchaseController.itemList;
     final item = isEditing ? itemList[editIndex] : null;
@@ -61,7 +61,7 @@ class _SalePageState extends State<SalePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ItemDetailWidget(
+        builder: (context) => QuickSellWidget(
           initialModel: isEditing ? item!['model'] : '',
           initialQty: isEditing ? item!['qty'] : 1,
           initialPurchasePrice: isEditing ? item!['purchasePrice'] : 0.0,
@@ -86,7 +86,6 @@ class _SalePageState extends State<SalePage> {
     );
   }
 
-  // --- یہاں ہم نے ترتیب ٹھیک کی ہے: پہلے اسٹاک مائنس ہوگا پھر ٹرانزیکشن سیভ ہوگی ---
   void _onSaveAndSharePressed() {
     if (salePurchaseController.itemList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -95,7 +94,6 @@ class _SalePageState extends State<SalePage> {
       return;
     }
 
-    // 1. پہلے اسٹاک میں سے مقدار مائنس کریں (جب تک لسٹ میں آئٹمز موجود ہیں)
     for (var item in salePurchaseController.itemList) {
       itemController.reduceItemStock(
         name: item['model'],
@@ -104,7 +102,6 @@ class _SalePageState extends State<SalePage> {
       );
     }
 
-    // 2. اس کے بعد ٹرانزیکشن مکمل اور محفوظ کریں
     bool success = salePurchaseController.completeTransaction(
       bankSource: _selectedBankSource,
       cashAmount: _cashAmount,
@@ -200,7 +197,7 @@ class _SalePageState extends State<SalePage> {
                         if (itemList.isEmpty)
                           ItemSelectorRowWidget(
                             hasItems: false,
-                            onTap: () => _openItemDetail(),
+                            onTap: () => _openQuickSellItem(),
                           )
                         else
                           ListView.builder(
@@ -230,9 +227,9 @@ class _SalePageState extends State<SalePage> {
                                   unitPrice: unitPrice,
                                   subTotal: qty * unitPrice,
                                   description: displayDescription.isNotEmpty ? displayDescription : 'کیٹیگری: ${item['category']}',
-                                  onEditTap: () => _openItemDetail(editIndex: index),
+                                  onEditTap: () => _openQuickSellItem(editIndex: index),
                                   onDeleteTap: () => salePurchaseController.deleteItem(index),
-                                  onPlusTap: isLastItem ? () => _openItemDetail() : null,
+                                  onPlusTap: isLastItem ? () => _openQuickSellItem() : null,
                                 ),
                               );
                             },
