@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
 import 'sale_purchase.dart';
+import '../controllers/item_controller.dart'; // <--- اسٹاک کو اپڈیٹ کرنے کے لیے امپورٹ ایڈ کر دیا ہے
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
@@ -99,8 +100,19 @@ class _SalePageState extends State<SalePage> {
       return;
     }
 
+    // --- سیل ہونے پر اسٹاک میں سے مقدار مائنس (Reduce) کرنے کا لوپ ---
+    for (var item in salePurchaseController.itemList) {
+      // فرض کریں itemController میں آئٹم کم کرنے یا ایڈجस्ट کرنے کا فنکشن موجود ہے
+      // یہاں ہم موجودہ اسٹاک میں سے کوয়ানٹیٹی کو کم کر رہے ہیں
+      itemController.reduceItemStock(
+        name: item['model'],
+        imei: item['imei'] ?? '',
+        quantityToSubtract: item['qty'],
+      );
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('سیل انٹری کامیابی سے محفوظ اور شیئر کر دی گئی ہے')),
+      const SnackBar(content: Text('سیل انٹری کامیابی سے محفوظ اور اسٹاک اپڈیٹ کر دیا گیا ہے')),
     );
 
     Navigator.pop(context);
@@ -144,7 +156,6 @@ class _SalePageState extends State<SalePage> {
                         padding: EdgeInsets.zero,
                         icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
                         onPressed: () {
-                          // 🔴 بیک جاتے وقت موڈ کو واپس خرید (0) پر سیٹ کریں تاکہ قیمتیں درست رہیں
                           salePurchaseController.setMode(0);
                           Navigator.of(context).pop();
                         },

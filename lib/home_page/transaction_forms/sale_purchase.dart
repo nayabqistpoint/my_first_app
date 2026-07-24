@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
 import 'sale_page.dart';
+import '../controllers/item_controller.dart';
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
@@ -85,25 +86,43 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     );
   }
 
-  void _onSaveAndSharePressed() {
-    bool success = salePurchaseController.completeTransaction(
-      bankSource: _selectedBankSource,
-      cashAmount: _cashAmount,
-      bankAmount: _bankAmount,
-    );
+  // --- مشترکہ فنکشن جو دونوں جگہ ڈیٹا اسٹاک میں بھیجے گا ---
+  void _saveItemsToStock() {
+    for (var item in salePurchaseController.itemList) {
+      itemController.addItem(
+        name: item['model'],
+        imei: item['imei'] ?? '',
+        quantity: item['qty'],
+        purchasePrice: item['purchasePrice'],
+        salePrice: item['salePrice'],
+      );
+    }
+  }
 
-    if (!success) {
+  void _onSaveAndSharePressed() {
+    if (salePurchaseController.itemList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('کم از کم ایک آئٹم شامل کرنا ضروری ہے')),
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('انٹری کامیابی سے محفوظ اور شیئر کر دی گئی ہے')),
+    // 1. پہلے اسٹاک میں ڈیٹا محفوظ کریں
+    _saveItemsToStock();
+
+    // 2. پھر ٹرانزیکشن مکمل کریں
+    bool success = salePurchaseController.completeTransaction(
+      bankSource: _selectedBankSource,
+      cashAmount: _cashAmount,
+      bankAmount: _bankAmount,
     );
 
-    Navigator.pop(context);
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('انٹری کامیابی سے محفوظ اور شیئر کر دی گئی ہے')),
+      );
+      Navigator.pop(context);
+    }
   }
 
   void _navigateToSalePageSmoothly() {
@@ -118,7 +137,6 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
   }
 
   void _onSaveAndSellPressed() {
-    // 1. پہلے چیک کریں کہ لسٹ خالی تو نہیں ہے
     if (salePurchaseController.itemList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('کم از کم ایک آئٹم شامل کرنا ضروری ہے')),
@@ -126,13 +144,13 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
       return;
     }
 
-    // 2. ڈیٹا کو سیل موڈ میں منتقل کریں (completeTransaction ہٹا دیا گیا ہے تاکہ ڈیٹا صاف نہ ہو)
-    salePurchaseController.shiftToSaveAndSellMode();
+    // 1. اسٹاک میں ڈیٹا محفوظ کریں
+    _saveItemsToStock();
 
-    // 3. سیل پیج پر جائیں
+    // 2. سیل موڈ میں شفٹ کریں
+    salePurchaseController.shiftToSaveAndSellMode();
     _navigateToSalePageSmoothly();
 
-    // 4. فارم کے فیلڈز صاف کریں
     setState(() {
       _partyNameController.clear();
       _partyPhoneController.clear();

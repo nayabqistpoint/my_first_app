@@ -47,6 +47,32 @@ class ItemController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- بہتر بنایا گیا اسٹاک کم کرنے والا فنکشن ---
+  void reduceItemStock({
+    required String name,
+    required String imei,
+    required int quantityToSubtract,
+  }) {
+    for (var item in items) {
+      bool nameMatched = item.name.trim().toLowerCase() == name.trim().toLowerCase();
+      bool imeiMatched = true;
+
+      // اگر اسٹاک اور سیل دونوں میں IMEI موجود ہے تو اسے بھی میچ کریں
+      if (imei.trim().isNotEmpty && item.imei.trim().isNotEmpty) {
+        imeiMatched = item.imei.trim().toLowerCase() == imei.trim().toLowerCase();
+      }
+
+      if (nameMatched && imeiMatched) {
+        item.quantity -= quantityToSubtract;
+        if (item.quantity < 0) {
+          item.quantity = 0;
+        }
+        notifyListeners();
+        break; // جیسے ہی آئٹم ملے، لوپ روک دیں
+      }
+    }
+  }
+
   void updateSearchQuery(String query) {
     searchQuery = query;
     notifyListeners();
