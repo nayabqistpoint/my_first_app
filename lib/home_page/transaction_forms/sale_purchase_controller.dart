@@ -113,6 +113,15 @@ class SalePurchaseController extends ChangeNotifier {
     return finalVal < 0 ? 0 : finalVal;
   }
 
+  // تمام آئٹمز اور ڈسکاؤنٹ صاف کرنے کا فنکشن
+  void clearAll() {
+    purchaseItemList.clear();
+    saleItemList.clear();
+    discountValue = 0.0;
+    isPercentageDiscount = false;
+    notifyListeners();
+  }
+
   // انٹری مکمل کرنے کا فنکشن
   bool completeTransaction({
     String? bankSource,
@@ -134,16 +143,10 @@ class SalePurchaseController extends ChangeNotifier {
 
   // --- "محفوظ کریں اور سیل کریں" کا مضبوط اور درست فنکشن ---
   void shiftToSaveAndSellMode() {
-    // 1. پرچیز لسٹ کا گہرا کاپی (Deep copy) بنائیں تاکہ ڈیٹا محفوظ طریقے سے سیل لسٹ میں جائے
     saleItemList = purchaseItemList.map((item) => Map<String, dynamic>.from(item)).toList();
-    
-    // 2. موڈ کو فروخت (1) پر سیٹ کریں
     selectedMode = 1; 
-    
-    // 3. ڈسکاؤنٹ ری سیٹ کریں
     discountValue = 0.0;
     isPercentageDiscount = false;
-
     notifyListeners();
   }
 }
