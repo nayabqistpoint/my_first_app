@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // ہائیو کا پیکیج
+import 'package:hive_flutter/hive_flutter.dart';
 import 'home_page.dart'; 
 
 void main() async {
@@ -8,8 +8,11 @@ void main() async {
   // ہائیو کو انیشیلائز کیا
   await Hive.initFlutter(); 
 
-  // اسٹاک کے لیے ڈیٹا بیس کا باکس کھول رہے ہیں
+  // اسٹاک کا باکس کھولا
   await Hive.openBox('stockBox');
+
+  // کسٹمر کا باکس کھولا (یہ بہت ضروری ہے)
+  await Hive.openBox('customerBox');
 
   runApp(const MyApp());
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
 import 'sale_purchase.dart';
 import '../controllers/item_controller.dart';
+import '../controllers/customer_controller.dart';
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
 import 'common/discount_widget.dart';
@@ -69,7 +70,6 @@ class _SalePageState extends State<SalePage> {
           initialDescription: isEditing ? item!['desc'] : '',
           initialImei: isEditing ? item!['imei'] : '',
           initialCategory: isEditing ? item!['category'] : 'موبائل فون (Mobile Phone)',
-          // اب یہاں بالکل 7 پیرامیٹرز ہیں جو دونوں ویجیٹس میں یکساں ہیں
           onItemSaved: (model, qty, purchasePrice, salePrice, desc, imei, category) {
             salePurchaseController.saveItem(
               editIndex: editIndex,
@@ -110,6 +110,30 @@ class _SalePageState extends State<SalePage> {
     );
 
     if (success) {
+      final partyName = _partyNameController.text.trim();
+      final partyPhone = _partyPhoneController.text.trim();
+
+      if (partyName.isNotEmpty) {
+        final grandTotal = salePurchaseController.grandTotal;
+        final receivedAmount = double.tryParse(_receivedController.text) ?? 0.0;
+        final balance = grandTotal - receivedAmount;
+
+        // سیل موڈ میں:
+        // اگر بقایا مثبت ہے (balance > 0) تو اس کا مطلب ہے کسٹمر سے پیسے 'لینے' ہیں ('get')
+        // اگر بقایا صفر یا منفی ہے، تو ٹائپ کو 'get' یا 'give' کے مطابق سیٹ کیا جا सकता ہے
+        final String transactionType = balance >= 0 ? 'get' : 'give';
+
+        customerController.addOrUpdateCustomer(
+          name: partyName,
+          phone: partyPhone.isNotEmpty ? partyPhone : 'نامعلوم',
+          amount: balance.abs(),
+          type: transactionType, 
+          description: _descriptionController.text.trim().isNotEmpty 
+              ? _descriptionController.text.trim() 
+              : 'سیل انٹری بقایا جات',
+        );
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('سیل انٹری کامیابی سے محفوظ اور اسٹاک اپڈیٹ کر دیا گیا ہے')),
       );
@@ -192,7 +216,10 @@ class _SalePageState extends State<SalePage> {
                           currentDate: '23-07-2026',
                           currentTime: '4:37 AM',
                           phoneContacts: _dummyContacts,
-                          onNewPartyAdded: (name, phone) {},
+                          onNewPartyAdded: (name, phone) {
+                            _partyNameController.text = name;
+                            _partyPhoneController.text = phone;
+                          },
                         ),
                         const SizedBox(height: 12),
                         if (itemList.isEmpty)

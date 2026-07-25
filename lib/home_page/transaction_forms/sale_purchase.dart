@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
 import 'sale_page.dart';
 import '../controllers/item_controller.dart';
+import '../controllers/customer_controller.dart';
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
@@ -108,6 +109,35 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     }
   }
 
+  void _handleCustomerOrSupplierRegistration() {
+    final partyName = _partyNameController.text.trim();
+    final partyPhone = _partyPhoneController.text.trim();
+
+    if (partyName.isNotEmpty) {
+      final grandTotal = salePurchaseController.grandTotal;
+      final paidAmount = double.tryParse(_receivedController.text) ?? 0.0;
+      final balance = grandTotal - paidAmount;
+
+      // یہ چیک کرتا ہے کہ آیا یہ پرچیز موڈ ہے (0) یا سیل موڈ ہے (1)
+      final bool isPurchaseMode = salePurchaseController.selectedMode == 0;
+
+      // پرچیز موڈ میں کسٹمر/سپلائر کا ٹائپ 'give' (دینا ہے) بنتا ہے، اور سیل موڈ میں 'get' (لینا ہے) بنتا ہے
+      final String transactionType = isPurchaseMode 
+          ? (balance >= 0 ? 'give' : 'get') 
+          : (balance >= 0 ? 'get' : 'give');
+
+      customerController.addOrUpdateCustomer(
+        name: partyName,
+        phone: partyPhone.isNotEmpty ? partyPhone : 'نامعلوم',
+        amount: balance.abs(),
+        type: transactionType, 
+        description: _descriptionController.text.trim().isNotEmpty 
+            ? _descriptionController.text.trim() 
+            : (isPurchaseMode ? 'پرچیز انٹری بقایا جات' : 'سیل انٹری بقایا جات'),
+      );
+    }
+  }
+
   void _onSaveAndSharePressed() {
     if (salePurchaseController.itemList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -117,6 +147,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     }
 
     _saveItemsToStock();
+    _handleCustomerOrSupplierRegistration();
 
     bool success = salePurchaseController.completeTransaction(
       bankSource: _selectedBankSource,
@@ -152,6 +183,7 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     }
 
     _saveItemsToStock();
+    _handleCustomerOrSupplierRegistration();
 
     salePurchaseController.shiftToSaveAndSellMode();
     _navigateToSalePageSmoothly();
@@ -205,8 +237,10 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                         ),
                       ),
                       SalePurchaseToggleWidget(
-                        isSaleSelected: false,
-                        onPurchaseTap: () {},
+                        isSaleSelected: !isPurchaseMode,
+                        onPurchaseTap: () {
+                          salePurchaseController.setMode(0);
+                        },
                         onSaleTap: () {
                           salePurchaseController.setMode(1);
                           _navigateToSalePageSmoothly();
@@ -229,7 +263,10 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                           currentDate: '23-07-2026',
                           currentTime: '4:37 AM',
                           phoneContacts: _dummyContacts,
-                          onNewPartyAdded: (name, phone) {},
+                          onNewPartyAdded: (name, phone) {
+                            _partyNameController.text = name;
+                            _partyPhoneController.text = phone;
+                          },
                         ),
                         const SizedBox(height: 12),
                         if (itemList.isEmpty)
@@ -246,6 +283,8 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                               final item = itemList[index];
                               final isLastItem = (index == itemList.length - 1);
                               final qty = item['qty'] as int;
+                              
+                              // **یہاں خرابی حل کی گئی ہے:** اب پرچیز موڈ میں قیمت خرید (`purchasePrice`) اٹھائے گا اور سیل موڈ میں قیمت فروخت (`salePrice`) اٹھائے گا۔
                               final unitPrice = isPurchaseMode 
                                   ? (item['purchasePrice'] as double) 
                                   : (item['salePrice'] as double);
