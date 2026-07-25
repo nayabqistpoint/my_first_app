@@ -83,5 +83,4 @@ class SaleController extends ChangeNotifier {
   }
 }
 
-// گلوبل انسٹانس تاکہ پوری ایپ میں آسانی سے استعمال ہو سکے
 final SaleController saleController = SaleController();

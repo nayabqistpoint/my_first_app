@@ -57,7 +57,6 @@ class ItemController extends ChangeNotifier {
     return Hive.box(_boxName);
   }
 
-  // صرف وہی آئٹمز دکھائیں جن کی کوانٹٹی صفر سے زیادہ ہو
   List<StockItem> get items {
     try {
       final rawData = stockBox.values.toList();
@@ -73,6 +72,7 @@ class ItemController extends ChangeNotifier {
   String searchQuery = "";
   String searchFilter = "بذریعہ نام";
 
+  // یہ فنکشن اسٹاک میں مال بڑھانے (खरीद / Purchase) کے لیے ہے
   void addItem({
     required String name,
     required String imei,
@@ -116,7 +116,7 @@ class ItemController extends ChangeNotifier {
       StockItem updatedItem = StockItem(
         name: name,
         imei: imei,
-        quantity: oldQty + quantity,
+        quantity: oldQty + quantity, // خرید پر اسٹاک پلس ہونا بالکل ٹھیک ہے
         purchasePrice: purchasePrice,
         salePrice: salePrice,
         supplierName: cleanSupplier != "نامعلوم سپلائر" ? cleanSupplier : (existingData['supplierName'] ?? 'نامعلوم سپلائر'),
@@ -147,6 +147,7 @@ class ItemController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // یہ فنکشن صرف اور صرف اسٹاک کم کرنے (فروخت / Sale) کے لیے ہے
   void reduceItemStock({
     required String name,
     required String imei,
@@ -160,15 +161,14 @@ class ItemController extends ChangeNotifier {
         StockItem item = StockItem.fromJson(rawData);
         
         bool isMatch = false;
-        if (imei.trim().isNotEmpty && item.imei.trim().toLowerCase() == imei.trim().toLowerCase()) {
-          isMatch = true;
-        } else if (item.name.trim().toLowerCase() == name.trim().toLowerCase()) {
+        if (item.name.trim().toLowerCase() == name.trim().toLowerCase() &&
+            item.imei.trim().toLowerCase() == imei.trim().toLowerCase()) {
           isMatch = true;
         }
 
         if (isMatch && item.quantity > 0) {
           if (item.quantity >= remainingToSubtract) {
-            item.quantity -= remainingToSubtract;
+            item.quantity -= remainingToSubtract; // یہاں سختی سے مائنس ہو رہا ہے
             remainingToSubtract = 0;
           } else {
             remainingToSubtract -= item.quantity;
@@ -194,7 +194,6 @@ class ItemController extends ChangeNotifier {
   }
 
   List<StockItem> get filteredItems {
-    // items پہلے ہی quantity > 0 والے دے رہا ہے، لہذا یہیں سے فلٹر ہو گا
     if (searchQuery.isEmpty) {
       return items;
     }
