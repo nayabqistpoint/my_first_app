@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class StockItem {
   String name;
@@ -6,6 +7,9 @@ class StockItem {
   int quantity;
   double purchasePrice;
   double salePrice;
+  String supplierName;
+  String category;
+  String color;
 
   StockItem({
     required this.name,
@@ -13,51 +17,137 @@ class StockItem {
     required this.quantity,
     required this.purchasePrice,
     required this.salePrice,
+    required this.supplierName,
+    required this.category,
+    required this.color,
   });
 
-  double get totalPurchaseValue => quantity * purchasePrice;
-  double get totalSaleValue => quantity * salePrice;
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'imei': imei,
+        'quantity': quantity,
+        'purchasePrice': purchasePrice,
+        'salePrice': salePrice,
+        'supplierName': supplierName,
+        'category': category,
+        'color': color,
+      };
+
+  factory StockItem.fromJson(Map<dynamic, dynamic> json) {
+    return StockItem(
+      name: json['name'] ?? '',
+      imei: json['imei'] ?? '',
+      quantity: json['quantity'] ?? 0,
+      purchasePrice: (json['purchasePrice'] ?? 0).toDouble(),
+      salePrice: (json['salePrice'] ?? 0).toDouble(),
+      supplierName: json['supplierName'] ?? 'نامعلوم سپلائر',
+      category: json['category'] ?? 'موبائل فون',
+      color: json['color'] ?? 'کوئی رنگ نہیں',
+    );
+  }
 }
 
 class ItemController extends ChangeNotifier {
-  final List<StockItem> items = [];
+  static const String _boxName = 'stockBox';
+
+  Box get stockBox {
+    if (!Hive.isBoxOpen(_boxName)) {
+      throw HiveError('Box $_boxName is not open. Make sure to open it in main().');
+    }
+    return Hive.box(_boxName);
+  }
+
+  List<StockItem> get items {
+    try {
+      final rawData = stockBox.values.toList();
+      return rawData
+          .map((e) => StockItem.fromJson(e as Map<dynamic, dynamic>))
+          .where((item) => item.quantity > 0)
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
 
   String searchQuery = "";
   String searchFilter = "بذریعہ نام";
 
+  // یہ فنکشن اسٹاک میں مال بڑھانے (खरीद / Purchase) کے لیے ہے
   void addItem({
     required String name,
     required String imei,
     required int quantity,
     required double purchasePrice,
     required double salePrice,
+    String supplierName = "نامعلوم سپلائر",
+    String category = "موبائل فون",
+    String color = "کوئی رنگ نہیں",
   }) {
-    int existingIndex = items.indexWhere((item) =>
-        item.name.trim().toLowerCase() == name.trim().toLowerCase() &&
-        item.imei.trim().toLowerCase() == imei.trim().toLowerCase());
+    final cleanCategory = (category.trim().isEmpty || category.contains('हिंदी') || category.contains('ह')) 
+        ? 'موبائل فون' 
+        : category;
 
-    if (existingIndex != -1) {
-      items[existingIndex].quantity += quantity;
-      items[existingIndex].purchasePrice = purchasePrice;
-      items[existingIndex].salePrice = salePrice;
+    final cleanColor = (color.trim().isEmpty || color.contains('हिंदी') || color.contains('ह')) 
+        ? 'کوئی رنگ نہیں' 
+        : color;
+        
+    final cleanSupplier = (supplierName.trim().isEmpty) ? 'نامعلوم سپلائر' : supplierName;
+
+    int existingKey = -1;
+
+    for (var key in stockBox.keys) {
+      final rawData = stockBox.get(key);
+      if (rawData != null && rawData is Map) {
+        String existingName = rawData['name'] ?? '';
+        String existingImei = rawData['imei'] ?? '';
+
+        if (existingName.trim().toLowerCase() == name.trim().toLowerCase() &&
+            existingImei.trim().toLowerCase() == imei.trim().toLowerCase()) {
+          existingKey = key;
+          break;
+        }
+      }
+    }
+
+    if (existingKey != -1) {
+      final existingData = stockBox.get(existingKey) as Map;
+      int oldQty = existingData['quantity'] ?? 0;
+
+      StockItem updatedItem = StockItem(
+        name: name,
+        imei: imei,
+        quantity: oldQty + quantity, // خرید پر اسٹاک پلس ہونا بالکل ٹھیک ہے
+        purchasePrice: purchasePrice,
+        salePrice: salePrice,
+        supplierName: cleanSupplier != "نامعلوم سپلائر" ? cleanSupplier : (existingData['supplierName'] ?? 'نامعلوم سپلائر'),
+        category: cleanCategory != "موبائل فون" ? cleanCategory : (existingData['category'] ?? 'موبائل فون'),
+        color: cleanColor != "کوئی رنگ نہیں" ? cleanColor : (existingData['color'] ?? 'کوئی رنگ نہیں'),
+      );
+
+      stockBox.put(existingKey, updatedItem.toJson());
     } else {
-      items.add(StockItem(
+      StockItem newItem = StockItem(
         name: name,
         imei: imei,
         quantity: quantity,
         purchasePrice: purchasePrice,
         salePrice: salePrice,
-      ));
+        supplierName: cleanSupplier,
+        category: cleanCategory,
+        color: cleanColor,
+      );
+      stockBox.add(newItem.toJson());
     }
+
     notifyListeners();
   }
 
   void removeItem(int index) {
-    items.removeAt(index);
+    stockBox.deleteAt(index);
     notifyListeners();
   }
 
-  // --- سمارٹ اسٹاک کم کرنے والا فنکشن جو اب نہیں اٹکے گا ---
+  // یہ فنکشن صرف اور صرف اسٹاک کم کرنے (فروخت / Sale) کے لیے ہے
   void reduceItemStock({
     required String name,
     required String imei,
@@ -65,39 +155,27 @@ class ItemController extends ChangeNotifier {
   }) {
     int remainingToSubtract = quantityToSubtract;
 
-    // مرحلہ 1: پہلے مخصوص IMEI والے آئٹم کو تلاش کر کے مائنس کریں
-    if (imei.trim().isNotEmpty) {
-      for (var item in items) {
-        if (item.imei.trim().toLowerCase() == imei.trim().toLowerCase() &&
-            item.name.trim().toLowerCase() == name.trim().toLowerCase()) {
-          
-          int available = item.quantity;
-          if (available >= remainingToSubtract) {
-            item.quantity -= remainingToSubtract;
+    for (var key in stockBox.keys) {
+      final rawData = stockBox.get(key);
+      if (rawData != null && rawData is Map) {
+        StockItem item = StockItem.fromJson(rawData);
+        
+        bool isMatch = false;
+        if (item.name.trim().toLowerCase() == name.trim().toLowerCase() &&
+            item.imei.trim().toLowerCase() == imei.trim().toLowerCase()) {
+          isMatch = true;
+        }
+
+        if (isMatch && item.quantity > 0) {
+          if (item.quantity >= remainingToSubtract) {
+            item.quantity -= remainingToSubtract; // یہاں سختی سے مائنس ہو رہا ہے
             remainingToSubtract = 0;
           } else {
-            remainingToSubtract -= available;
+            remainingToSubtract -= item.quantity;
             item.quantity = 0;
           }
-          break;
-        }
-      }
-    }
-
-    // مرحلہ 2: اگر مزید مقدار مائنس کرنی ہو تو نام کی بنیاد پر باری باری اگلی روز (Rows) سے مائنس کریں
-    if (remainingToSubtract > 0) {
-      for (var item in items) {
-        if (item.name.trim().toLowerCase() == name.trim().toLowerCase()) {
-          if (item.quantity > 0) {
-            if (item.quantity >= remainingToSubtract) {
-              item.quantity -= remainingToSubtract;
-              remainingToSubtract = 0;
-              break; 
-            } else {
-              remainingToSubtract -= item.quantity;
-              item.quantity = 0; 
-            }
-          }
+          stockBox.put(key, item.toJson());
+          if (remainingToSubtract <= 0) break;
         }
       }
     }
@@ -131,4 +209,4 @@ class ItemController extends ChangeNotifier {
   }
 }
 
-final itemController = ItemController();
+final ItemController itemController = ItemController();

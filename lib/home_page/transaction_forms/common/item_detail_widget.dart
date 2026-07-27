@@ -8,7 +8,8 @@ class ItemDetailWidget extends StatefulWidget {
   final String initialDescription;
   final String initialImei;
   final String initialCategory;
-  final bool isSaleMode; // نیا موڈ فلیگ (سیل ہے یا پرچیز)
+  final String initialSupplierName;
+  final bool isSaleMode;
   
   final Function(
     String model, 
@@ -17,7 +18,8 @@ class ItemDetailWidget extends StatefulWidget {
     double salePrice, 
     String description, 
     String imei, 
-    String category
+    String category,
+    String supplierName
   ) onItemSaved;
 
   const ItemDetailWidget({
@@ -29,7 +31,8 @@ class ItemDetailWidget extends StatefulWidget {
     this.initialDescription = '',
     this.initialImei = '',
     this.initialCategory = 'موبائل فون (Mobile Phone)',
-    this.isSaleMode = false, // بائی ڈیফলت پرچیز موڈ رہے گا
+    this.initialSupplierName = '',
+    this.isSaleMode = true,
     required this.onItemSaved,
   });
 
@@ -43,6 +46,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
   late TextEditingController _purchasePriceController;
   late TextEditingController _salePriceController;
   late TextEditingController _imeiController;
+  late TextEditingController _supplierController;
   
   late String _selectedCategory;
   final List<String> _categories = [
@@ -76,6 +80,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
       text: widget.initialSalePrice > 0 ? widget.initialSalePrice.toStringAsFixed(0) : '',
     );
     _imeiController = TextEditingController(text: widget.initialImei);
+    _supplierController = TextEditingController(text: widget.initialSupplierName);
     
     _selectedCategory = _categories.contains(widget.initialCategory) 
         ? widget.initialCategory 
@@ -95,6 +100,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
     _purchasePriceController.dispose();
     _salePriceController.dispose();
     _imeiController.dispose();
+    _supplierController.dispose();
     super.dispose();
   }
 
@@ -106,9 +112,12 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
     final imei = _imeiController.text.trim();
     final description = _selectedColor ?? '';
     final category = _selectedCategory;
+    final supplierName = _supplierController.text.trim().isEmpty 
+        ? 'نامعلوم' 
+        : _supplierController.text.trim();
 
     if (model.isNotEmpty) {
-      widget.onItemSaved(model, qty, purchasePrice, salePrice, description, imei, category);
+      widget.onItemSaved(model, qty, purchasePrice, salePrice, description, imei, category, supplierName);
       return true;
     }
     
@@ -120,25 +129,12 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
 
   @override
   Widget build(BuildContext context) {
-    bool isEditing = widget.initialModel.isNotEmpty;
-
-    final qty = int.tryParse(_qtyController.text) ?? 0;
-    final salePrice = double.tryParse(_salePriceController.text) ?? 0.0;
-    final purchasePrice = double.tryParse(_purchasePriceController.text) ?? 0.0;
-    final activePrice = salePrice > 0 ? salePrice : purchasePrice;
-    final liveSubTotal = qty * activePrice;
-    
-    // پرافٹ کا لائیو حساب (اگر سیل موڈ ہو تو پرافٹ نکلے گا)
-    final liveProfit = widget.isSaleMode ? (qty * (salePrice - purchasePrice)) : 0.0;
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: const Color(0xFFE53935),
         title: Text(
-          widget.isSaleMode 
-              ? 'آئٹم سیل کی تفصیل' 
-              : (isEditing ? 'آئٹم میں ترمیم کریں' : 'نیا آئٹم درج کریں'),
+          widget.isSaleMode ? 'آئٹم سیل کی تفصیل' : 'نیا آئٹم درج کریں',
           style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -148,7 +144,6 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. کیٹیگری اور ماڈل کا نام
             Row(
               children: [
                 Expanded(
@@ -187,45 +182,25 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                 const SizedBox(width: 8),
                 Expanded(
                   flex: 3,
-                  child: SizedBox(
-                    height: 48,
-                    child: TextField(
-                      controller: _modelController,
-                      // اگر سیل موڈ ہے تو ماڈل کا نام بھی صرف پڑھنے کے لیے ہو سکتا ہے یا ایڈیٹیبل، 
-                      // آپ کی ضرورت کے مطابق یہ ایڈیٹیبل رکھا ہے تاکہ سرچ ہو سکے
-                      onChanged: (value) => setState(() {}),
-                      decoration: InputDecoration(
-                        labelText: 'ماڈل / آئٹم کا نام',
-                        labelStyle: const TextStyle(fontSize: 11, color: Colors.grey),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(6),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        focusedBorder: const OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(6)),
-                          borderSide: BorderSide(color: Color(0xFFE53935), width: 1.5),
-                        ),
-                      ),
-                      style: const TextStyle(fontSize: 12),
-                    ),
+                  child: _buildTextField(
+                    controller: _modelController,
+                    label: 'ماڈل / آئٹم کا نام',
+                    icon: Icons.phone_android,
+                    readOnly: false,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-
-            // 2. قیمتِ خرید و فروخت (سیل موڈ میں پرچیز پرائس ریڈ آؤٹ / لاک ہوگی)
             Row(
               children: [
                 Expanded(
                   child: _buildTextField(
                     controller: _purchasePriceController,
-                    label: widget.isSaleMode ? 'قیمتِ خرید (پڑی ہوئی ہے)' : 'قیمتِ خرید (Rs)',
+                    label: 'قیمتِ خرید (Rs)',
                     icon: Icons.account_balance_wallet_outlined,
                     keyboardType: TextInputType.number,
-                    readOnly: widget.isSaleMode, // سیل موڈ میں خرید قیمت تبدیل نہیں ہو گی
+                    readOnly: widget.isSaleMode,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -235,13 +210,12 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                     label: 'قیمتِ فروخت (Rs)',
                     icon: Icons.point_of_sale_outlined,
                     keyboardType: TextInputType.number,
+                    readOnly: false,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-
-            // 3. تعداد (Qty) اور رنگ ڈراپ ڈاؤن
             Row(
               children: [
                 Expanded(
@@ -251,6 +225,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                     label: 'تعداد (Qty)',
                     icon: Icons.format_list_numbered,
                     keyboardType: TextInputType.number,
+                    readOnly: false,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -289,136 +264,49 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
               ],
             ),
             const SizedBox(height: 12),
-
-            // 4. IMEI نمبر
-            _buildTextField(
-              controller: _imeiController,
-              label: 'IMEI نمبر (15 ہندسے)',
-              icon: Icons.qr_code,
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-
-            // 5. لائیو سب ٹوٹل اور پرافٹ باکس
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'کل رقم (Subtotal):',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
-                      ),
-                      Text(
-                        'Rs ${liveSubTotal.toStringAsFixed(0)}',
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFE53935)),
-                      ),
-                    ],
-                  ),
-                  if (widget.isSaleMode) ...[
-                    const Divider(height: 12, thickness: 1),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'تخمینہ پرافٹ (Estimated Profit):',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
-                        ),
-                        Text(
-                          'Rs ${liveProfit.toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // بٹنز
-            if (!isEditing && !widget.isSaleMode) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 42,
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFE53935), width: 1.5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                        ),
-                        onPressed: () {
-                          if (_saveItemLocally()) {
-                            Navigator.pop(context);
-                          }
-                        },
-                        child: const Text(
-                          'محفوظ کریں',
-                          style: TextStyle(color: Color(0xFFE53935), fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SizedBox(
-                      height: 42,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE53935),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                        ),
-                        onPressed: () {
-                          if (_saveItemLocally()) {
-                            setState(() {
-                              _modelController.clear();
-                              _qtyController.text = '1';
-                              _purchasePriceController.clear();
-                              _salePriceController.clear();
-                              _imeiController.clear();
-                              _selectedColor = _commonColors.first;
-                            });
-                          }
-                        },
-                        child: const Text(
-                          'سیو اینڈ نیو (+)',
-                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ] else ...[
-              SizedBox(
-                width: double.infinity,
-                height: 42,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE53935),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  ),
-                  onPressed: () {
-                    if (_saveItemLocally()) {
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: Text(
-                    widget.isSaleMode ? 'سیل میں شامل کریں' : 'تبدیلیاں محفوظ کریں',
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTextField(
+                    controller: _imeiController,
+                    label: 'IMEI نمبر (15 ہندسے)',
+                    icon: Icons.qr_code,
+                    keyboardType: TextInputType.number,
+                    readOnly: false,
                   ),
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildTextField(
+                    controller: _supplierController,
+                    label: 'سپلائر کا نام (Supplier)',
+                    icon: Icons.person_outline,
+                    keyboardType: TextInputType.text,
+                    readOnly: widget.isSaleMode,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE53935),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                ),
+                onPressed: () {
+                  if (_saveItemLocally()) {
+                    Navigator.pop(context);
+                  }
+                },
+                child: Text(
+                  widget.isSaleMode ? 'سیل میں شامل کریں' : 'تبدیلیاں محفوظ کریں',
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                ),
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -437,8 +325,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        readOnly: readOnly, // اگر یہ ٹرو ہو تو فیلڈ ایڈٹ نہیں ہو گی (جیسے سیل موڈ میں پرچیز پرائس)
-        onChanged: (value) => setState(() {}),
+        readOnly: readOnly,
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(fontSize: 11, color: Colors.grey),

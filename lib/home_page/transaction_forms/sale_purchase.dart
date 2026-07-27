@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'sale_purchase_controller.dart';
 import 'sale_page.dart';
 import '../controllers/item_controller.dart';
+import '../controllers/customer_controller.dart';
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
 import 'common/item_detail_widget.dart';
@@ -69,16 +70,19 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
           initialDescription: isEditing ? item!['desc'] : '',
           initialImei: isEditing ? item!['imei'] : '',
           initialCategory: isEditing ? item!['category'] : 'موبائل فون (Mobile Phone)',
-          onItemSaved: (model, qty, purchasePrice, salePrice, desc, imei, category) {
+          initialSupplierName: isEditing ? (item!['supplier'] ?? '') : '',
+          onItemSaved: (model, qty, purchasePrice, salePrice, description, imei, category, supplierName) {
             salePurchaseController.saveItem(
               editIndex: editIndex,
               model: model,
               qty: qty,
               purchasePrice: purchasePrice,
               salePrice: salePrice,
-              desc: desc,
+              desc: description,
               imei: imei,
               category: category,
+              supplier: supplierName,
+              color: description,
             );
           },
         ),
@@ -86,15 +90,50 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
     );
   }
 
-  // --- مشترکہ فنکشن جو دونوں جگہ ڈیٹا اسٹاک میں بھیجے گا ---
   void _saveItemsToStock() {
     for (var item in salePurchaseController.itemList) {
+      final String modelName = (item['model'] != null && item['model'].toString().trim().isNotEmpty) 
+          ? item['model'] 
+          : 'نامعلوم ماڈل';
+
       itemController.addItem(
-        name: item['model'],
+        name: modelName,
         imei: item['imei'] ?? '',
-        quantity: item['qty'],
-        purchasePrice: item['purchasePrice'],
-        salePrice: item['salePrice'],
+        quantity: item['qty'] ?? 1,
+        purchasePrice: item['purchasePrice'] ?? 0.0,
+        salePrice: item['salePrice'] ?? 0.0,
+        category: item['category'] ?? 'جنرل',
+        supplierName: item['supplier'] ?? 'نامعلوم',
+        color: item['desc'] ?? 'نامعلوم',
+      );
+    }
+  }
+
+  void _handleCustomerOrSupplierRegistration() {
+    final partyName = _partyNameController.text.trim();
+    final partyPhone = _partyPhoneController.text.trim();
+
+    if (partyName.isNotEmpty) {
+      final grandTotal = salePurchaseController.grandTotal;
+      final paidAmount = double.tryParse(_receivedController.text) ?? 0.0;
+      final balance = grandTotal - paidAmount;
+
+      // یہ چیک کرتا ہے کہ آیا یہ پرچیز موڈ ہے (0) یا سیل موڈ ہے (1)
+      final bool isPurchaseMode = salePurchaseController.selectedMode == 0;
+
+      // پرچیز موڈ میں کسٹمر/سپلائر کا ٹائپ 'give' (دینا ہے) بنتا ہے، اور سیل موڈ میں 'get' (لینا ہے) بنتا ہے
+      final String transactionType = isPurchaseMode 
+          ? (balance >= 0 ? 'give' : 'get') 
+          : (balance >= 0 ? 'get' : 'give');
+
+      customerController.addOrUpdateCustomer(
+        name: partyName,
+        phone: partyPhone.isNotEmpty ? partyPhone : 'نامعلوم',
+        amount: balance.abs(),
+        type: transactionType, 
+        description: _descriptionController.text.trim().isNotEmpty 
+            ? _descriptionController.text.trim() 
+            : (isPurchaseMode ? 'پرچیز انٹری بقایا جات' : 'سیل انٹری بقایا جات'),
       );
     }
   }
@@ -107,10 +146,9 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
       return;
     }
 
-    // 1. پہلے اسٹاک میں ڈیٹا محفوظ کریں
     _saveItemsToStock();
+    _handleCustomerOrSupplierRegistration();
 
-    // 2. پھر ٹرانزیکشن مکمل کریں
     bool success = salePurchaseController.completeTransaction(
       bankSource: _selectedBankSource,
       cashAmount: _cashAmount,
@@ -144,10 +182,9 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
       return;
     }
 
-    // 1. اسٹاک میں ڈیٹا محفوظ کریں
     _saveItemsToStock();
+    _handleCustomerOrSupplierRegistration();
 
-    // 2. سیل موڈ میں شفٹ کریں
     salePurchaseController.shiftToSaveAndSellMode();
     _navigateToSalePageSmoothly();
 
@@ -200,8 +237,10 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                         ),
                       ),
                       SalePurchaseToggleWidget(
-                        isSaleSelected: false,
-                        onPurchaseTap: () {},
+                        isSaleSelected: !isPurchaseMode,
+                        onPurchaseTap: () {
+                          salePurchaseController.setMode(0);
+                        },
                         onSaleTap: () {
                           salePurchaseController.setMode(1);
                           _navigateToSalePageSmoothly();
@@ -224,7 +263,10 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                           currentDate: '23-07-2026',
                           currentTime: '4:37 AM',
                           phoneContacts: _dummyContacts,
-                          onNewPartyAdded: (name, phone) {},
+                          onNewPartyAdded: (name, phone) {
+                            _partyNameController.text = name;
+                            _partyPhoneController.text = phone;
+                          },
                         ),
                         const SizedBox(height: 12),
                         if (itemList.isEmpty)
@@ -241,6 +283,8 @@ class _SalePurchaseFormState extends State<SalePurchaseForm> {
                               final item = itemList[index];
                               final isLastItem = (index == itemList.length - 1);
                               final qty = item['qty'] as int;
+                              
+                              // **یہاں خرابی حل کی گئی ہے:** اب پرچیز موڈ میں قیمت خرید (`purchasePrice`) اٹھائے گا اور سیل موڈ میں قیمت فروخت (`salePrice`) اٹھائے گا۔
                               final unitPrice = isPurchaseMode 
                                   ? (item['purchasePrice'] as double) 
                                   : (item['salePrice'] as double);

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'sale_purchase_controller.dart';
+import 'sale_controller.dart';
 import 'sale_purchase.dart';
 import '../controllers/item_controller.dart';
+import '../controllers/customer_controller.dart';
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
 import 'common/discount_widget.dart';
 import 'common/transaction_summary_widget.dart';
 import 'common/sale_purchase_toggle_widget.dart';
 import '../../dashboard/widgets/source_selecter.dart';
-import 'common/quick_sell_widget.dart'; // <--- درست فولڈر پاتھ کے ساتھ امپورٹ
+import 'common/item_detail_widget.dart';
 
 class SalePage extends StatefulWidget {
   const SalePage({super.key});
@@ -55,13 +56,14 @@ class _SalePageState extends State<SalePage> {
 
   void _openQuickSellItem({int? editIndex}) {
     final isEditing = editIndex != null;
-    final itemList = salePurchaseController.itemList;
+    final itemList = saleController.itemList;
     final item = isEditing ? itemList[editIndex] : null;
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => QuickSellWidget(
+        builder: (context) => ItemDetailWidget(
+          isSaleMode: true,
           initialModel: isEditing ? item!['model'] : '',
           initialQty: isEditing ? item!['qty'] : 1,
           initialPurchasePrice: isEditing ? item!['purchasePrice'] : 0.0,
@@ -69,8 +71,9 @@ class _SalePageState extends State<SalePage> {
           initialDescription: isEditing ? item!['desc'] : '',
           initialImei: isEditing ? item!['imei'] : '',
           initialCategory: isEditing ? item!['category'] : 'موبائل فون (Mobile Phone)',
-          onItemSaved: (model, qty, purchasePrice, salePrice, desc, imei, category) {
-            salePurchaseController.saveItem(
+          initialSupplierName: isEditing ? (item!['supplier'] ?? '') : '',
+          onItemSaved: (model, qty, purchasePrice, salePrice, desc, imei, category, supplierName) {
+            saleController.saveItem(
               editIndex: editIndex,
               model: model,
               qty: qty,
@@ -79,6 +82,8 @@ class _SalePageState extends State<SalePage> {
               desc: desc,
               imei: imei,
               category: category,
+              supplier: supplierName,
+              color: desc,
             );
           },
         ),
@@ -87,33 +92,50 @@ class _SalePageState extends State<SalePage> {
   }
 
   void _onSaveAndSharePressed() {
-    if (salePurchaseController.itemList.isEmpty) {
+    if (saleController.itemList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('کم از کم ایک آئٹم شامل کرنا ضروری ہے')),
       );
       return;
     }
 
-    for (var item in salePurchaseController.itemList) {
+    // یہاں آپ _selectedBankSource, _cashAmount اور _bankAmount کو آگے پے منٹ یا لیجر میں پاس کر سکتے ہیں
+    debugPrint('Selected Bank: $_selectedBankSource, Cash: $_cashAmount, Bank: $_bankAmount');
+
+    for (var item in saleController.itemList) {
       itemController.reduceItemStock(
-        name: item['model'],
+        name: item['model'] ?? 'نامعلوم',
         imei: item['imei'] ?? '',
-        quantityToSubtract: item['qty'],
+        quantityToSubtract: item['qty'] ?? 1,
       );
     }
 
-    bool success = salePurchaseController.completeTransaction(
-      bankSource: _selectedBankSource,
-      cashAmount: _cashAmount,
-      bankAmount: _bankAmount,
+    final partyName = _partyNameController.text.trim();
+    final partyPhone = _partyPhoneController.text.trim();
+
+    if (partyName.isNotEmpty) {
+      final grandTotal = saleController.grandTotal;
+      final receivedAmount = double.tryParse(_receivedController.text) ?? 0.0;
+      final balance = grandTotal - receivedAmount;
+      final String transactionType = balance >= 0 ? 'get' : 'give';
+
+      customerController.addOrUpdateCustomer(
+        name: partyName,
+        phone: partyPhone.isNotEmpty ? partyPhone : 'نامعلوم',
+        amount: balance.abs(),
+        type: transactionType, 
+        description: _descriptionController.text.trim().isNotEmpty 
+            ? _descriptionController.text.trim() 
+            : 'موبائل فون فروخت (Sale)',
+      );
+    }
+
+    saleController.clearSale();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('سیل انٹری کامیابی سے محفوظ اور اسٹاک اپڈیٹ کر دیا گیا ہے')),
     );
-
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('سیل انٹری کامیابی سے محفوظ اور اسٹاک اپڈیٹ کر دیا گیا ہے')),
-      );
-      Navigator.pop(context);
-    }
+    Navigator.pop(context);
   }
 
   void _navigateToPurchasePageSmoothly() {
@@ -130,12 +152,10 @@ class _SalePageState extends State<SalePage> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: salePurchaseController,
+      listenable: saleController,
       builder: (context, child) {
-        final itemList = salePurchaseController.itemList;
-        final isPurchaseMode = salePurchaseController.selectedMode == 0;
-        final grandTotal = salePurchaseController.grandTotal;
-
+        final itemList = saleController.itemList;
+        final grandTotal = saleController.grandTotal;
         double currentReceivedAmount = double.tryParse(_receivedController.text) ?? 0.0;
 
         return Scaffold(
@@ -154,7 +174,6 @@ class _SalePageState extends State<SalePage> {
                         padding: EdgeInsets.zero,
                         icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
                         onPressed: () {
-                          salePurchaseController.setMode(0);
                           Navigator.of(context).pop();
                         },
                       ),
@@ -169,7 +188,6 @@ class _SalePageState extends State<SalePage> {
                       SalePurchaseToggleWidget(
                         isSaleSelected: true,
                         onPurchaseTap: () {
-                          salePurchaseController.setMode(0);
                           _navigateToPurchasePageSmoothly();
                         },
                         onSaleTap: () {},
@@ -191,7 +209,10 @@ class _SalePageState extends State<SalePage> {
                           currentDate: '23-07-2026',
                           currentTime: '4:37 AM',
                           phoneContacts: _dummyContacts,
-                          onNewPartyAdded: (name, phone) {},
+                          onNewPartyAdded: (name, phone) {
+                            _partyNameController.text = name;
+                            _partyPhoneController.text = phone;
+                          },
                         ),
                         const SizedBox(height: 12),
                         if (itemList.isEmpty)
@@ -207,11 +228,8 @@ class _SalePageState extends State<SalePage> {
                             itemBuilder: (context, index) {
                               final item = itemList[index];
                               final isLastItem = (index == itemList.length - 1);
-                              final qty = item['qty'] as int;
-                              final unitPrice = isPurchaseMode 
-                                  ? (item['purchasePrice'] as double) 
-                                  : (item['salePrice'] as double);
-
+                              final qty = item['qty'] as int? ?? 1;
+                              final unitPrice = (item['salePrice'] as num?)?.toDouble() ?? 0.0;
                               final colorDesc = item['desc'] ?? '';
                               final imeiText = (item['imei'] != null && item['imei'].toString().isNotEmpty) 
                                   ? ' | IMEI: ${item['imei']}' 
@@ -222,13 +240,13 @@ class _SalePageState extends State<SalePage> {
                                 padding: const EdgeInsets.only(bottom: 8.0),
                                 child: ItemSelectorRowWidget(
                                   hasItems: true,
-                                  itemName: item['model'],
+                                  itemName: item['model'] ?? 'نامعلوم',
                                   totalQty: qty,
                                   unitPrice: unitPrice,
                                   subTotal: qty * unitPrice,
-                                  description: displayDescription.isNotEmpty ? displayDescription : 'کیٹیگری: ${item['category']}',
+                                  description: displayDescription.isNotEmpty ? displayDescription : 'کیٹیگری: ${item['category'] ?? 'جنرل'}',
                                   onEditTap: () => _openQuickSellItem(editIndex: index),
-                                  onDeleteTap: () => salePurchaseController.deleteItem(index),
+                                  onDeleteTap: () => saleController.deleteItem(index),
                                   onPlusTap: isLastItem ? () => _openQuickSellItem() : null,
                                 ),
                               );
@@ -238,13 +256,13 @@ class _SalePageState extends State<SalePage> {
                           const SizedBox(height: 12),
                           DiscountWidget(
                             onDiscountChanged: (value, isPercentage) {
-                              salePurchaseController.setDiscount(value, isPercentage);
+                              saleController.setDiscount(value, isPercentage);
                             },
                           ),
                           const SizedBox(height: 12),
                           TransactionSummaryWidget(
-                            subTotal: salePurchaseController.subTotal,
-                            discountAmount: salePurchaseController.discountAmount,
+                            subTotal: saleController.subTotal,
+                            discountAmount: saleController.discountAmount,
                             grandTotal: grandTotal,
                             receivedController: _receivedController,
                             descriptionController: _descriptionController,

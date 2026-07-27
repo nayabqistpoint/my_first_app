@@ -98,7 +98,6 @@ class ItemsPage extends StatelessWidget {
                                 item.imei,
                                 item.quantity,
                                 item.purchasePrice,
-                                item.salePrice,
                               );
                             },
                           ),
@@ -112,8 +111,10 @@ class ItemsPage extends StatelessWidget {
     );
   }
 
-  // اسٹاک آئٹم کا ڈیزائن جس میں خرید اور فروخت دونوں قیمتیں شامل ہیں
-  Widget _buildStockItem(String mobileName, String imei, int qty, double purchasePrice, double salePrice) {
+  // اسٹاک آئٹم کا نیا ڈیزائن (صرف قیمتِ خرید اور سب ٹوٹل کے ساتھ)
+  Widget _buildStockItem(String mobileName, String imei, int qty, double purchasePrice) {
+    double subTotal = qty * purchasePrice;
+
     return Column(
       children: [
         Padding(
@@ -135,18 +136,18 @@ class ItemsPage extends StatelessWidget {
                   Text(imei, style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold)),
                 ],
               ),
-              // بائیں طرف: خرید قیمت اور فروخت قیمت کی تفصیل
+              // بائیں طرف: بڑا سب ٹوٹل اور نیچے چھوٹا مدھم فارمولا (مقدار × پرائس)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "فروخت: Rs ${salePrice.toInt()}", 
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.green)
+                    "Rs ${subTotal.toInt()}", 
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "خرید: Rs ${purchasePrice.toInt()}", 
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.redAccent)
+                    "$qty × ${purchasePrice.toInt()}", 
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey.shade600)
                   ),
                 ],
               ),

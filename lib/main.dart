@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart'; // ہوم پیج کو یہاں امپورٹ کریں
+import 'welcome/login_page.dart'; // لاگ ان پیج کا امپورٹ راستہ
 
 void main() {
   runApp(const MyApp());
@@ -12,12 +12,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Installment App',
+      title: 'نایاب قسط پوائنٹ',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
+        primaryColor: Colors.red[800],
+        scaffoldBackgroundColor: Colors.white,
       ),
-      home: const HomePage(), // کنٹرول سیدھا ہوم پیج فائل کو دے دیا
+      home: const LoginPage(),
     );
   }
 }

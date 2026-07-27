@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-// یہ پاتھ درست ہے: ایک بار ../ سے lib فولڈر میں اور پھر مین فائل تک
+// یہ پاتھ درست ہے: ایک بار ../ سے sections سے باہر، اور دوسرا ../ سے home_page سے باہر lib فولڈر تک
 import '../../installment_calculater_page.dart';
 // خرید و فروخت فارم کا امپورٹ پاتھ
 import '../transaction_forms/sale_purchase.dart';
+// آپ کی نئی بنائی گئی ڈیٹا بیس فائل کا درست پاتھ
+import '../../database_page.dart';
 
 class BottomSection extends StatelessWidget {
   const BottomSection({super.key});
@@ -13,8 +15,10 @@ class BottomSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10.0),
       child: Row(
         children: [
+          // 1. پہلا بڑا کیپسول بٹن (قسط کیلکولیٹر)
           Expanded(
-            child: _buildFilledButton(
+            flex: 4,
+            child: _buildCapsuleButton(
               context, 
               "قسط کیلکولیٹر", 
               Colors.blue, 
@@ -26,14 +30,32 @@ class BottomSection extends StatelessWidget {
               }
             ),
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 10),
+
+          // 2. درمیان میں چھوٹا گول "پلس (+)" بٹن (ڈیٹا بیس کے لیے)
+          FloatingActionButton(
+            heroTag: "database_plus_btn",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DatabasePage()),
+              );
+            },
+            backgroundColor: Colors.orange,
+            elevation: 2,
+            mini: true, // بٹن کو چھوٹا اور خوبصورت رکھنے کے لیے
+            child: const Icon(Icons.add, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 10),
+
+          // 3. دوسرا بڑا کیپسول بٹن (خرید و فروخت)
           Expanded(
-            child: _buildFilledButton(
+            flex: 4,
+            child: _buildCapsuleButton(
               context, 
               "خرید و فروخت", 
               Colors.green, 
               () {
-                // اب یہ قسط کیلکولیٹر کی طرح بالکل فل سکرین پیج کے طور پر کھلے گا
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const SalePurchaseForm()),
@@ -46,23 +68,24 @@ class BottomSection extends StatelessWidget {
     );
   }
 
-  Widget _buildFilledButton(BuildContext context, String title, Color color, VoidCallback onPressed) {
+  // کیپسول ڈیزائن بنانے کا فنکشن (گول کونے)
+  Widget _buildCapsuleButton(BuildContext context, String title, Color color, VoidCallback onPressed) {
     return SizedBox(
-      height: 45,
+      height: 48,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(30), // مکمل گول کیپسول شیپ
           ),
           elevation: 2,
         ),
         child: Text(
           title,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: FontWeight.bold,
           ),
         ),
