@@ -1,19 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'home_page.dart'; 
+import 'welcome/login_page.dart'; // لاگ ان پیج کا امپورٹ راستہ
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // ہائیو کو انیشیلائز کیا
-  await Hive.initFlutter(); 
-
-  // اسٹاک کا باکس کھولا
-  await Hive.openBox('stockBox');
-
-  // کسٹمر کا باکس کھولا (یہ بہت ضروری ہے)
-  await Hive.openBox('customerBox');
-
+void main() {
   runApp(const MyApp());
 }
 
@@ -24,12 +12,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Installment App',
+      title: 'نایاب قسط پوائنٹ',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
+        primaryColor: Colors.red[800],
+        scaffoldBackgroundColor: Colors.white,
       ),
-      home: const HomePage(), 
+      home: const LoginPage(),
     );
   }
 }

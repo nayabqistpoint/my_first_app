@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "559470553711",
+    "project_id": "nayab-qist-point",
+    "storage_bucket": "nayab-qist-point.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:559470553711:android:adbd07a6da46ef0c633b9a",
+        "android_client_info": {
+          "package_name": "com.example.my_first_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfAz5FS2XB4E9Slch3QWF66G3MXlPsLAM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
