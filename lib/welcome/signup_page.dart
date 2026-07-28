@@ -377,7 +377,7 @@ class _SignupPageState extends State<SignupPage> {
                       onChanged: (String? newValue) {
                         setState(() {
                           _selectedPackageType = newValue;
-                        });
+                         });
                       },
                     ),
                     const SizedBox(height: 12),
