@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart';
 import '../installment_calculater_page.dart';
 import 'signup_page.dart';
 import '../home_page.dart'; // آپ کے ہوم پیج کا امپورٹ
@@ -15,6 +16,9 @@ class _LoginPageState extends State<LoginPage> {
 
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  // فنگر پرنٹ کے لیے انسٹینس
+  final LocalAuthentication auth = LocalAuthentication();
 
   void _handleLogin() {
     String username = _usernameController.text.trim();
@@ -36,7 +40,7 @@ class _LoginPageState extends State<LoginPage> {
         // کامیاب لاگ ان کے بعد ہوم پیج / ایڈمن پینل پر ری ڈائریکٹ کرنا
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomePage()), // یہاں اپنی ہوم پیج کلاس کا نام چیک کر لیں
+          MaterialPageRoute(builder: (context) => const HomePage()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -47,6 +51,39 @@ class _LoginPageState extends State<LoginPage> {
       // کسٹمر لاگ ان چیک
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('کسٹمر ($username) کا لاگ ان ویریفائی ہو رہا ہے...')),
+      );
+    }
+  }
+
+  // فنگر پرنٹ لاگ ان کا فنکشن
+  Future<void> _handleBiometricLogin() async {
+    try {
+      bool canCheckBiometrics = await auth.canCheckBiometrics;
+      bool isSupported = await auth.isDeviceSupported();
+
+      if (canCheckBiometrics || isSupported) {
+        bool didAuthenticate = await auth.authenticate(
+          localizedReason: 'ڈیش بورڈ کھولنے کے لیے فنگر پرنٹ کی تصدیق کریں',
+        );
+
+        if (!mounted) return;
+
+        if (didAuthenticate) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+        }
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('اس ڈیوائس میں فنگر پرنٹ سکیورٹی دستیاب نہیں ہے')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خرابی: $e')),
       );
     }
   }
@@ -176,6 +213,36 @@ class _LoginPageState extends State<LoginPage> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     child: Text(_isCustomerLogin ? 'کسٹمر ڈیش بورڈ کھولیں' : 'ایڈمن پینل لاگ ان'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // فنگر پرنٹ (Biometric) لاگ ان بٹن
+                  OutlinedButton.icon(
+                    onPressed: _handleBiometricLogin,
+                    icon: Icon(Icons.fingerprint, color: Colors.red[800], size: 28),
+                    label: const Text(
+                      'فنگر پرنٹ سے لاگ ان کریں',
+                      style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: BorderSide(color: Colors.red.shade300, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // پاسورڈ بھول جانے کی صورت میں ایڈمن سے رابطہ کرنے کا سرخ پیغام
+                  Center(
+                    child: Text(
+                      'پاسورڈ بھول جانے کی صورت میں ایڈمن سے رابطہ کریں',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 15),
 

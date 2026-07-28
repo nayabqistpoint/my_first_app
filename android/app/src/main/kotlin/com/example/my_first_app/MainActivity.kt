@@ -1,5 +1,6 @@
-package com.example.my_first_app
+package com.example.my_first_app // (اگر آپ کا پیکیج نام الگ ہے تو اوپر والا ہی رہنے دیں، صرف اندر کی کلاس بدلیں)
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+class MainActivity: FlutterFragmentActivity() {
+}
