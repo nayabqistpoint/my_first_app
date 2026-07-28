@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'dashboard_page.dart';
+import 'admin_panel_page.dart'; // نیا ایڈمن پینل امپورٹ کر لیا گیا ہے
 
 // آپ کے پروجیکٹ کے بالکل سیدھے اور محفوظ امپورٹ راستے
 import 'home_page/sections/top.dart';
@@ -57,8 +58,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    // masterSwipeController: ایپ ہمیشہ ہوم پیج (Index 1) پر کھلے گی تاکہ بائیں طرف ڈیش بورڈ رہے
+  Widget build(BuildContext buildContext) {
+    // masterSwipeController: ایپ ہمیشہ ہوم پیج (Index 1) پر کھلے گی
+    // index 0 پر ڈیش بورڈ (بائیں طرف) اور index 2 پر ایڈمن پینل (دائیں طرف) ہوگا
     final PageController masterSwipeController = PageController(initialPage: 1);
 
     return Scaffold(
@@ -66,12 +68,12 @@ class _HomePageState extends State<HomePage> {
         behavior: AppScrollBehavior(),
         child: PageView(
           controller: masterSwipeController,
-          physics: const BouncingScrollPhysics(), // ڈیش بورڈ کے لیے مین سوائپ
+          physics: const BouncingScrollPhysics(),
           children: [
-            // 1. بالکل بائیں طرف آپ کا فنانشل بورڈ (ڈیش بورڈ) پیج
+            // 1. بالکل بائیں طرف آپ کا فنانشل بورڈ (ڈیش بورڈ) پیج (Index 0)
             const DashboardPage(),
 
-            // 2. دائیں طرف آپ کا مین ہوم پیج اپنے تمام سیکشنز کے ساتھ
+            // 2. درمیان میں آپ کا مین ہوم پیج اپنے تمام سیکشنز کے ساتھ (Index 1 - ڈیفالٹ)
             SafeArea(
               child: Container(
                 color: Colors.white,
@@ -115,6 +117,9 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+
+            // 3. دائیں طرف سے سوائپ کرنے پر نیا ایڈمن پینل (Index 2)
+            const AdminPanelPage(),
           ],
         ),
       ),

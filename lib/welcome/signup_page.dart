@@ -11,8 +11,8 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> {
   final _formKey = GlobalKey<FormState>();
 
-  bool _hasCheck = false;
   bool _hasGuarantor = false;
+  bool _hasSecurityCheck = false;
   
   // اقرار نامے اور اسکرول کی حالت
   bool _isCheckedTerms = false;
@@ -22,10 +22,9 @@ class _SignupPageState extends State<SignupPage> {
   // کسٹمر سیلفی کے لیے
   String? _customerSelfiePath;
 
-  // پیکج اور مالیات کے ویری ایبلز
+  // پیکج اور اسٹاک کے ویری ایبلز
   String? _selectedPackageType;
-  double _calculatedMonthlyInstallment = 0.0;
-  double _calculatedTotalAmount = 0.0;
+  String? _selectedStockItem;
 
   final TextEditingController _itemPriceController = TextEditingController();
   final TextEditingController _advanceAmountController = TextEditingController();
@@ -53,8 +52,6 @@ class _SignupPageState extends State<SignupPage> {
   @override
   void initState() {
     super.initState();
-    _itemPriceController.addListener(_calculateInstallment);
-    
     _termsScrollController.addListener(() {
       if (_termsScrollController.position.pixels >=
           _termsScrollController.position.maxScrollExtent - 20) {
@@ -64,45 +61,6 @@ class _SignupPageState extends State<SignupPage> {
           });
         }
       }
-    });
-  }
-
-  // پیکج اور قیمت کے حساب سے ماہانہ قسط اور ٹوٹل رقم نکالنے کا فارمولا
-  void _calculateInstallment() {
-    if (_selectedPackageType == null) return;
-
-    double price = double.tryParse(_itemPriceController.text) ?? 0.0;
-    double advance = double.tryParse(_advanceAmountController.text) ?? 0.0;
-    double remaining = price - advance;
-    if (remaining < 0) remaining = 0;
-
-    int months = 6;
-    double markupPercentage = 0.15; 
-
-    if (_selectedPackageType!.contains('چھ ماہ')) {
-      months = 6;
-      markupPercentage = 0.15;
-    } else if (_selectedPackageType!.contains('سات ماہ')) {
-      months = 7;
-      markupPercentage = 0.17;
-    } else if (_selectedPackageType!.contains('آٹھ ماہ')) {
-      months = 8;
-      markupPercentage = 0.20;
-    } else if (_selectedPackageType!.contains('نو ماہ')) {
-      months = 9;
-      markupPercentage = 0.22;
-    } else if (_selectedPackageType!.contains('دس ماہ')) {
-      months = 10;
-      markupPercentage = 0.25;
-    } else if (_selectedPackageType!.contains('بارہ ماہ')) {
-      months = 12;
-      markupPercentage = 0.30;
-    }
-
-    double totalWithMarkup = remaining + (remaining * markupPercentage);
-    setState(() {
-      _calculatedTotalAmount = advance + totalWithMarkup;
-      _calculatedMonthlyInstallment = totalWithMarkup / months;
     });
   }
 
@@ -129,23 +87,8 @@ class _SignupPageState extends State<SignupPage> {
     super.dispose();
   }
 
-  // ڈیٹا ہائیو میں محفوظ کرنے کا فنکشن
   void _submitData() async {
     if (_formKey.currentState!.validate()) {
-      if (_selectedPackageType == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('براہ کرم قسط کا پیکج منتخب کریں')),
-        );
-        return;
-      }
-
-      if (!_isCheckedTerms) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('براہ کرم اقرار نامے اور شرائط کو آخر تک پڑھ کر منظور کریں')),
-        );
-        return;
-      }
-
       var customerBox = Hive.box('customerBox');
 
       Map<String, dynamic> requestData = {
@@ -156,14 +99,12 @@ class _SignupPageState extends State<SignupPage> {
         'cnic': _cnicController.text,
         'address': _addressController.text,
         'customerSelfie': _customerSelfiePath ?? '',
-        'itemModel': _itemModelController.text,
+        'itemModel': _selectedStockItem ?? _itemModelController.text,
         'itemPrice': _itemPriceController.text,
         'packageType': _selectedPackageType,
         'advanceAmount': _advanceAmountController.text,
-        'monthlyInstallment': _calculatedMonthlyInstallment.toStringAsFixed(0),
-        'totalAmount': _calculatedTotalAmount.toStringAsFixed(0),
         'hasStampPaper': true, 
-        'hasCheck': _hasCheck,
+        'hasCheck': _hasSecurityCheck,
         'bankName': _bankNameController.text,
         'checkNumber': _checkNumberController.text,
         'hasGuarantor': _hasGuarantor,
@@ -184,8 +125,8 @@ class _SignupPageState extends State<SignupPage> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('درخواست موصول ہو گئی'),
-          content: const Text('آپ کی قسط کی درخواست کامیابی سے جمع ہو چکی ہے۔ منظوری کے لیے شاپ اونر سے رابطہ کریں۔'),
+          title: const Text('تصویر / ڈیٹا محفوظ ہو گیا'),
+          content: const Text('یو آئی کا یہ فارم کامیابی سے سیو ہو گیا ہے۔'),
           actions: [
             TextButton(
               onPressed: () {
@@ -202,12 +143,20 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   Widget build(BuildContext context) {
+    List<String> availableStockItems = [
+      'Vivo Y20 (دستیاب اسٹاک)',
+      'Samsung Galaxy A12 (دستیاب اسٹاک)',
+      'Oppo A54 (دستیاب اسٹاک)',
+      'Xiaomi Redmi 9T (دستیاب اسٹاک)',
+      'Infinix Hot 10 (دستیاب اسٹاک)'
+    ];
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       
       appBar: AppBar(
         backgroundColor: Colors.red[800],
-        title: const Text('نیا کسٹمر رجسٹریشن فارم', style: TextStyle(color: Colors.white, fontSize: 18)),
+        title: const Text('نیا کسٹمر رجسٹریشن (UI Layout)', style: TextStyle(color: Colors.white, fontSize: 18)),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 2,
       ),
@@ -233,7 +182,7 @@ class _SignupPageState extends State<SignupPage> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           child: const Text(
-            'معلومات محفوظ کریں اور درخواست جمع کروائیں',
+            'لی آؤٹ محفوظ کریں',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
@@ -246,7 +195,7 @@ class _SignupPageState extends State<SignupPage> {
           children: [
             
             // 1. کسٹمر کی ذاتی معلومات
-            _buildSectionHeader('1. کسٹمر کی ذاتی معلومات (لازمی)', Icons.person),
+            _buildSectionHeader('1. کسٹمر کی ذاتی معلومات', Icons.person),
             const SizedBox(height: 10),
             Card(
               elevation: 1,
@@ -255,17 +204,17 @@ class _SignupPageState extends State<SignupPage> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    _buildTextField('کسٹمر کا پورا نام', Icons.badge, controller: _nameController, validator: (val) => val!.isEmpty ? 'نام لکھنا لازمی ہے' : null),
+                    _buildTextField('کسٹمر کا پورا نام', Icons.badge, controller: _nameController),
                     const SizedBox(height: 12),
-                    _buildTextField('والد / شوہر کا نام', Icons.person_outline, controller: _fatherNameController, validator: (val) => val!.isEmpty ? 'ولدیت لکھنا لازمی ہے' : null),
+                    _buildTextField('والد / شوہر کا نام', Icons.person_outline, controller: _fatherNameController),
                     const SizedBox(height: 12),
-                    _buildTextField('قوم (مثلاً: آرائیں، بلوچ، ملک)', Icons.group, controller: _casteController, validator: (val) => val!.isEmpty ? 'قوم کا نام لکھیں' : null),
+                    _buildTextField('قوم (مثلاً: آرائیں، بلوچ، ملک)', Icons.group, controller: _casteController),
                     const SizedBox(height: 12),
-                    _buildTextField('موبائل نمبر', Icons.phone, controller: _phoneController, keyboardType: TextInputType.phone, validator: (val) => val!.isEmpty ? 'موبائل نمبر لازمی ہے' : null),
+                    _buildTextField('موبائل نمبر', Icons.phone, controller: _phoneController, keyboardType: TextInputType.phone),
                     const SizedBox(height: 12),
-                    _buildTextField('شناختی کارڈ نمبر (CNIC)', Icons.credit_card, controller: _cnicController, keyboardType: TextInputType.number, validator: (val) => val.toString().length != 13 ? '13 ہندسے پورے لکھیں' : null),
+                    _buildTextField('شناختی کارڈ نمبر (CNIC)', Icons.credit_card, controller: _cnicController, keyboardType: TextInputType.number),
                     const SizedBox(height: 12),
-                    _buildTextField('مکمل گھر کا پتہ', Icons.home, controller: _addressController, validator: (val) => val!.isEmpty ? 'پتہ درج کریں' : null),
+                    _buildTextField('مکمل گھر کا پتہ', Icons.home, controller: _addressController),
                     const SizedBox(height: 14),
 
                     // سیلفی والا کیمرہ سیکشن
@@ -291,12 +240,9 @@ class _SignupPageState extends State<SignupPage> {
                               setState(() {
                                 _customerSelfiePath = 'selfie_captured_dummy.jpg';
                               });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('سیلفی کامیابی سے کیپچر ہو گئی!')),
-                              );
                             },
                             icon: const Icon(Icons.camera, size: 16),
-                            label: Text(_customerSelfiePath == null ? 'تصویر لیں' : 'دوبارہ لیں'),
+                            label: Text(_customerSelfiePath == null ? 'تصویر لیں' : 'تصویر موجود ہے'),
                             style: ElevatedButton.styleFrom(backgroundColor: Colors.red[800], foregroundColor: Colors.white),
                           ),
                         ],
@@ -326,24 +272,23 @@ class _SignupPageState extends State<SignupPage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
-                        'نوٹ: اسٹامپ پیپر اور پرا نوٹ ہر ٹرانزیکشن کے لیے لازمی ہے اور اس کے بغیر درخواست آگے نہیں بڑھے گی۔',
+                        'نوٹ: اسٹامپ پیپر اور پرا نوٹ ہر ٹرانزیکشن کے لیے لازمی ہیں۔',
                         style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(height: 12),
                     SwitchListTile(
                       title: const Text('کیا کسٹمر نے ایڈوانس چیک دیا ہے؟', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      subtitle: const Text('چیک دینے پر قسط اور شرائط میں رعایت مل سکتی ہے', style: TextStyle(fontSize: 12)),
-                      value: _hasCheck,
+                      value: _hasSecurityCheck,
                       activeThumbColor: Colors.red[800],
                       onChanged: (bool value) {
                         setState(() {
-                          _hasCheck = value;
+                          _hasSecurityCheck = value;
                         });
                       },
                     ),
 
-                    if (_hasCheck) ...[
+                    if (_hasSecurityCheck) ...[
                       const SizedBox(height: 10),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -367,7 +312,7 @@ class _SignupPageState extends State<SignupPage> {
             ),
             const SizedBox(height: 20),
 
-            // 3. آئٹم اور پیکج کا انتخاب
+            // 3. آئٹم اور پیکج کا انتخاب (اسٹاک ڈراپ ڈاؤن کے ساتھ)
             _buildSectionHeader('3. آئٹم اور قسط کا پیکج', Icons.shopping_bag),
             const SizedBox(height: 10),
             Card(
@@ -377,12 +322,37 @@ class _SignupPageState extends State<SignupPage> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    _buildTextField('آئٹم کا نام / ماڈل (مثلاً: Vivo Y20)', Icons.phone_android, controller: _itemModelController, validator: (val) => val!.isEmpty ? 'آئٹم کا نام لکھیں' : null),
+                    // اسٹاک سے انتخاب کرنے کا ڈراپ ڈاؤن
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedStockItem,
+                      hint: const Text('دستیاب اسٹاک سے موبائل منتخب کریں'),
+                      decoration: InputDecoration(
+                        labelText: 'دکان کا موجودہ اسٹاک',
+                        prefixIcon: Icon(Icons.inventory_2, color: Colors.red[800]),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      items: availableStockItems.map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedStockItem = newValue;
+                          if (newValue != null) {
+                            _itemModelController.text = newValue;
+                          }
+                        });
+                      },
+                    ),
                     const SizedBox(height: 12),
-                    _buildTextField('آئٹم کی اصل نقد قیمت (روپے میں)', Icons.money, controller: _itemPriceController, keyboardType: TextInputType.number, validator: (val) => val!.isEmpty ? 'قیمت لکھیں' : null),
+
+                    _buildTextField('یا اپنی مرضی کا آئٹم / ماڈل لکھیں', Icons.phone_android, controller: _itemModelController),
+                    const SizedBox(height: 12),
+                    _buildTextField('آئٹم کی اصل نقد قیمت', Icons.money, controller: _itemPriceController, keyboardType: TextInputType.number),
                     const SizedBox(height: 12),
                     
-                    // --- یہاں 'value' کو ہٹا کر 'initialValue' کر دیا گیا ہے تاکہ وارننگ ختم ہو جائے ---
                     DropdownButtonFormField<String>(
                       initialValue: _selectedPackageType,
                       hint: const Text('پیکج کی مدت منتخب کریں'),
@@ -404,48 +374,14 @@ class _SignupPageState extends State<SignupPage> {
                           child: Text(value),
                         );
                       }).toList(),
-                      validator: (val) => val == null ? 'پیکج منتخب کرنا لازمی ہے' : null,
                       onChanged: (String? newValue) {
                         setState(() {
                           _selectedPackageType = newValue;
-                          _calculateInstallment();
                         });
                       },
                     ),
                     const SizedBox(height: 12),
-                    _buildTextField('ادائیگی کا ایڈوانس (اگر ہے)', Icons.payment, controller: _advanceAmountController, keyboardType: TextInputType.number, onChanged: (val) => _calculateInstallment()),
-                    
-                    // پیکج سلیکٹ ہونے کے بعد ظاہر ہونے والے خانے
-                    if (_selectedPackageType != null) ...[
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('ماہانہ قسط کی رقم:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
-                                Text('Rs: ${_calculatedMonthlyInstallment.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red[800])),
-                              ],
-                            ),
-                            const Divider(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('مجموعی کل ادھار رقم:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
-                                Text('Rs: ${_calculatedTotalAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red[800])),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    _buildTextField('ادائیگی کا ایڈوانس (اگر ہے)', Icons.payment, controller: _advanceAmountController, keyboardType: TextInputType.number),
                   ],
                 ),
               ),
@@ -453,7 +389,7 @@ class _SignupPageState extends State<SignupPage> {
             const SizedBox(height: 20),
 
             // 4. ضامن کی معلومات
-            _buildSectionHeader('4. ضامن کی معلومات (اگر دستیاب ہو)', Icons.people),
+            _buildSectionHeader('4. ضامن کی معلومات', Icons.people),
             const SizedBox(height: 10),
             Card(
               elevation: 1,
@@ -505,7 +441,7 @@ class _SignupPageState extends State<SignupPage> {
             ),
             const SizedBox(height: 20),
 
-            // 5. اسکرولیبل اقرار نامہ اور ثالثی کی شق
+            // 5. اسکرولیبل اقرار نامہ
             _buildSectionHeader('5. اقرار نامہ اور ضابطہ اخلاق', Icons.gavel),
             const SizedBox(height: 10),
             Card(
@@ -592,12 +528,10 @@ class _SignupPageState extends State<SignupPage> {
     );
   }
 
-  Widget _buildTextField(String label, IconData icon, {TextEditingController? controller, TextInputType keyboardType = TextInputType.text, String? Function(String?)? validator, void Function(String)? onChanged}) {
+  Widget _buildTextField(String label, IconData icon, {TextEditingController? controller, TextInputType keyboardType = TextInputType.text}) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
-      validator: validator,
-      onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: Colors.red[800], size: 20),
