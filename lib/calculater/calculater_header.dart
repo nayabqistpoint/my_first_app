@@ -28,7 +28,7 @@ class CalculaterHeader extends StatelessWidget {
           ),
           
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), // ہورزنٹل پیڈنگ تھوڑی بیلنس کی تاکہ سکرین پر پورا آئے
             child: Column(
               children: [
                 SizedBox(
@@ -76,14 +76,17 @@ class CalculaterHeader extends StatelessWidget {
                 
                 const SizedBox(height: 15),
                 
+                // یہاں سوئچ والے رو کو فکس کیا گیا ہے تاکہ موبائل پر اندر نہ دھنسے
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      "کیا آپ نے رعایت کے لیے سیکیورٹی چیک مہیا کیا ہے؟",
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                    const Expanded(
+                      child: Text(
+                        "کیا آپ نے رعایت کے لیے سیکیورٹی چیک مہیا کیا ہے؟",
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                      ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 5),
                     Switch(
                       value: controller.hasSecurityCheck,
                       onChanged: (bool value) => controller.toggleSecurityCheck(value),
@@ -104,7 +107,7 @@ class CalculaterHeader extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
                       "رابطہ: ${CalculaterConfig.contactName} - ${CalculaterConfig.contactNumber}",
-                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 18, decoration: TextDecoration.underline),
+                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 16, decoration: TextDecoration.underline),
                     ),
                   ),
                 ),
