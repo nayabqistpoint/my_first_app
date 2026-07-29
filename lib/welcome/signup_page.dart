@@ -14,17 +14,18 @@ class _SignupPageState extends State<SignupPage> {
   bool _hasGuarantor = false;
   bool _hasSecurityCheck = false;
   
-  // اقرار نامے اور اسکرول کی حالت
   bool _isCheckedTerms = false;
   bool _hasScrolledToBottom = false;
   final ScrollController _termsScrollController = ScrollController();
 
-  // کسٹمر سیلفی کے لیے
   String? _customerSelfiePath;
 
-  // پیکج اور اسٹاک کے ویری ایبلز
-  String? _selectedPackageType;
+  String? _selectionMode; // 'stock' یا 'manual'
   String? _selectedStockItem;
+  
+  // یہاں ہم نے لسٹ کو کھولنے اور بند کرنے کا کنٹرولر رکھ لیا ہے
+  bool _isPackageDropdownOpen = false;
+  Map<String, dynamic>? _selectedCalculatorPackage;
 
   final TextEditingController _itemPriceController = TextEditingController();
   final TextEditingController _advanceAmountController = TextEditingController();
@@ -33,7 +34,6 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController _checkNumberController = TextEditingController();
   final TextEditingController _bankNameController = TextEditingController();
 
-  // کسٹمر کے کوائف
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _fatherNameController = TextEditingController();
   final TextEditingController _casteController = TextEditingController();
@@ -41,7 +41,6 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController _cnicController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
 
-  // ضامن کے کوائف
   final TextEditingController _guarantorNameController = TextEditingController();
   final TextEditingController _guarantorFatherNameController = TextEditingController();
   final TextEditingController _guarantorCasteController = TextEditingController();
@@ -87,6 +86,44 @@ class _SignupPageState extends State<SignupPage> {
     super.dispose();
   }
 
+  List<Map<String, dynamic>> _calculatePackages(double basePrice) {
+    List<Map<String, dynamic>> packages = [];
+    List<int> monthsList = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+    for (int months in monthsList) {
+      double markup = basePrice * (0.03 * months); 
+      double totalPrice = basePrice + markup;
+      
+      double advanceA = basePrice * 0.20;
+      double remainingA = totalPrice - advanceA;
+      double installmentA = remainingA / months;
+
+      packages.add({
+        'key': '${months}A',
+        'title': 'پیکج ${months}A ($months ماہ - ایڈوانس کے ساتھ)',
+        'months': months,
+        'advance': advanceA.round(),
+        'installment': installmentA.round(),
+        'total': totalPrice.round(),
+        'isAdvanceType': true,
+      });
+
+      if (months <= 6) {
+        double installmentB = totalPrice / months;
+        packages.add({
+          'key': '${months}B',
+          'title': 'پیکج ${months}B ($months ماہ - بغیر ایڈوانس)',
+          'months': months,
+          'advance': 0,
+          'installment': installmentB.round(),
+          'total': totalPrice.round(),
+          'isAdvanceType': false,
+        });
+      }
+    }
+    return packages;
+  }
+
   void _submitData() async {
     if (_formKey.currentState!.validate()) {
       var customerBox = Hive.box('customerBox');
@@ -101,8 +138,11 @@ class _SignupPageState extends State<SignupPage> {
         'customerSelfie': _customerSelfiePath ?? '',
         'itemModel': _selectedStockItem ?? _itemModelController.text,
         'itemPrice': _itemPriceController.text,
-        'packageType': _selectedPackageType,
+        'packageKey': _selectedCalculatorPackage?['key'],
+        'packageTitle': _selectedCalculatorPackage?['title'],
         'advanceAmount': _advanceAmountController.text,
+        'monthlyInstallment': _selectedCalculatorPackage?['installment'].toString(),
+        'totalPrice': _selectedCalculatorPackage?['total'].toString(),
         'hasStampPaper': true, 
         'hasCheck': _hasSecurityCheck,
         'bankName': _bankNameController.text,
@@ -125,8 +165,8 @@ class _SignupPageState extends State<SignupPage> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('تصویر / ڈیٹا محفوظ ہو گیا'),
-          content: const Text('یو آئی کا یہ فارم کامیابی سے سیو ہو گیا ہے۔'),
+          title: const Text('ڈیٹا محفوظ ہو گیا'),
+          content: const Text('کسٹمر کی رجسٹریشن کامیابی سے محفوظ کر دی گئی ہے۔'),
           actions: [
             TextButton(
               onPressed: () {
@@ -143,20 +183,23 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   Widget build(BuildContext context) {
-    List<String> availableStockItems = [
-      'Vivo Y20 (دستیاب اسٹاک)',
-      'Samsung Galaxy A12 (دستیاب اسٹاک)',
-      'Oppo A54 (دستیاب اسٹاک)',
-      'Xiaomi Redmi 9T (دستیاب اسٹاک)',
-      'Infinix Hot 10 (دستیاب اسٹاک)'
-    ];
+    final Map<String, double> availableStockWithPrices = {
+      'Vivo Y20 (دستیاب اسٹاک)': 32000,
+      'Samsung Galaxy A12 (دستیاب اسٹاک)': 38000,
+      'Oppo A54 (دستیاب اسٹاک)': 35000,
+      'Xiaomi Redmi 9T (دستیاب اسٹاک)': 30000,
+      'Infinix Hot 10 (دستیاب اسٹاک)': 27000,
+    };
+
+    double currentItemPrice = double.tryParse(_itemPriceController.text) ?? 0;
+    List<Map<String, dynamic>> calculatedList = currentItemPrice > 0 ? _calculatePackages(currentItemPrice) : [];
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       
       appBar: AppBar(
         backgroundColor: Colors.red[800],
-        title: const Text('نیا کسٹمر رجسٹریشن (UI Layout)', style: TextStyle(color: Colors.white, fontSize: 18)),
+        title: const Text('نیا کسٹمر رجسٹریشن (فائنل ورژن)', style: TextStyle(color: Colors.white, fontSize: 16)),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 2,
       ),
@@ -182,7 +225,7 @@ class _SignupPageState extends State<SignupPage> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           child: const Text(
-            'لی آؤٹ محفوظ کریں',
+            'رجسٹریشن محفوظ کریں',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
@@ -217,7 +260,6 @@ class _SignupPageState extends State<SignupPage> {
                     _buildTextField('مکمل گھر کا پتہ', Icons.home, controller: _addressController),
                     const SizedBox(height: 14),
 
-                    // سیلفی والا کیمرہ سیکشن
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
@@ -254,7 +296,7 @@ class _SignupPageState extends State<SignupPage> {
             ),
             const SizedBox(height: 20),
 
-            // 2. سکیورٹی (اسٹامپ، پرا نوٹ اور چیک)
+            // 2. سکیورٹی اور قانونی دستاویزات
             _buildSectionHeader('2. سکیورٹی اور قانونی دستاویزات', Icons.verified_user),
             const SizedBox(height: 10),
             Card(
@@ -312,8 +354,8 @@ class _SignupPageState extends State<SignupPage> {
             ),
             const SizedBox(height: 20),
 
-            // 3. آئٹم اور پیکج کا انتخاب (اسٹاک ڈراپ ڈاؤن کے ساتھ)
-            _buildSectionHeader('3. آئٹم اور قسط کا پیکج', Icons.shopping_bag),
+            // 3. آئٹم اور کیلکولیٹر لسٹ
+            _buildSectionHeader('3. آئٹم اور کیلکولیٹر پیکجز لسٹ', Icons.shopping_bag),
             const SizedBox(height: 10),
             Card(
               elevation: 1,
@@ -321,67 +363,287 @@ class _SignupPageState extends State<SignupPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // اسٹاک سے انتخاب کرنے کا ڈراپ ڈاؤن
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedStockItem,
-                      hint: const Text('دستیاب اسٹاک سے موبائل منتخب کریں'),
-                      decoration: InputDecoration(
-                        labelText: 'دکان کا موجودہ اسٹاک',
-                        prefixIcon: Icon(Icons.inventory_2, color: Colors.red[800]),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      items: availableStockItems.map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
+                    const Text('آئٹم درج کرنے کا طریقہ منتخب کریں:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
+                    const SizedBox(height: 8),
+                    
+                    RadioGroup<String>(
+                      groupValue: _selectionMode,
+                      onChanged: (val) {
                         setState(() {
-                          _selectedStockItem = newValue;
-                          if (newValue != null) {
-                            _itemModelController.text = newValue;
-                          }
+                          _selectionMode = val;
+                          _selectedStockItem = null;
+                          _itemModelController.clear();
+                          _itemPriceController.clear();
+                          _selectedCalculatorPackage = null;
+                          _isPackageDropdownOpen = false;
+                          _advanceAmountController.clear();
                         });
                       },
-                    ),
-                    const SizedBox(height: 12),
-
-                    _buildTextField('یا اپنی مرضی کا آئٹم / ماڈل لکھیں', Icons.phone_android, controller: _itemModelController),
-                    const SizedBox(height: 12),
-                    _buildTextField('آئٹم کی اصل نقد قیمت', Icons.money, controller: _itemPriceController, keyboardType: TextInputType.number),
-                    const SizedBox(height: 12),
-                    
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedPackageType,
-                      hint: const Text('پیکج کی مدت منتخب کریں'),
-                      decoration: InputDecoration(
-                        labelText: 'قسط کا پیکج',
-                        prefixIcon: Icon(Icons.calendar_month, color: Colors.red[800]),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('دستیاب اسٹاک', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                              value: 'stock',
+                              activeColor: Colors.red[800],
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('مینوئل (اپنی مرضی)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                              value: 'manual',
+                              activeColor: Colors.red[800],
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ],
                       ),
-                      items: <String>[
-                        'چھ ماہ کا پیکج (معیاری)',
-                        'سات ماہ کا پیکج',
-                        'آٹھ ماہ کا پیکج',
-                        'نو ماہ کا پیکج',
-                        'دس ماہ کا پیکج',
-                        'بارہ ماہ کا پیکج'
-                      ].map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedPackageType = newValue;
-                         });
-                      },
                     ),
-                    const SizedBox(height: 12),
-                    _buildTextField('ادائیگی کا ایڈوانس (اگر ہے)', Icons.payment, controller: _advanceAmountController, keyboardType: TextInputType.number),
+
+                    if (_selectionMode == 'stock') ...[
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedStockItem,
+                        hint: const Text('اسٹاک سے موبائل منتخب کریں'),
+                        decoration: InputDecoration(
+                          labelText: 'دکان کا موجودہ اسٹاک',
+                          prefixIcon: Icon(Icons.inventory_2, color: Colors.red[800]),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        items: availableStockWithPrices.keys.map<DropdownMenuItem<String>>((String key) {
+                          return DropdownMenuItem<String>(
+                            value: key,
+                            child: Text(key),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedStockItem = newValue;
+                            if (newValue != null) {
+                              _itemModelController.text = newValue;
+                              _itemPriceController.text = availableStockWithPrices[newValue].toString();
+                              _selectedCalculatorPackage = null;
+                              _isPackageDropdownOpen = false;
+                            }
+                          });
+                        },
+                      ),
+                    ],
+
+                    if (_selectionMode == 'manual') ...[
+                      const SizedBox(height: 12),
+                      _buildTextField('آئٹم / ماڈل کا نام لکھیں', Icons.phone_android, controller: _itemModelController, onChanged: (val) {
+                        setState(() {});
+                      }),
+                      
+                      if (_itemModelController.text.trim().isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildTextField('آئٹم کی اصل نقد قیمت درج کریں', Icons.money, controller: _itemPriceController, keyboardType: TextInputType.number, onChanged: (val) {
+                          setState(() {
+                            _selectedCalculatorPackage = null;
+                            _isPackageDropdownOpen = false;
+                          });
+                        }),
+                      ],
+                    ],
+
+                    // جب قیمت درج ہو جائے تو یہاں لسٹ کھلنے والا خوبصورت ڈراپ ڈاؤن باکس آئے گا
+                    if (calculatedList.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'قسطوں کا پلان (پیکج منتخب کریں):',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.red),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // سلیکٹڈ باکس جو ہمیشہ بند حالت میں یا منتخب پیکج دکھائے گا
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _isPackageDropdownOpen = !_isPackageDropdownOpen;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.red.shade300, width: 1.5),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _selectedCalculatorPackage != null 
+                                      ? _selectedCalculatorPackage!['title'] 
+                                      : 'مطلوبہ پیکج منتخب کرنے کے لیے یہاں دبائیں...',
+                                  style: TextStyle(
+                                    fontSize: 13, 
+                                    fontWeight: FontWeight.bold,
+                                    color: _selectedCalculatorPackage != null ? Colors.red[800] : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                _isPackageDropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                                color: Colors.red[800],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // اگر یوزر نے کلک کیا ہو تو مکمل لسٹ نیچے کھلے گی، کلک کرتے ہی بند ہو جائے گی
+                      if (_isPackageDropdownOpen) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.grey.shade300),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withValues(alpha: 0.2),
+                                blurRadius: 5,
+                                offset: const Offset(0, 3),
+                              )
+                            ],
+                          ),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: calculatedList.length,
+                            itemBuilder: (context, index) {
+                              var pkg = calculatedList[index];
+                              bool isSelected = _selectedCalculatorPackage?['key'] == pkg['key'];
+
+                              return InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedCalculatorPackage = pkg;
+                                    _advanceAmountController.text = pkg['advance'].toString();
+                                    _isPackageDropdownOpen = false; // پیکج سلیکٹ ہوتے ہی لسٹ بند ہو جائے گی
+                                  });
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(vertical: 4),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? Colors.red.shade50 : Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected ? Colors.red.shade700 : Colors.grey.shade200,
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        flex: 3,
+                                        child: Text(
+                                          pkg['title'],
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: isSelected ? Colors.red[800] : Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          'ایڈوانس: ${pkg['advance']}',
+                                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          'قسط: ${pkg['installment']}',
+                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          'کل: ${pkg['total']}',
+                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ],
+
+                    // جب پیکج منتخب ہو جائے تو نیچے الگ الگ تینوں خانے (باکسز) نظر آئیں گے تاکہ پی ڈی ایف اور ریکارڈ بہترین طریقے سے بنے
+                    if (_selectedCalculatorPackage != null) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'منتخب کردہ پیکج کی تفصیلات (پی ڈی ایف پرنٹ کے لیے تیار):',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.green),
+                            ),
+                            const SizedBox(height: 10),
+                            
+                            // باکس 1: ایڈوانس رقم
+                            TextFormField(
+                              controller: _advanceAmountController,
+                              keyboardType: TextInputType.number,
+                              readOnly: !_selectedCalculatorPackage!['isAdvanceType'],
+                              decoration: InputDecoration(
+                                labelText: _selectedCalculatorPackage!['isAdvanceType'] ? 'ایڈوانس رقم (ترمیم کر سکتے ہیں)' : 'بغیر ایڈوانس پیکج (صفر)',
+                                prefixIcon: Icon(Icons.payment, color: Colors.red[800], size: 20),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                filled: true,
+                                fillColor: !_selectedCalculatorPackage!['isAdvanceType'] ? Colors.grey.shade200 : Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            
+                            // باکس 2 اور 3: ماہانہ قسط اور کل رقم کا ڈسپلے
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade300)),
+                                  child: Text('ماہانہ قسط: ${_selectedCalculatorPackage!['installment']} روپے', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade300)),
+                                  child: Text('کل رقم: ${_selectedCalculatorPackage!['total']} روپے', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.green)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
                   ],
                 ),
               ),
@@ -528,10 +790,11 @@ class _SignupPageState extends State<SignupPage> {
     );
   }
 
-  Widget _buildTextField(String label, IconData icon, {TextEditingController? controller, TextInputType keyboardType = TextInputType.text}) {
+  Widget _buildTextField(String label, IconData icon, {TextEditingController? controller, TextInputType keyboardType = TextInputType.text, void Function(String)? onChanged}) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: Colors.red[800], size: 20),
