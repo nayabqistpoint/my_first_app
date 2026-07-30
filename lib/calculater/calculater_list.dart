@@ -33,70 +33,80 @@ class CalculaterList extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 8),
             
-            // پیکجز کی لسٹ
+            // پیکجز کی لسٹ (ہلکے اور مدہم دو مختلف کلرز کے ساتھ)
             Expanded(
               child: ListView.builder(
-                padding: EdgeInsets.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: results.length,
                 itemBuilder: (context, index) {
                   final item = results[index];
                   bool isAdvancePackage = item['isAdvance'] ?? false;
 
-                  return InkWell(
-                    onTap: onPackageSelected != null
-                        ? () {
+                  // دو مختلف ہلکے مدہم رنگ (ایک ہلکا بلیو/سیاں ٹچ اور دوسرا ہلکا گرین ٹچ)
+                  final Color rowBackgroundColor = index.isEven 
+                      ? const Color(0xFFF0F4F8) // بہت ہی مدہم سا ہلکا نیلا/سلیٹی شیڈ
+                      : const Color(0xFFF1F8F5); // بہت ہی مدہم سا ہلکا سبز شیڈ
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: Material(
+                      color: rowBackgroundColor,
+                      elevation: 1,
+                      shadowColor: Colors.black.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      child: InkWell(
+                        onTap: () {
+                          if (onPackageSelected != null) {
                             onPackageSelected!(item);
-                            Navigator.pop(context);
                           }
-                        : null,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        border: Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.2))),
-                        color: onPackageSelected != null ? Colors.grey.shade50 : null,
-                      ),
-                      child: Row(
-                        textDirection: TextDirection.rtl,
-                        children: [
-                          // پیکج (ماہانہ)
-                          Expanded(
-                            flex: 2, 
-                            child: Text(
-                              item['packageName']!,
-                              textAlign: TextAlign.center, 
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFE53935), fontSize: 14)
-                            ),
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                          child: Row(
+                            textDirection: TextDirection.rtl,
+                            children: [
+                              // پیکج (ماہانہ)
+                              Expanded(
+                                flex: 2, 
+                                child: Text(
+                                  item['packageName']!,
+                                  textAlign: TextAlign.center, 
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFE53935), fontSize: 13)
+                                ),
+                              ),
+                              // ایڈوانس
+                              Expanded(
+                                flex: 2, 
+                                child: Text(
+                                  isAdvancePackage ? item['advance']! : "0", 
+                                  textAlign: TextAlign.center, 
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple, fontSize: 12.5)
+                                ),
+                              ),
+                              // قسط
+                              Expanded(
+                                flex: 2, 
+                                child: Text(
+                                  item['installment']!, 
+                                  textAlign: TextAlign.center, 
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 12.5)
+                                ),
+                              ),
+                              // ٹوٹل
+                              Expanded(
+                                flex: 2, 
+                                child: Text(
+                                  item['total']!, 
+                                  textAlign: TextAlign.center, 
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent, fontSize: 12.5)
+                                ),
+                              ),
+                            ],
                           ),
-                          // ایڈوانس: اگر A والا پیکج ہے تو اصل رقم (رزلٹ) آئے گی، B والے کے لیے "0"
-                          Expanded(
-                            flex: 2, 
-                            child: Text(
-                              isAdvancePackage ? item['advance']! : "0", 
-                              textAlign: TextAlign.center, 
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple, fontSize: 13)
-                            ),
-                          ),
-                          // قسط
-                          Expanded(
-                            flex: 2, 
-                            child: Text(
-                              item['installment']!, 
-                              textAlign: TextAlign.center, 
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 13)
-                            ),
-                          ),
-                          // ٹوٹل
-                          Expanded(
-                            flex: 2, 
-                            child: Text(
-                              item['total']!, 
-                              textAlign: TextAlign.center, 
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent, fontSize: 13)
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   );
