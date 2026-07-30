@@ -5,7 +5,9 @@ import 'calculater_controller.dart';
 import 'calculater_config.dart';
 
 class CalculaterHeader extends StatefulWidget {
-  const CalculaterHeader({super.key});
+  final Function(Map<String, dynamic>)? onDataChanged;
+
+  const CalculaterHeader({super.key, this.onDataChanged});
 
   @override
   State<CalculaterHeader> createState() => _CalculaterHeaderState();
@@ -16,6 +18,14 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
   String? _selectedStockMobile;
   final TextEditingController _manualModelController = TextEditingController();
   
+  // ان پٹس کے کنٹرولرز تاکہ ڈیٹا کو باہر بھیجا جا سکے
+  final TextEditingController _advanceController = TextEditingController();
+  final TextEditingController _imeiController = TextEditingController();
+  final TextEditingController _colorController = TextEditingController();
+  final TextEditingController _manualTotalController = TextEditingController();
+  final TextEditingController _checkNumberController = TextEditingController();
+  final TextEditingController _bankNameController = TextEditingController();
+  
   final List<String> _dummyStockMobiles = [
     'Samsung Galaxy A15',
     'Xiaomi Redmi Note 13',
@@ -23,6 +33,36 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
     'Tecno Spark 20 Pro',
     'Realme C67',
   ];
+
+  void _notifyDataChanged() {
+    if (widget.onDataChanged != null) {
+      String mobileName = _selectedMode == 1 
+          ? (_selectedStockMobile ?? '') 
+          : _manualModelController.text;
+
+      widget.onDataChanged!({
+        'mobileName': mobileName,
+        'advanceAmount': _advanceController.text,
+        'imei': _imeiController.text,
+        'color': _colorController.text,
+        'totalAmount': _manualTotalController.text,
+        'checkNumber': _checkNumberController.text,
+        'bankName': _bankNameController.text,
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _manualModelController.dispose();
+    _advanceController.dispose();
+    _imeiController.dispose();
+    _colorController.dispose();
+    _manualTotalController.dispose();
+    _checkNumberController.dispose();
+    _bankNameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,9 +108,15 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                         _selectedMode = newSelection.first;
                         if (_selectedMode == 1) {
                           _selectedStockMobile = null;
-                        } else {
                           _manualModelController.clear();
+                          _manualTotalController.clear();
+                          controller.setTotalAmount("0");
+                        } else {
+                          _selectedStockMobile = null;
+                          _advanceController.clear();
+                          controller.setAdvanceAmount("0");
                         }
+                        _notifyDataChanged();
                       });
                     },
                   ),
@@ -100,6 +146,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                         onChanged: (String? newValue) {
                           setState(() {
                             _selectedStockMobile = newValue;
+                            _notifyDataChanged();
                           });
                         },
                       ),
@@ -116,8 +163,12 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                           child: SizedBox(
                             height: 40,
                             child: TextField(
+                              controller: _advanceController,
                               textAlign: TextAlign.center,
-                              onChanged: (value) => controller.setAdvanceAmount(value),
+                              onChanged: (value) {
+                                controller.setAdvanceAmount(value);
+                                _notifyDataChanged();
+                              },
                               decoration: const InputDecoration(
                                 hintText: "ایڈوانس",
                                 contentPadding: EdgeInsets.symmetric(vertical: 0),
@@ -133,7 +184,9 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                           child: SizedBox(
                             height: 40,
                             child: TextField(
+                              controller: _imeiController,
                               textAlign: TextAlign.center,
+                              onChanged: (value) => _notifyDataChanged(),
                               decoration: const InputDecoration(
                                 hintText: "IMEI نمبر",
                                 contentPadding: EdgeInsets.symmetric(vertical: 0),
@@ -149,7 +202,9 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                           child: SizedBox(
                             height: 40,
                             child: TextField(
+                              controller: _colorController,
                               textAlign: TextAlign.center,
+                              onChanged: (value) => _notifyDataChanged(),
                               decoration: const InputDecoration(
                                 hintText: "کلر",
                                 contentPadding: EdgeInsets.symmetric(vertical: 0),
@@ -171,7 +226,10 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                     child: TextField(
                       controller: _manualModelController,
                       textAlign: TextAlign.center,
-                      onChanged: (value) => setState(() {}),
+                      onChanged: (value) {
+                        setState(() {});
+                        _notifyDataChanged();
+                      },
                       decoration: const InputDecoration(
                         hintText: "موبائل کا نام اور ماڈل لکھیں",
                         contentPadding: EdgeInsets.symmetric(vertical: 0),
@@ -189,8 +247,12 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                           child: SizedBox(
                             height: 40,
                             child: TextField(
+                              controller: _manualTotalController,
                               textAlign: TextAlign.center,
-                              onChanged: (value) => controller.setTotalAmount(value),
+                              onChanged: (value) {
+                                controller.setTotalAmount(value);
+                                _notifyDataChanged();
+                              },
                               decoration: const InputDecoration(
                                 hintText: "نقد قیمت",
                                 contentPadding: EdgeInsets.symmetric(vertical: 0),
@@ -205,8 +267,12 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                           child: SizedBox(
                             height: 40,
                             child: TextField(
+                              controller: _advanceController,
                               textAlign: TextAlign.center,
-                              onChanged: (value) => controller.setAdvanceAmount(value),
+                              onChanged: (value) {
+                                controller.setAdvanceAmount(value);
+                                _notifyDataChanged();
+                              },
                               decoration: const InputDecoration(
                                 hintText: "ایڈوانس",
                                 contentPadding: EdgeInsets.symmetric(vertical: 0),
@@ -266,7 +332,9 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                         child: SizedBox(
                           height: 40,
                           child: TextField(
+                            controller: _checkNumberController,
                             textAlign: TextAlign.center,
+                            onChanged: (value) => _notifyDataChanged(),
                             decoration: const InputDecoration(
                               hintText: "چیک نمبر",
                               contentPadding: EdgeInsets.symmetric(vertical: 0),
@@ -281,7 +349,9 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                         child: SizedBox(
                           height: 40,
                           child: TextField(
+                            controller: _bankNameController,
                             textAlign: TextAlign.center,
+                            onChanged: (value) => _notifyDataChanged(),
                             decoration: const InputDecoration(
                               hintText: "بینک کا نام",
                               contentPadding: EdgeInsets.symmetric(vertical: 0),

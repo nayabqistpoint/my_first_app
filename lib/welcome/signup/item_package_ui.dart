@@ -1,4 +1,3 @@
-// file: item_package_ui.dart
 import 'package:flutter/material.dart';
 import 'package:my_first_app/installment_calculater_page.dart';
 import 'item_package_logic.dart';
@@ -13,21 +12,50 @@ class ItemPackageUI extends StatefulWidget {
 class ItemPackageUIState extends State<ItemPackageUI> {
   final ItemPackageLogic _logic = ItemPackageLogic();
 
+  // کیلکولیٹر سے آنے والا ڈیٹا یہاں محفوظ ہوگا
+  Map<String, dynamic> _calculatorData = {};
+
   Map<String, dynamic> getPackageData() {
-    return _logic.getPackageData();
+    // لاجک اور کیلکولیٹر کا مکس ڈیٹا واپس کریں
+    return {
+      ..._logic.getPackageData(),
+      ..._calculatorData,
+    };
   }
 
   void _openCalculator(BuildContext context) async {
-    await Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => const InstallmentCalculaterPage(),
       ),
     );
+
+    // جب کیلکولیٹر سے ڈیٹا واپس آئے تو سکرین کو اپڈیٹ کریں
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _calculatorData = result;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // ڈیٹا نکالنے کے طریقے
+    final String modelName = _calculatorData['mobileName'] ?? '';
+    final String packageName = _calculatorData['packageName'] ?? '';
+    final String advanceAmount = _calculatorData['advanceAmount'] ?? '';
+    final String monthlyInstallment = _calculatorData['monthlyInstallment'] ?? '';
+    final String totalPrice = _calculatorData['totalPrice'] ?? '';
+    
+    final String imei = _calculatorData['imei'] ?? '';
+    final String color = _calculatorData['color'] ?? '';
+    final String checkNumber = _calculatorData['checkNumber'] ?? '';
+    final String bankName = _calculatorData['bankName'] ?? '';
+
+    bool hasImeiOrColor = imei.isNotEmpty || color.isNotEmpty;
+    bool hasCheckOrBank = checkNumber.isNotEmpty || bankName.isNotEmpty;
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -72,9 +100,9 @@ class ItemPackageUIState extends State<ItemPackageUI> {
                 // 1. پہلی لائن: موبائل کا ماڈل اور پیکج کا نام
                 Row(
                   children: [
-                    Expanded(child: _buildBox('ماڈل:', 'Samsung A14 (ڈمی)')),
+                    Expanded(child: _buildBox('ماڈل:', modelName.isEmpty ? 'منتخب کریں' : modelName)),
                     const SizedBox(width: 6),
-                    Expanded(child: _buildBox('پیکج:', '6 ماہ (ڈمی)')),
+                    Expanded(child: _buildBox('پیکج:', packageName.isEmpty ? 'منتخب کریں' : packageName)),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -82,35 +110,51 @@ class ItemPackageUIState extends State<ItemPackageUI> {
                 // 2. دوسری لائن: ایڈوانس اور ماہانہ قسط
                 Row(
                   children: [
-                    Expanded(child: _buildBox('ایڈوانس:', '10,000')),
+                    Expanded(child: _buildBox('ایڈوانس:', advanceAmount.isEmpty ? '0' : advanceAmount)),
                     const SizedBox(width: 6),
-                    Expanded(child: _buildBox('ماہانہ قسط:', '5,000')),
+                    Expanded(child: _buildBox('ماہانہ قسط:', monthlyInstallment.isEmpty ? '0' : monthlyInstallment)),
                   ],
                 ),
                 const SizedBox(height: 6),
 
-                // 3. تیسری لائن: کل ادھار قیمت (پوری ایک لائن میں)
-                _buildBox('کل ادھار قیمت:', '60,000', isTotal: true),
-                const SizedBox(height: 6),
+                // 3. تیسری لائن: کل ادھار قیمت
+                _buildBox('کل ادھار قیمت:', totalPrice.isEmpty ? '0' : totalPrice, isTotal: true),
+                
+                // 4. چوتھی لائن: IMEI نمبر اور کلر (صرف تب ظاہر ہوں گے جب موجود ہوں)
+                if (hasImeiOrColor) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      if (imei.isNotEmpty)
+                        Expanded(child: _buildBox('IMEI نمبر:', imei, isSpecial: true))
+                      else
+                        const Spacer(),
+                      if (imei.isNotEmpty && color.isNotEmpty) const SizedBox(width: 6),
+                      if (color.isNotEmpty)
+                        Expanded(child: _buildBox('کلر:', color, isSpecial: true))
+                      else
+                        const Spacer(),
+                    ],
+                  ),
+                ],
 
-                // 4. چوتھی لائن: IMEI نمبر اور کلر
-                Row(
-                  children: [
-                    Expanded(child: _buildBox('IMEI نمبر:', '123456789012345', isSpecial: true)),
-                    const SizedBox(width: 6),
-                    Expanded(child: _buildBox('کلر:', 'Black', isSpecial: true)),
-                  ],
-                ),
-                const SizedBox(height: 6),
-
-                // 5. پانچویں لائن (بالکل آخر میں): چیک نمبر اور بینک کا نام
-                Row(
-                  children: [
-                    Expanded(child: _buildBox('چیک نمبر:', 'CHQ-987654', isSpecial: true)),
-                    const SizedBox(width: 6),
-                    Expanded(child: _buildBox('بینک کا نام:', 'Meezan Bank', isSpecial: true)),
-                  ],
-                ),
+                // 5. پانچویں لائن: چیک نمبر اور بینک کا نام (صرف تب ظاہر ہوں گے جب سیکیورٹی چیک آن ہو)
+                if (hasCheckOrBank) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      if (checkNumber.isNotEmpty)
+                        Expanded(child: _buildBox('چیک نمبر:', checkNumber, isSpecial: true))
+                      else
+                        const Spacer(),
+                      if (checkNumber.isNotEmpty && bankName.isNotEmpty) const SizedBox(width: 6),
+                      if (bankName.isNotEmpty)
+                        Expanded(child: _buildBox('بینک کا نام:', bankName, isSpecial: true))
+                      else
+                        const Spacer(),
+                    ],
+                  ),
+                ],
               ],
             ),
           ],
