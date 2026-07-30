@@ -38,28 +38,10 @@ class SignUpController extends ChangeNotifier {
 
       var customerBox = Hive.box('customerBox');
 
-      // 2. کسٹمر کا شناختی کارڈ (CNIC) چیک کرنا کہ کہیں پہلے سے تو موجود نہیں
-      String currentCnic = customerData['cnic'] ?? '';
-      if (currentCnic.isNotEmpty) {
-        bool cnicExists = customerBox.values.any((item) {
-          if (item is Map) {
-            return item['cnic'] == currentCnic;
-          }
-          return false;
-        });
+      // نوٹ: شناختی کارڈ (CNIC) کی ڈুপ্লিکیٹ ریسٹرکشن کو فی الحال ہولڈ/ختم کر دیا گیا ہے 
+      // تاکہ ایک کسٹمر ایک سے زیادہ ڈیوائسز یا اقساط کے لیے آسانی سے سائن اپ کر سکے۔
 
-        if (cnicExists) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('یہ کسٹمر (شناختی کارڈ نمبر) پہلے سے رجسٹرڈ ہے!'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return false;
-        }
-      }
-
-      // 3. لوڈنگ شروع (بٹن پر گول دائرہ گھمانے کے لیے)
+      // 2. لوڈنگ شروع (بٹن پر گول دائرہ گھمانے کے لیے)
       _isLoading = true;
       notifyListeners();
 
@@ -77,7 +59,7 @@ class SignUpController extends ChangeNotifier {
 
       await customerBox.add(requestData);
 
-      // 4. لوڈنگ ختم
+      // 3. لوڈنگ ختم
       _isLoading = false;
       notifyListeners();
 
