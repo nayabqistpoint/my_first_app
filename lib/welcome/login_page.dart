@@ -17,6 +17,8 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _isCustomerLogin = true;
+  bool _obscurePassword = true; 
+  bool _rememberMe = false;     
 
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -24,12 +26,31 @@ class _LoginPageState extends State<LoginPage> {
   final LocalAuthentication auth = LocalAuthentication();
   bool _isLoading = false;
 
-  // ڈائریکٹ کال کرنے کا فنکشن
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  // محفوظ شدہ ڈیٹا لوڈ کرنے کا فنکشن
+  Future<void> _loadSavedCredentials() async {
+    try {
+      var settingsBox = await Hive.openBox('settingsBox');
+      bool savedRemember = settingsBox.get('rememberMe', defaultValue: false);
+      if (savedRemember) {
+        setState(() {
+          _rememberMe = true;
+          _usernameController.text = settingsBox.get('savedUsername', defaultValue: '');
+          _passwordController.text = settingsBox.get('savedPassword', defaultValue: '');
+        });
+      }
+    } catch (e) {
+      // اگر باکس کھلنے میں کوئی مسئلہ ہو تو اگنور کریں
+    }
+  }
+
   Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri launchUri = Uri(
-      scheme: 'tel',
-      path: phoneNumber,
-    );
+    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
     try {
       await launchUrl(launchUri);
     } catch (e) {
@@ -41,9 +62,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // نمبر سیو کیے بغیر ڈائریکٹ واٹس ایپ چیٹ کھولنے کا فنکشن
   Future<void> _openWhatsApp(String phoneNumber) async {
-    // پاکستانی نمبر کے لیے 92 کا اضافہ اور پلس یا صفر کی صفائی
     String formattedPhone = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
     if (formattedPhone.startsWith('0')) {
       formattedPhone = '92${formattedPhone.substring(1)}';
@@ -78,8 +97,19 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
+      // ریممبر می کا ڈیٹا ہائیو میں محفوظ یا ڈیلیٹ کرنا
+      var settingsBox = await Hive.openBox('settingsBox');
+      if (_rememberMe) {
+        await settingsBox.put('rememberMe', true);
+        await settingsBox.put('savedUsername', username);
+        await settingsBox.put('savedPassword', password);
+      } else {
+        await settingsBox.put('rememberMe', false);
+        await settingsBox.delete('savedUsername');
+        await settingsBox.delete('savedPassword');
+      }
+
       if (!_isCustomerLogin) {
-        // ایڈمن لاگ ان چیک
         if (username == 'admin' && password == '1234') {
           if (mounted) {
             Navigator.pushReplacement(
@@ -95,7 +125,6 @@ class _LoginPageState extends State<LoginPage> {
           }
         }
       } else {
-        // کسٹمر لاگ ان: ہائیو (Hive) میں چیک کریں
         String cleanPhone = username.replaceAll(RegExp(r'[^0-9]'), '');
         
         if (cleanPhone.length < 10) {
@@ -109,8 +138,8 @@ class _LoginPageState extends State<LoginPage> {
           var customerData = customerBox.get(key);
           if (customerData != null && customerData is Map) {
             String savedPhone = customerData['customerPhone'] ?? 
-                                 customerData['phone'] ?? 
-                                 customerData['mobile'] ?? '';
+                                   customerData['phone'] ?? 
+                                   customerData['mobile'] ?? '';
             
             String cleanSavedPhone = savedPhone.replaceAll(RegExp(r'[^0-9]'), '');
 
@@ -138,7 +167,6 @@ class _LoginPageState extends State<LoginPage> {
             );
           }
         } else {
-          // اگر ہائیو میں نہ ملے تو فائر بیس سے کوشش کریں
           String fakeEmail = '$cleanPhone@nayabqist.com';
           await FirebaseAuth.instance.signInWithEmailAndPassword(
             email: fakeEmail,
@@ -212,14 +240,14 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Container(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(16.0), 
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.red.shade200, width: 1.5),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -227,33 +255,33 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.red.shade100, width: 1),
                       ),
-                      child: Icon(Icons.phone_android, size: 36, color: Colors.red[800]),
+                      child: Icon(Icons.phone_android, size: 28, color: Colors.red[800]),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 6),
                   Text(
                     'نایاب قسط پوائنٹ',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.red[800]),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red[800]),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   const Text(
                     'آسان قسطوں پر موبائل اور الیکٹرانکس',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
                   ),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 12),
                   
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.grey.shade200),
                     ),
                     child: Row(
@@ -262,15 +290,15 @@ class _LoginPageState extends State<LoginPage> {
                           child: GestureDetector(
                             onTap: () => setState(() => _isCustomerLogin = true),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
                                 color: _isCustomerLogin ? Colors.red[800] : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 'کسٹمر لاگ ان',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontWeight: FontWeight.bold, color: _isCustomerLogin ? Colors.white : Colors.black87),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _isCustomerLogin ? Colors.white : Colors.black87),
                               ),
                             ),
                           ),
@@ -279,15 +307,15 @@ class _LoginPageState extends State<LoginPage> {
                           child: GestureDetector(
                             onTap: () => setState(() => _isCustomerLogin = false),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
                                 color: !_isCustomerLogin ? Colors.red[800] : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 'ایڈمن لاگ ان',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontWeight: FontWeight.bold, color: !_isCustomerLogin ? Colors.white : Colors.black87),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: !_isCustomerLogin ? Colors.white : Colors.black87),
                               ),
                             ),
                           ),
@@ -295,113 +323,154 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
 
                   TextField(
                     controller: _usernameController,
                     keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
-                      labelText: _isCustomerLogin ? 'موبائل نمبر' : 'ایڈمن یوزر نیم',
-                      prefixIcon: Icon(Icons.person, color: Colors.red[800]),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      isDense: true,
+                      labelText: _isCustomerLogin ? 'موبایل نمبر' : 'ایڈمن یوزر نیم',
+                      labelStyle: const TextStyle(fontSize: 13),
+                      prefixIcon: Icon(Icons.person, color: Colors.red[800], size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       filled: true,
                       fillColor: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
 
                   TextField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword, 
                     enableSuggestions: false,
                     autocorrect: false,
                     decoration: InputDecoration(
+                      isDense: true,
                       labelText: _isCustomerLogin ? 'پاسورڈ (PIN)' : 'ایڈمن پاسورڈ',
-                      prefixIcon: Icon(Icons.lock, color: Colors.red[800]),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      labelStyle: const TextStyle(fontSize: 13),
+                      prefixIcon: Icon(Icons.lock, color: Colors.red[800], size: 20),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.grey,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       filled: true,
                       fillColor: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 4),
+
+                  Row(
+                    children: [
+                      SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: Checkbox(
+                          value: _rememberMe,
+                          activeColor: Colors.red[800],
+                          onChanged: (value) {
+                            setState(() {
+                              _rememberMe = value ?? false;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text('پاسورڈ یاد رکھیں', style: TextStyle(fontSize: 11, color: Colors.black54)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
 
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red[800],
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     child: _isLoading
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 18,
+                            height: 18,
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                           )
-                        : Text(_isCustomerLogin ? 'کسٹمر ڈیش بورڈ کھولیں' : 'ایڈمن پینل لاگ ان'),
+                        : Text(_isCustomerLogin ? 'کسٹمر ڈیش بورڈ کھولیں' : 'ایڈمن پینل لاگ ان', style: const TextStyle(fontSize: 13)),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
 
                   OutlinedButton.icon(
                     onPressed: _handleBiometricLogin,
-                    icon: Icon(Icons.fingerprint, color: Colors.red[800], size: 28),
+                    icon: Icon(Icons.fingerprint, color: Colors.red[800], size: 22),
                     label: const Text(
                       'فنگر پرنٹ سے لاگ ان کریں',
-                      style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold),
                     ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: BorderSide(color: Colors.red.shade300, width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      side: BorderSide(color: Colors.red.shade300, width: 1.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 10),
 
-                  // حافظ محمد صابر صاحب کا نام، کال اور واٹس ایپ کے ڈائریکٹ لنکس
+                  // ہیلپ سیکشن (بڑے اور کھلے ہوئے بٹن)
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.red.shade200),
                     ),
                     child: Column(
                       children: [
                         const Text(
-                          'کسی بھی معلومات، مدد یا پاسورڈ کے لیے رابطہ کریں:',
-                          style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.bold),
+                          'معلومات یا پاسورڈ کے لیے رابطہ کریں:',
+                          style: TextStyle(fontSize: 10, color: Colors.black54, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 3),
                         Text(
-                          'حافظ محمد صابر\n03012700351',
-                          style: TextStyle(fontSize: 13, color: Colors.red[800], fontWeight: FontWeight.bold),
+                          'حافظ محمد صابر - 03012700351',
+                          style: TextStyle(fontSize: 11, color: Colors.red[800], fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            ElevatedButton.icon(
-                              onPressed: () => _makePhoneCall('03012700351'),
-                              icon: const Icon(Icons.call, size: 16),
-                              label: const Text('ڈائریکٹ کال'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _makePhoneCall('03012700351'),
+                                icon: const Icon(Icons.call, size: 16),
+                                label: const Text('کال کریں', style: TextStyle(fontSize: 12)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 10),
-                            ElevatedButton.icon(
-                              onPressed: () => _openWhatsApp('03012700351'),
-                              icon: const Icon(Icons.chat, size: 16),
-                              label: const Text('واٹس ایپ چیٹ'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.teal,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _openWhatsApp('03012700351'),
+                                icon: const Icon(Icons.chat, size: 16),
+                                label: const Text('واٹس ایپ', style: TextStyle(fontSize: 12)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
                               ),
                             ),
                           ],
@@ -409,12 +478,12 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 8),
 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('اکاؤنٹ نہیں بنا ہوا؟ ', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                      const Text('اکاؤنٹ نہیں بنا ہوا؟ ', style: TextStyle(fontSize: 11, color: Colors.grey)),
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -424,15 +493,12 @@ class _LoginPageState extends State<LoginPage> {
                         },
                         child: Text(
                           'نیا اکاؤنٹ بنائیں',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.red[800], decoration: TextDecoration.underline),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red[800], decoration: TextDecoration.underline),
                         ),
                       ),
                     ],
                   ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 15),
-                    child: Divider(thickness: 1, color: Colors.grey),
-                  ),
+                  const SizedBox(height: 8),
 
                   InkWell(
                     onTap: () {
@@ -441,29 +507,28 @@ class _LoginPageState extends State<LoginPage> {
                         MaterialPageRoute(builder: (context) => const InstallmentCalculaterPage()),
                       );
                     },
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         border: Border.all(color: Colors.red.shade200),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.calculate, color: Colors.red[800], size: 28),
-                          const SizedBox(width: 12),
+                          Icon(Icons.calculate, color: Colors.red[800], size: 22),
+                          const SizedBox(width: 8),
                           const Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('آن لائن قسط کیلکولیٹر', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                                SizedBox(height: 2),
-                                Text('بغیر لاگ ان کیے اپنی ماہانہ قسط چیک کریں', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                Text('آن لائن قسط کیلکولیٹر', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                Text('بغیر لاگ ان کیے ماہانہ قسط چیک کریں', style: TextStyle(fontSize: 10, color: Colors.grey)),
                               ],
                             ),
                           ),
-                          Icon(Icons.arrow_forward_ios, size: 16, color: Colors.red[800]),
+                          Icon(Icons.arrow_forward_ios, size: 14, color: Colors.red[800]),
                         ],
                       ),
                     ),
