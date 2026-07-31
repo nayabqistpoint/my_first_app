@@ -15,7 +15,6 @@ class CapsuleFilterWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // اوپر والے تینوں فکسڈ کیپسول ٹیبز
         Container(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
           color: Colors.white,
@@ -76,9 +75,8 @@ class CapsuleFilterWidget extends StatelessWidget {
   }
 }
 
-// ہر پیج کے اندر نظر آنے والا سب-فلٹر بار
 class InPageSubFiltersWidget extends StatelessWidget {
-  final String pageStatus; // 'approved', 'pending', 'completed'
+  final String pageStatus;
   final AdminPanelController controller;
   final VoidCallback onStateChanged;
 
@@ -97,12 +95,115 @@ class InPageSubFiltersWidget extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: _buildSubFilterChip('all', 'تمام')),
+          const SizedBox(width: 4),
+          Expanded(child: _buildSubFilterChip('purchase', 'پرچیز')),
+          const SizedBox(width: 4),
+          Expanded(child: _buildSubFilterChip('signup', 'سائن اپ')),
+          const SizedBox(width: 4),
+          Expanded(child: _buildSubFilterChip('both', 'دونوں')),
           const SizedBox(width: 6),
-          Expanded(child: _buildSubFilterChip('purchase', 'صرف پرچیز')),
-          const SizedBox(width: 6),
-          Expanded(child: _buildSubFilterChip('signup', 'صرف سائن اپ')),
-          const SizedBox(width: 6),
-          Expanded(child: _buildSubFilterChip('both', 'دونوں مکس')),
+
+          Container(
+            height: 32,
+            decoration: BoxDecoration(
+              color: controller.selectedFilterDate != null 
+                  ? const Color(0xFFE53935) 
+                  : Colors.grey[200],
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: PopupMenuButton<String>(
+              padding: EdgeInsets.zero,
+              icon: Icon(
+                Icons.filter_list, 
+                size: 18, 
+                color: controller.selectedFilterDate != null ? Colors.white : Colors.grey[800],
+              ),
+              onSelected: (value) async {
+                if (value == 'newest') {
+                  controller.toggleSortOrder(true);
+                  onStateChanged(); // <--- یہاں سکرین کو ریفریش کرنے کا سگنل جوڑ دیا گیا ہے
+                } else if (value == 'oldest') {
+                  controller.toggleSortOrder(false);
+                  onStateChanged(); // <--- یہاں بھی سکرین ریفریش ہوگی
+                } else if (value == 'by_date') {
+                  DateTime? pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: controller.selectedFilterDate ?? DateTime.now(),
+                    firstDate: DateTime(2023),
+                    lastDate: DateTime.now(),
+                    builder: (context, child) {
+                      return Theme(
+                        data: ThemeData.light().copyWith(
+                          primaryColor: const Color(0xFFE53935),
+                          colorScheme: const ColorScheme.light(
+                            primary: Color(0xFFE53935),
+                            onPrimary: Colors.white,
+                            surface: Colors.white,
+                            onSurface: Colors.black87,
+                          ),
+                          dialogTheme: const DialogThemeData(
+                            backgroundColor: Colors.white,
+                          ),
+                        ),
+                        child: child!,
+                      );
+                    },
+                  );
+                  if (pickedDate != null) {
+                    controller.filterByDate(pickedDate);
+                    onStateChanged();
+                  }
+                } else if (value == 'clear_date') {
+                  controller.clearDateFilter();
+                  onStateChanged();
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'newest',
+                  child: Row(
+                    children: [
+                      Icon(Icons.arrow_downward, size: 16, color: controller.isNewestFirst ? const Color(0xFFE53935) : Colors.grey),
+                      const SizedBox(width: 8),
+                      const Text('نئی سے پرانی (Newest First)', style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'oldest',
+                  child: Row(
+                    children: [
+                      Icon(Icons.arrow_upward, size: 16, color: !controller.isNewestFirst ? const Color(0xFFE53935) : Colors.grey),
+                      const SizedBox(width: 8),
+                      const Text('پرانی سے نئی (Oldest First)', style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem<String>(
+                  value: 'by_date',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 16, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      const Text('تاریخ کے حساب سے فلٹر کریں', style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ),
+                if (controller.selectedFilterDate != null)
+                  PopupMenuItem<String>(
+                    value: 'clear_date',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.clear, size: 16, color: Color(0xFFE53935)),
+                        const SizedBox(width: 8),
+                        const Text('تاریخ کا فلٹر ہٹائیں', style: TextStyle(fontSize: 12, color: Color(0xFFE53935))),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -116,7 +217,7 @@ class InPageSubFiltersWidget extends StatelessWidget {
         onStateChanged();
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFE53935) : Colors.grey[200],
@@ -125,7 +226,7 @@ class InPageSubFiltersWidget extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 9.5,
             fontWeight: FontWeight.bold,
             color: isSelected ? Colors.white : Colors.grey[800],
           ),

@@ -3,43 +3,84 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AdminPanelController extends ChangeNotifier {
-  // پیج ویو کو کنٹرول کرنے کے لیے کنٹرولر
   final PageController pageController = PageController(initialPage: 1);
   int currentIndex = 1;
 
-  // ہر ریکویسٹ کے اندر قیمت (Price) لکھنے کے لیے الگ کنٹرولرز کا میپ
   final Map<String, TextEditingController> priceControllers = {};
 
-  // ہر ویو کے اندر ان-پیج فلٹرز کی حالت ('all', 'purchase', 'signup', 'both')
   final Map<String, String> pageFilters = {
     'approved': 'all',
     'pending': 'all',
     'completed': 'all',
   };
 
-  // تمام ریکویسٹس کا ڈیٹا جو ہائیو (Hive) سے آئے گا
-  List<Map<String, dynamic>> requests = [];
+  bool isNewestFirst = true;
+  DateTime? selectedFilterDate;
+  List<Map<String, dynamic>> _allRequests = [];
 
   AdminPanelController() {
     loadRequestsFromHive();
   }
 
-  // ہائیو باکس سے ڈیٹا لوڈ کرنے اور مکمل میপিং کرنے کا فنکشن
+  List<Map<String, dynamic>> get requests {
+    var filtered = _allRequests.where((req) {
+      if (selectedFilterDate == null) return true;
+      String timeStr = req['timestamp']?.toString() ?? '';
+      DateTime? reqDate = DateTime.tryParse(timeStr);
+      if (reqDate == null) return false;
+      
+      return reqDate.year == selectedFilterDate!.year &&
+             reqDate.month == selectedFilterDate!.month &&
+             reqDate.day == selectedFilterDate!.day;
+    }).toList();
+
+    filtered.sort((a, b) {
+      String timeA = a['timestamp']?.toString() ?? '';
+      String timeB = b['timestamp']?.toString() ?? '';
+      
+      DateTime? dateA = DateTime.tryParse(timeA);
+      DateTime? dateB = DateTime.tryParse(timeB);
+
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+
+      if (isNewestFirst) {
+        return dateB.compareTo(dateA);
+      } else {
+        return dateA.compareTo(dateB);
+      }
+    });
+
+    return filtered;
+  }
+
+  void toggleSortOrder(bool newestFirst) {
+    isNewestFirst = newestFirst;
+    notifyListeners();
+  }
+
+  void filterByDate(DateTime? date) {
+    selectedFilterDate = date;
+    notifyListeners();
+  }
+
+  void clearDateFilter() {
+    selectedFilterDate = null;
+    notifyListeners();
+  }
+
   void loadRequestsFromHive() {
     try {
       var customerBox = Hive.box('customerBox');
       int indexCount = 0;
       
-      requests = customerBox.values.map((e) {
+      _allRequests = customerBox.values.map((e) {
         var map = Map<String, dynamic>.from(e);
         
-        // 1. محفوظ ID بنانا تاکہ نل (Null) ہونے پر ایپ کریش نہ ہو
         map['id'] = map['id']?.toString() ?? 'req_${indexCount++}';
-
-        // 2. بیسک اسٹیٹس
         map['status'] = map['status']?.toString().toLowerCase() ?? 'pending';
         
-        // 3. کسٹمر انفارمیشن (تمام ممکنہ کیز کو کور کیا گیا ہے تاکہ ڈیٹا غائب نہ ہو)
         map['name'] = map['customerName']?.toString() ?? map['name']?.toString() ?? map['fullName']?.toString() ?? 'نام موجود نہیں';
         map['fatherName'] = map['customerFatherName']?.toString() ?? map['fatherName']?.toString() ?? map['father_name']?.toString() ?? '';
         map['caste'] = map['customerCaste']?.toString() ?? map['caste']?.toString() ?? '';
@@ -47,7 +88,15 @@ class AdminPanelController extends ChangeNotifier {
         map['cnic'] = map['customerCnic']?.toString() ?? map['cnic']?.toString() ?? map['idCard']?.toString() ?? '';
         map['address'] = map['customerAddress']?.toString() ?? map['address']?.toString() ?? '';
         
-        // 4. پیکج یا پرچیز سے جڑی فیلڈز
+        map['username'] = map['phone'];
+        
+        String cnicStr = map['cnic'];
+        String defaultPassword = '1234';
+        if (cnicStr.length >= 4) {
+          defaultPassword = cnicStr.substring(cnicStr.length - 4);
+        }
+        map['password'] = map['password']?.toString() ?? defaultPassword;
+
         bool hasPackage = map['packageName'] != null || map['mobileName'] != null || map['cashPrice'] != null;
         
         if (hasPackage) {
@@ -58,17 +107,15 @@ class AdminPanelController extends ChangeNotifier {
           map['filterKey'] = 'signup';
         }
 
-        // 5. پرچیز اور آئٹم کی تفصیلات
         map['mobileName'] = map['mobileName']?.toString() ?? 'کوئی ڈیوائس نہیں';
         map['cashPrice'] = map['cashPrice']?.toString() ?? '0';
-        map['advance'] = map['advance']?.toString() ?? '0';
-        map['installment'] = map['installment']?.toString() ?? '0';
+        map['advanceAmount'] = map['advanceAmount']?.toString() ?? map['advance']?.toString() ?? '0';
+        map['monthlyInstallment'] = map['monthlyInstallment']?.toString() ?? map['installment']?.toString() ?? '0';
         map['packageName'] = map['packageName']?.toString() ?? '';
-        map['isManualMode'] = map['isManualMode'] ?? false;
+        map['isBuyStockMode'] = map['isBuyStockMode'] ?? !(map['isManualMode'] ?? false);
+        map['totalPrice'] = map['totalPrice']?.toString() ?? '0';
 
-        // 6. ضامن (Guarantor) کی تفصیلات کی درست میपिंग
         map['hasGuarantor'] = map['isGuarantorPresent'] ?? map['hasGuarantor'] ?? (map['guarantorName'] != null && map['guarantorName'].toString().isNotEmpty);
-        
         map['guarantorName'] = map['guarantorName']?.toString() ?? map['customerGuarantorName']?.toString() ?? '';
         map['guarantorFatherName'] = map['guarantorFatherName']?.toString() ?? '';
         map['guarantorCaste'] = map['guarantorCaste']?.toString() ?? '';
@@ -88,30 +135,72 @@ class AdminPanelController extends ChangeNotifier {
     }
   }
 
-  // ریکویسٹ کا سٹیٹس تبدیل کرنے کا فنکشن
   Future<void> updateRequestStatus(int index, String newStatus) async {
     var customerBox = Hive.box('customerBox');
     
-    requests[index]['status'] = newStatus;
-    await customerBox.putAt(index, requests[index]);
+    int originalIndex = _allRequests.indexWhere((r) => r['id'] == requests[index]['id']);
+    if (originalIndex != -1) {
+      _allRequests[originalIndex]['status'] = newStatus;
+      await customerBox.putAt(originalIndex, _allRequests[originalIndex]);
+    }
     
     notifyListeners();
   }
 
-  // فون کال کرنے کا فنکشن
   Future<void> makePhoneCall(String phoneNumber) async {
     final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
     await launchUrl(launchUri);
   }
 
-  // واٹس ایپ میسج بھیجنے کا فنکشن
   Future<void> openWhatsApp(String phone, String message) async {
-    String formattedPhone = phone.startsWith('0') ? '92${phone.substring(1)}' : phone;
-    final Uri whatsappUri = Uri.parse('https://wa.me/$formattedPhone?text=${Uri.encodeComponent(message)}');
-    await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+    String cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
+    
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '92${cleanPhone.substring(1)}';
+    } else if (!cleanPhone.startsWith('92') && cleanPhone.length == 10) {
+      cleanPhone = '92$cleanPhone';
+    }
+
+    final Uri whatsappUri = Uri.parse(
+      'https://api.whatsapp.com/send?phone=$cleanPhone&text=${Uri.encodeComponent(message)}'
+    );
+    
+    try {
+      await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint("WhatsApp Launch Error: $e");
+    }
   }
 
-  // وسائل ختم (Dispose) کرنے کے لیے
+  // مکمل اور تفصیلی منظوری کا میسج
+  Future<void> sendApprovalWhatsApp(Map<String, dynamic> req) async {
+    String phone = req['phone'] ?? '';
+    String username = req['username'] ?? phone;
+    String password = req['password'] ?? '1234';
+
+    String message = 
+      "\u200Fالسلام علیکم محترم و معزز کسٹمر صاحب!\n\n"
+      "آپ کو مطلع کیا جاتا ہے کہ آپ کی درخواست منظور کر لی گئی ہے اور آپ کا یوزر نیم اور پاسورڈ اسائن کر دیا گیا ہے۔\n\n"
+      "🔹 آپ کا موبائل نمبر ہی آپ کا یوزر نیم ہے: $username\n"
+      "🔹 آپ کا پاسورڈ (شناختی کارڈ کے آخری 4 ہندسے): $password\n\n"
+      "مزید خریداری اور نئی درخواست دینے کے لیے آپ اپنے سائن اپ پیج سے اپلائی کر سکتے ہیں۔\n\n"
+      "برائے مہربانی قانونی دستاویزات کی مکمل تکمیل اور موبائل کی وصولی کے لیے اپنے اصل شناختی کارڈ کے ہمراہ ہماری دکان پر تشریف لائیں۔ شکریہ!";
+
+    await openWhatsApp(phone, message);
+  }
+
+  // مکمل اور تفصیلی ریجیکشن / اعتراض کا میسج
+  Future<void> sendRejectionWhatsApp(Map<String, dynamic> req) async {
+    String phone = req['phone'] ?? '';
+
+    String message = 
+      "\u200Fالسلام علیکم محترم و معزز کسٹمر صاحب!\n\n"
+      "آپ کی درخواست کے حوالے سے معذرت خواہ ہیں؛ آپ کی درج کردہ قیمت اور مارکیٹ کے ریٹ میں فرق آ رہا ہے۔\n\n"
+      "برائے مہربانی درست مارکیٹ ریٹ کے حساب سے دوبارہ درخواست (اپلائی) کریں تاکہ آپ کی کارروائی کو آگے بڑھایا جا سکے۔ شکریہ!";
+
+    await openWhatsApp(phone, message);
+  }
+
   @override
   void dispose() {
     pageController.dispose();
