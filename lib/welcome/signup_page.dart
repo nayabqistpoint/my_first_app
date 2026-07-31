@@ -15,7 +15,13 @@ class SignupPage extends StatefulWidget {
 
 class _SignupPageState extends State<SignupPage> {
   final _formKey = GlobalKey<FormState>();
-  final SignUpController _controller = SignUpController();
+  late final SignUpController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = SignUpController();
+  }
 
   void _handleSubmission() async {
     bool success = await _controller.submitRegistration(context, _formKey);
@@ -40,7 +46,6 @@ class _SignupPageState extends State<SignupPage> {
           ],
         ),
       ),
-      // ListenableBuilder کے ذریعے بٹن خود بخود کنٹرولر کی اسٹیٹ کے مطابق اپڈیٹ ہوگا
       bottomNavigationBar: ListenableBuilder(
         listenable: _controller,
         builder: (context, child) {
@@ -95,9 +100,17 @@ class _SignupPageState extends State<SignupPage> {
             ItemPackageUI(key: _controller.packageKey),
             const SizedBox(height: 16),
 
-            TermsBlock(
-              onTermsChanged: (isAccepted) {
-                _controller.updateTerms(isAccepted);
+            // TermsBlock اب کنٹرولر کی اسٹیٹ کے ساتھ جڑا ہوا ہے
+            ListenableBuilder(
+              listenable: _controller,
+              builder: (context, child) {
+                return TermsBlock(
+                  key: const PageStorageKey('terms_block_key'),
+                  initialValue: _controller.isTermsAccepted,
+                  onTermsChanged: (isAccepted) {
+                    _controller.updateTerms(isAccepted);
+                  },
+                );
               },
             ),
             const SizedBox(height: 20),

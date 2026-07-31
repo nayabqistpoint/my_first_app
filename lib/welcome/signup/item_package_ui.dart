@@ -9,15 +9,21 @@ class ItemPackageUI extends StatefulWidget {
   State<ItemPackageUI> createState() => ItemPackageUIState();
 }
 
-class ItemPackageUIState extends State<ItemPackageUI> {
-  final ItemPackageLogic _logic = ItemPackageLogic();
-
-  // پرچیز ریکویسٹ کا سوئچ
+class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveClientMixin {
+  // اب لاجک کا ابجیکٹ یہاں مکمل استعمال ہوگا
+  late final ItemPackageLogic _logic;
   bool _isPurchaseRequested = false;
 
-  // کیلکولیٹر سے آنے والا ڈیٹا یہاں محفوظ ہوگا
-  Map<String, dynamic> _calculatorData = {};
+  @override
+  bool get wantKeepAlive => true;
 
+  @override
+  void initState() {
+    super.initState();
+    _logic = ItemPackageLogic(); // لاجک انیشیलाइज ہو گئی
+  }
+
+  // اب یہ براہ راست لاجک سے ڈیٹا اٹھا کر آگے بھیجے گا
   Map<String, dynamic> getPackageData() {
     if (!_isPurchaseRequested) {
       return {'isPurchaseRequested': false};
@@ -25,7 +31,6 @@ class ItemPackageUIState extends State<ItemPackageUI> {
     return {
       'isPurchaseRequested': true,
       ..._logic.getPackageData(),
-      ..._calculatorData,
     };
   }
 
@@ -39,27 +44,43 @@ class ItemPackageUIState extends State<ItemPackageUI> {
 
     if (result != null && result is Map<String, dynamic>) {
       setState(() {
-        _calculatorData = result;
+        // کیلکولیٹر سے آنے والا ڈیٹا سیدھا لاجک کے اندر سیو ہوگا
+        _logic.updatePackageData(
+          name: result['mobileName'] ?? '',
+          pkgName: result['packageName'] ?? '',
+          cash: result['cashPrice'] ?? '',
+          advance: result['advanceAmount'] ?? '',
+          installment: result['monthlyInstallment'] ?? '',
+          total: result['totalPrice'] ?? '',
+          buyStock: result['isBuyStockMode'] ?? false,
+          stockImei: result['imei'],
+          stockColor: result['color'],
+          chqNumber: result['checkNumber'],
+          bnkName: result['bankName'],
+        );
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final String modelName = _calculatorData['mobileName'] ?? '';
-    final String packageName = _calculatorData['packageName'] ?? '';
-    final String cashPrice = _calculatorData['cashPrice'] ?? '';
-    final String advanceAmount = _calculatorData['advanceAmount'] ?? '';
-    final String monthlyInstallment = _calculatorData['monthlyInstallment'] ?? '';
-    final String totalPrice = _calculatorData['totalPrice'] ?? '';
-    
-    final String imei = _calculatorData['imei'] ?? '';
-    final String color = _calculatorData['color'] ?? '';
-    final String checkNumber = _calculatorData['checkNumber'] ?? '';
-    final String bankName = _calculatorData['bankName'] ?? '';
+    super.build(context);
 
-    bool hasImeiOrColor = imei.isNotEmpty || color.isNotEmpty;
-    bool hasCheckOrBank = checkNumber.isNotEmpty || bankName.isNotEmpty;
+    // اب تمام ویلیوز براہ راست لاجک سے سکرین پر شو ہوں گی
+    final String modelName = _logic.mobileName ?? '';
+    final String packageName = _logic.packageName ?? '';
+    final String cashPrice = _logic.cashPrice ?? '';
+    final String advanceAmount = _logic.advanceAmount ?? '';
+    final String monthlyInstallment = _logic.monthlyInstallment ?? '';
+    final String totalPrice = _logic.totalPrice ?? '';
+    
+    final String? imei = _logic.imei;
+    final String? color = _logic.color;
+    final String? checkNumber = _logic.checkNumber;
+    final String? bankName = _logic.bankName;
+
+    bool hasImeiOrColor = (imei != null && imei.isNotEmpty) || (color != null && color.isNotEmpty);
+    bool hasCheckOrBank = (checkNumber != null && checkNumber.isNotEmpty) || (bankName != null && bankName.isNotEmpty);
 
     return Card(
       elevation: 2,
@@ -74,11 +95,7 @@ class ItemPackageUIState extends State<ItemPackageUI> {
               children: [
                 const Text(
                   '3. آئٹم اور پیکج کی معلومات',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
                 ),
                 Row(
                   children: [
@@ -117,17 +134,14 @@ class ItemPackageUIState extends State<ItemPackageUI> {
 
               Column(
                 children: [
-                  // 1. پہلی لائن: ماڈل اور پیکج
                   Row(
                     children: [
-                      Expanded(child: _buildBox('ماڈل:', modelName.isEmpty ? 'منتخب کریں' : modelName)),
+                      Expanded(child: _buildBox('ماڈل:', modelName == 'N/A' || modelName.isEmpty ? 'منتخب کریں' : modelName)),
                       const SizedBox(width: 6),
-                      Expanded(child: _buildBox('پیکج:', packageName.isEmpty ? 'منتخب کریں' : packageName)),
+                      Expanded(child: _buildBox('پیکج:', packageName == 'N/A' || packageName.isEmpty ? 'منتخب کریں' : packageName)),
                     ],
                   ),
                   const SizedBox(height: 6),
-
-                  // 2. دوسری لائن: نقد قیمت اور ایڈوانس
                   Row(
                     children: [
                       Expanded(child: _buildBox('نقد قیمت:', cashPrice.isEmpty ? '0' : cashPrice)),
@@ -136,8 +150,6 @@ class ItemPackageUIState extends State<ItemPackageUI> {
                     ],
                   ),
                   const SizedBox(height: 6),
-
-                  // 3. تیسری لائن: ماہانہ قسط اور کل ادھار قیمت (دونوں ایک ساتھ)
                   Row(
                     children: [
                       Expanded(child: _buildBox('ماہانہ قسط:', monthlyInstallment.isEmpty ? '0' : monthlyInstallment)),
@@ -145,36 +157,32 @@ class ItemPackageUIState extends State<ItemPackageUI> {
                       Expanded(child: _buildBox('کل ادھار قیمت:', totalPrice.isEmpty ? '0' : totalPrice, isTotal: true)),
                     ],
                   ),
-                  
-                  // 4. چوتھی لائن: IMEI نمبر اور کلر (اگر موجود ہوں)
                   if (hasImeiOrColor) ...[
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        if (imei.isNotEmpty)
+                        if (imei != null && imei.isNotEmpty)
                           Expanded(child: _buildBox('IMEI نمبر:', imei, isSpecial: true))
                         else
                           const Spacer(),
-                        if (imei.isNotEmpty && color.isNotEmpty) const SizedBox(width: 6),
-                        if (color.isNotEmpty)
+                        if (imei != null && imei.isNotEmpty && color != null && color.isNotEmpty) const SizedBox(width: 6),
+                        if (color != null && color.isNotEmpty)
                           Expanded(child: _buildBox('کلر:', color, isSpecial: true))
                         else
                           const Spacer(),
                       ],
                     ),
                   ],
-
-                  // 5. پانچویں لائن: چیک نمبر اور بینک کا نام (اگر موجود ہوں)
                   if (hasCheckOrBank) ...[
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        if (checkNumber.isNotEmpty)
+                        if (checkNumber != null && checkNumber.isNotEmpty)
                           Expanded(child: _buildBox('چیک نمبر:', checkNumber, isSpecial: true))
                         else
                           const Spacer(),
-                        if (checkNumber.isNotEmpty && bankName.isNotEmpty) const SizedBox(width: 6),
-                        if (bankName.isNotEmpty)
+                        if (checkNumber != null && checkNumber.isNotEmpty && bankName != null && bankName.isNotEmpty) const SizedBox(width: 6),
+                        if (bankName != null && bankName.isNotEmpty)
                           Expanded(child: _buildBox('بینک کا نام:', bankName, isSpecial: true))
                         else
                           const Spacer(),
