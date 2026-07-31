@@ -7,7 +7,8 @@ class CustomerInfoWidget extends StatefulWidget {
   State<CustomerInfoWidget> createState() => CustomerInfoWidgetState();
 }
 
-class CustomerInfoWidgetState extends State<CustomerInfoWidget> {
+// یہاں 'AutomaticKeepAliveClientMixin' ملایا گیا ہے تاکہ ڈیٹا ری بلڈ ہونے پر اڑے نہیں
+class CustomerInfoWidgetState extends State<CustomerInfoWidget> with AutomaticKeepAliveClientMixin {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController fatherNameController = TextEditingController();
   final TextEditingController casteController = TextEditingController();
@@ -15,6 +16,9 @@ class CustomerInfoWidgetState extends State<CustomerInfoWidget> {
   final TextEditingController cnicController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
   String? customerSelfiePath;
+
+  @override
+  bool get wantKeepAlive => true; // یہ ڈیٹا کو ہمیشہ زندہ اور محفوظ رکھے گا
 
   @override
   void dispose() {
@@ -42,6 +46,8 @@ class CustomerInfoWidgetState extends State<CustomerInfoWidget> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // AutomaticKeepAliveClientMixin کے لیے لازمی ہے
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

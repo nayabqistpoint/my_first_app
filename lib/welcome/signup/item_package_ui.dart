@@ -9,17 +9,28 @@ class ItemPackageUI extends StatefulWidget {
   State<ItemPackageUI> createState() => ItemPackageUIState();
 }
 
-class ItemPackageUIState extends State<ItemPackageUI> {
-  final ItemPackageLogic _logic = ItemPackageLogic();
+class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveClientMixin {
+  // اب لاجک کا ابجیکٹ یہاں مکمل استعمال ہوگا
+  late final ItemPackageLogic _logic;
+  bool _isPurchaseRequested = false;
 
-  // کیلکولیٹر سے آنے والا ڈیٹا یہاں محفوظ ہوگا
-  Map<String, dynamic> _calculatorData = {};
+  @override
+  bool get wantKeepAlive => true;
 
+  @override
+  void initState() {
+    super.initState();
+    _logic = ItemPackageLogic(); // لاجک انیشیलाइज ہو گئی
+  }
+
+  // اب یہ براہ راست لاجک سے ڈیٹا اٹھا کر آگے بھیجے گا
   Map<String, dynamic> getPackageData() {
-    // لاجک اور کیلکولیٹر کا مکس ڈیٹا واپس کریں
+    if (!_isPurchaseRequested) {
+      return {'isPurchaseRequested': false};
+    }
     return {
+      'isPurchaseRequested': true,
       ..._logic.getPackageData(),
-      ..._calculatorData,
     };
   }
 
@@ -31,30 +42,45 @@ class ItemPackageUIState extends State<ItemPackageUI> {
       ),
     );
 
-    // جب کیلکولیٹر سے ڈیٹا واپس آئے تو سکرین کو اپڈیٹ کریں
     if (result != null && result is Map<String, dynamic>) {
       setState(() {
-        _calculatorData = result;
+        // کیلکولیٹر سے آنے والا ڈیٹا سیدھا لاجک کے اندر سیو ہوگا
+        _logic.updatePackageData(
+          name: result['mobileName'] ?? '',
+          pkgName: result['packageName'] ?? '',
+          cash: result['cashPrice'] ?? '',
+          advance: result['advanceAmount'] ?? '',
+          installment: result['monthlyInstallment'] ?? '',
+          total: result['totalPrice'] ?? '',
+          buyStock: result['isBuyStockMode'] ?? false,
+          stockImei: result['imei'],
+          stockColor: result['color'],
+          chqNumber: result['checkNumber'],
+          bnkName: result['bankName'],
+        );
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // ڈیٹا نکالنے کے طریقے
-    final String modelName = _calculatorData['mobileName'] ?? '';
-    final String packageName = _calculatorData['packageName'] ?? '';
-    final String advanceAmount = _calculatorData['advanceAmount'] ?? '';
-    final String monthlyInstallment = _calculatorData['monthlyInstallment'] ?? '';
-    final String totalPrice = _calculatorData['totalPrice'] ?? '';
-    
-    final String imei = _calculatorData['imei'] ?? '';
-    final String color = _calculatorData['color'] ?? '';
-    final String checkNumber = _calculatorData['checkNumber'] ?? '';
-    final String bankName = _calculatorData['bankName'] ?? '';
+    super.build(context);
 
-    bool hasImeiOrColor = imei.isNotEmpty || color.isNotEmpty;
-    bool hasCheckOrBank = checkNumber.isNotEmpty || bankName.isNotEmpty;
+    // اب تمام ویلیوز براہ راست لاجک سے سکرین پر شو ہوں گی
+    final String modelName = _logic.mobileName ?? '';
+    final String packageName = _logic.packageName ?? '';
+    final String cashPrice = _logic.cashPrice ?? '';
+    final String advanceAmount = _logic.advanceAmount ?? '';
+    final String monthlyInstallment = _logic.monthlyInstallment ?? '';
+    final String totalPrice = _logic.totalPrice ?? '';
+    
+    final String? imei = _logic.imei;
+    final String? color = _logic.color;
+    final String? checkNumber = _logic.checkNumber;
+    final String? bankName = _logic.bankName;
+
+    bool hasImeiOrColor = (imei != null && imei.isNotEmpty) || (color != null && color.isNotEmpty);
+    bool hasCheckOrBank = (checkNumber != null && checkNumber.isNotEmpty) || (bankName != null && bankName.isNotEmpty);
 
     return Card(
       elevation: 2,
@@ -64,106 +90,114 @@ class ItemPackageUIState extends State<ItemPackageUI> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ہیڈر اور قسط کیلکولیٹر بٹن
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   '3. آئٹم اور پیکج کی معلومات',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
                 ),
-                SizedBox(
-                  height: 30,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _openCalculator(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[800],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                Row(
+                  children: [
+                    const Text('پرچیز ریکویسٹ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    Switch(
+                      value: _isPurchaseRequested,
+                      activeThumbColor: Colors.red[800],
+                      onChanged: (value) {
+                        setState(() {
+                          _isPurchaseRequested = value;
+                        });
+                      },
                     ),
-                    icon: const Icon(Icons.calculate, size: 14),
-                    label: const Text('قسط کیلکولیٹر کھولیں', style: TextStyle(fontSize: 10)),
-                  ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-
-            // تمام خانے
-            Column(
-              children: [
-                // 1. پہلی لائن: موبائل کا ماڈل اور پیکج کا نام
-                Row(
-                  children: [
-                    Expanded(child: _buildBox('ماڈل:', modelName.isEmpty ? 'منتخب کریں' : modelName)),
-                    const SizedBox(width: 6),
-                    Expanded(child: _buildBox('پیکج:', packageName.isEmpty ? 'منتخب کریں' : packageName)),
-                  ],
+            
+            if (_isPurchaseRequested) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 30,
+                child: ElevatedButton.icon(
+                  onPressed: () => _openCalculator(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red[800],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
+                  icon: const Icon(Icons.calculate, size: 14),
+                  label: const Text('قسط کیلکولیٹر کھولیں', style: TextStyle(fontSize: 10)),
                 ),
-                const SizedBox(height: 6),
+              ),
+              const SizedBox(height: 8),
 
-                // 2. دوسری لائن: ایڈوانس اور ماہانہ قسط
-                Row(
-                  children: [
-                    Expanded(child: _buildBox('ایڈوانس:', advanceAmount.isEmpty ? '0' : advanceAmount)),
-                    const SizedBox(width: 6),
-                    Expanded(child: _buildBox('ماہانہ قسط:', monthlyInstallment.isEmpty ? '0' : monthlyInstallment)),
-                  ],
-                ),
-                const SizedBox(height: 6),
-
-                // 3. تیسری لائن: کل ادھار قیمت
-                _buildBox('کل ادھار قیمت:', totalPrice.isEmpty ? '0' : totalPrice, isTotal: true),
-                
-                // 4. چوتھی لائن: IMEI نمبر اور کلر (صرف تب ظاہر ہوں گے جب موجود ہوں)
-                if (hasImeiOrColor) ...[
+              Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: _buildBox('ماڈل:', modelName == 'N/A' || modelName.isEmpty ? 'منتخب کریں' : modelName)),
+                      const SizedBox(width: 6),
+                      Expanded(child: _buildBox('پیکج:', packageName == 'N/A' || packageName.isEmpty ? 'منتخب کریں' : packageName)),
+                    ],
+                  ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      if (imei.isNotEmpty)
-                        Expanded(child: _buildBox('IMEI نمبر:', imei, isSpecial: true))
-                      else
-                        const Spacer(),
-                      if (imei.isNotEmpty && color.isNotEmpty) const SizedBox(width: 6),
-                      if (color.isNotEmpty)
-                        Expanded(child: _buildBox('کلر:', color, isSpecial: true))
-                      else
-                        const Spacer(),
+                      Expanded(child: _buildBox('نقد قیمت:', cashPrice.isEmpty ? '0' : cashPrice)),
+                      const SizedBox(width: 6),
+                      Expanded(child: _buildBox('ایڈوانس:', advanceAmount.isEmpty ? '0' : advanceAmount)),
                     ],
                   ),
-                ],
-
-                // 5. پانچویں لائن: چیک نمبر اور بینک کا نام (صرف تب ظاہر ہوں گے جب سیکیورٹی چیک آن ہو)
-                if (hasCheckOrBank) ...[
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      if (checkNumber.isNotEmpty)
-                        Expanded(child: _buildBox('چیک نمبر:', checkNumber, isSpecial: true))
-                      else
-                        const Spacer(),
-                      if (checkNumber.isNotEmpty && bankName.isNotEmpty) const SizedBox(width: 6),
-                      if (bankName.isNotEmpty)
-                        Expanded(child: _buildBox('بینک کا نام:', bankName, isSpecial: true))
-                      else
-                        const Spacer(),
+                      Expanded(child: _buildBox('ماہانہ قسط:', monthlyInstallment.isEmpty ? '0' : monthlyInstallment)),
+                      const SizedBox(width: 6),
+                      Expanded(child: _buildBox('کل ادھار قیمت:', totalPrice.isEmpty ? '0' : totalPrice, isTotal: true)),
                     ],
                   ),
+                  if (hasImeiOrColor) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        if (imei != null && imei.isNotEmpty)
+                          Expanded(child: _buildBox('IMEI نمبر:', imei, isSpecial: true))
+                        else
+                          const Spacer(),
+                        if (imei != null && imei.isNotEmpty && color != null && color.isNotEmpty) const SizedBox(width: 6),
+                        if (color != null && color.isNotEmpty)
+                          Expanded(child: _buildBox('کلر:', color, isSpecial: true))
+                        else
+                          const Spacer(),
+                      ],
+                    ),
+                  ],
+                  if (hasCheckOrBank) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        if (checkNumber != null && checkNumber.isNotEmpty)
+                          Expanded(child: _buildBox('چیک نمبر:', checkNumber, isSpecial: true))
+                        else
+                          const Spacer(),
+                        if (checkNumber != null && checkNumber.isNotEmpty && bankName != null && bankName.isNotEmpty) const SizedBox(width: 6),
+                        if (bankName != null && bankName.isNotEmpty)
+                          Expanded(child: _buildBox('بینک کا نام:', bankName, isSpecial: true))
+                        else
+                          const Spacer(),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
-            ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  // ایک لائن اور خوبصورت باکس بنانے کا سمپل ویجیٹ
   Widget _buildBox(String label, String value, {bool isTotal = false, bool isSpecial = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),

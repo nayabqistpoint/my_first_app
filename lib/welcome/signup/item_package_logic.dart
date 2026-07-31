@@ -4,6 +4,7 @@ class ItemPackageLogic {
   // مین ویری ایبلز جو UI میں شو ہوں گے
   String? mobileName;
   String? packageName;
+  String? cashPrice; // نقد قیمت کا نیا ویری ایبل
   String? advanceAmount;
   String? monthlyInstallment;
   String? totalPrice;
@@ -19,6 +20,7 @@ class ItemPackageLogic {
   void updatePackageData({
     required String name,
     required String pkgName,
+    String? cash,
     required String advance,
     required String installment,
     required String total,
@@ -30,6 +32,7 @@ class ItemPackageLogic {
   }) {
     mobileName = name.isNotEmpty ? name : 'N/A';
     packageName = pkgName.isNotEmpty ? pkgName : 'N/A';
+    cashPrice = (cash != null && cash.isNotEmpty) ? cash : '0';
     advanceAmount = advance.isNotEmpty ? advance : '0';
     monthlyInstallment = installment.isNotEmpty ? installment : '0';
     totalPrice = total.isNotEmpty ? total : '0';
@@ -50,6 +53,7 @@ class ItemPackageLogic {
     return {
       'mobileName': mobileName ?? 'N/A',
       'packageName': packageName ?? 'N/A',
+      'cashPrice': cashPrice ?? '0',
       'advanceAmount': advanceAmount ?? '0',
       'monthlyInstallment': monthlyInstallment ?? '0',
       'totalPrice': totalPrice ?? '0',
@@ -65,6 +69,7 @@ class ItemPackageLogic {
   void clearData() {
     mobileName = null;
     packageName = null;
+    cashPrice = null;
     advanceAmount = null;
     monthlyInstallment = null;
     totalPrice = null;

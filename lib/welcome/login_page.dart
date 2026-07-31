@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
-import '../installment_calculater_page.dart';
-import 'signup_page.dart';
-import '../home_page.dart'; // آپ کے ہوم پیج کا امپورٹ
+import 'signup_page.dart'; // چونکہ یہ بھی welcome فولڈر کے اندر ہے
+import '../installment_calculater_page.dart'; // باہر روٹ سے کیلکولیٹر کا پاتھ
+import '../home_page.dart'; // باہر روٹ سے ہوم پیج کا پاتھ
+import '../customer_ledger_page.dart'; // باہر روٹ پر پڑی ہوئی کسٹمر لیجر فائل کا درست پاتھ
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -37,7 +38,6 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('ایڈمن لاگ ان کامیاب ہو گیا!')),
         );
-        // کامیاب لاگ ان کے بعد ہوم پیج / ایڈمن پینل پر ری ڈائریکٹ کرنا
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomePage()),
@@ -48,10 +48,22 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } else {
-      // کسٹمر لاگ ان چیک
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('کسٹمر ($username) کا لاگ ان ویریفائی ہو رہا ہے...')),
-      );
+      // کسٹمر لاگ ان چیک (پاسورڈ 1234)
+      if (password == '1234') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خوش آمدید! کسٹمر ($username) کا لاگ ان کامیاب ہو گیا')),
+        );
+        
+        // کامیاب لاگ ان کے بعد کسٹمر کو سیدھا باہر والی CustomerLedgerPage پر لے جانا
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const CustomerLedgerPage()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('غلط پاسورڈ! برائے مہربانی درست پاسورڈ درج کریں (مثلاً 1234)')),
+        );
+      }
     }
   }
 
@@ -216,7 +228,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 12),
 
-                  // فنگر پرنٹ (Biometric) لاگ ان بٹن
                   OutlinedButton.icon(
                     onPressed: _handleBiometricLogin,
                     icon: Icon(Icons.fingerprint, color: Colors.red[800], size: 28),
@@ -232,7 +243,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 12),
 
-                  // پاسورڈ بھول جانے کی صورت میں ایڈمن سے رابطہ کرنے کا سرخ پیغام
                   Center(
                     child: Text(
                       'پاسورڈ بھول جانے کی صورت میں ایڈمن سے رابطہ کریں',
