@@ -42,6 +42,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
 
       widget.onDataChanged!({
         'mobileName': mobileName,
+        'cashPrice': _selectedMode == 2 ? _manualTotalController.text : '', // نقد قیمت صرف مینول موڈ میں یہاں سے جائے گی
         'advanceAmount': _advanceController.text,
         'imei': _imeiController.text,
         'color': _colorController.text,
@@ -88,7 +89,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Column(
               children: [
-                // ماڈرن اور وارننگز سے پاک SegmentedButton موڈ سلیکشن
+                // موڈ سلیکشن
                 SizedBox(
                   width: double.infinity,
                   child: SegmentedButton<int>(
@@ -153,7 +154,6 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                     ),
                   ),
                   
-                  // جب موبائل سلیکٹ ہو جائے تو دوسری لائن میں: ایڈوانس، آئی ایم ای آئی، کلر
                   if (_selectedStockMobile != null) ...[
                     const SizedBox(height: 8),
                     Row(
@@ -238,7 +238,6 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                     ),
                   ),
                   
-                  // جب ماڈل کا نام لکھا جائے تو دوسری لائن میں: نقد قیمت اور ایڈوانس
                   if (_manualModelController.text.trim().isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Row(
@@ -323,7 +322,6 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                   ],
                 ),
                 
-                // جب سوئچ آن ہو تو چیک نمبر اور بینک کا نام
                 if (controller.hasSecurityCheck) ...[
                   const SizedBox(height: 8),
                   Row(
