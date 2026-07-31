@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart'; // ہائیو فلٹر کا پیکیج
+import 'package:firebase_core/firebase_core.dart'; // فائر بیس کور کا پیکیج
 import 'welcome/login_page.dart'; // لاگ ان پیج کا امپورٹ راستہ
 
 void main() async {
   // فلاتر اور پیکیجز کی بائنڈنگز کو یقینی بنانا
   WidgetsFlutterBinding.ensureInitialized();
+
+  // فائر بیس کو محفوظ طریقے سے انیشلائز کرنا (تاکہ براؤزر یا کسی بھی ڈیوائس پر ایپ رکے نہیں)
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase initialization skipped or failed: $e');
+  }
 
   // ہائیو ڈیٹا بیس کو انیشلائز کرنا
   await Hive.initFlutter();

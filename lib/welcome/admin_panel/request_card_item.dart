@@ -192,7 +192,6 @@ class RequestCardItem extends StatelessWidget {
                           ],
 
                           const SizedBox(height: 6),
-                          // درست کیز: packageName, monthlyInstallment, cashPrice, advanceAmount, totalPrice
                           Text("پیکج: ${request['packageName'] ?? 'N/A'} | ماہانہ قسط: ${request['monthlyInstallment'] ?? '0'} روپے", style: const TextStyle(fontSize: 12)),
                           const SizedBox(height: 3),
                           Text("نقد قیمت: ${request['cashPrice'] ?? '0'} روپے", style: const TextStyle(fontSize: 12)),
@@ -256,16 +255,14 @@ class RequestCardItem extends StatelessWidget {
 
                   const SizedBox(height: 15),
 
-                  // واٹس ایپ کے دونوں اہم بٹن
+                  // واٹس ایپ کے دونوں اہم بٹن (اب کنٹرولر کے تفصیلی فنکشنز کو کال کر رہے ہیں)
                   Row(
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            controller.openWhatsApp(
-                              request['phone'],
-                              "السلام علیکم ${request['name']}! آپ کی سائن اپ درخواست منظور کر لی گئی ہے۔",
-                            );
+                            // براہ راست کنٹرولر کا مکمل اور تفصیلی فنکشن کال ہو گا جس میں یوزر نیم اور پاسورڈ شامل ہیں
+                            controller.sendApprovalWhatsApp(request);
                           },
                           icon: const Icon(Icons.check_circle, color: Colors.white, size: 18),
                           label: const Text("منظور کریں", style: TextStyle(color: Colors.white, fontSize: 12)),
@@ -279,11 +276,8 @@ class RequestCardItem extends StatelessWidget {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            String verifiedPrice = priceController.text.trim();
-                            String msg = request['isBuyStockMode'] != true && verifiedPrice.isNotEmpty
-                                ? "محترم ${request['name']}! قیمت میں فرق کی وجہ سے آپ کی درخواست پر اعتراض ہے۔"
-                                : "محترم ${request['name']}! آپ کی درخواست فی الحال مسترد کی جاتی ہے۔";
-                            controller.openWhatsApp(request['phone'], msg);
+                            // براہ راست کنٹرولر کا ریجیکشن والا فنکشن کال ہو گا
+                            controller.sendRejectionWhatsApp(request);
                           },
                           icon: const Icon(Icons.cancel, color: Colors.white, size: 18),
                           label: const Text("اعتراض / مس میچ", style: TextStyle(color: Colors.white, fontSize: 11)),
