@@ -73,9 +73,22 @@ class CustomerInfoWidgetState extends State<CustomerInfoWidget> with AutomaticKe
           const SizedBox(height: 12),
           _buildTextField(controller: casteController, label: 'قوم', icon: Icons.group),
           const SizedBox(height: 12),
-          _buildTextField(controller: phoneController, label: 'موبائل نمبر', icon: Icons.phone, keyboardType: TextInputType.phone),
+          // موبائل نمبر والے خانے میں پاسورڈ یا براؤزر کی سجیشن مکمل بند کر دی گئی ہے
+          _buildTextField(
+            controller: phoneController, 
+            label: 'موبائل نمبر', 
+            icon: Icons.phone, 
+            keyboardType: TextInputType.phone,
+            isPhoneOrId: true,
+          ),
           const SizedBox(height: 12),
-          _buildTextField(controller: cnicController, label: 'شناختی کارڈ نمبر (CNIC)', icon: Icons.credit_card, keyboardType: TextInputType.number),
+          _buildTextField(
+            controller: cnicController, 
+            label: 'شناختی کارڈ نمبر (CNIC)', 
+            icon: Icons.credit_card, 
+            keyboardType: TextInputType.number,
+            isPhoneOrId: true,
+          ),
           const SizedBox(height: 12),
           _buildTextField(controller: addressController, label: 'گھر کا پتہ', icon: Icons.home),
           const SizedBox(height: 16),
@@ -125,7 +138,7 @@ class CustomerInfoWidgetState extends State<CustomerInfoWidget> with AutomaticKe
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   icon: Icon(customerSelfiePath != null ? Icons.done : Icons.camera, size: 16),
-                  label: Text(customerSelfiePath != null ? 'دوبارہ لیں' : 'تصویر لیں', style: const TextStyle(fontSize: 12)),
+                  label: Text(customerSelfiePath != null ? 'دوباره لیں' : 'تصویر لیں', style: const TextStyle(fontSize: 12)),
                 ),
               ],
             ),
@@ -140,10 +153,15 @@ class CustomerInfoWidgetState extends State<CustomerInfoWidget> with AutomaticKe
     required String label,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
+    bool isPhoneOrId = false,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      // براؤزر کی پرانی سجیشن اور آٹو فل کو یہاں سختی سے بند کیا گیا ہے تاکہ 1234 یا کوئی اور پاسورڈ سجسٹ نہ ہو
+      enableSuggestions: !isPhoneOrId,
+      autocorrect: false,
+      autofillHints: isPhoneOrId ? [] : null,
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
           return 'یہ خانہ خالی نہیں چھوڑ سکتے';

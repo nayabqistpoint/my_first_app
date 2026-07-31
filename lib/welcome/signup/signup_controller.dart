@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // فائر بیس اتھنٹیکیشن کا پیکیج
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'customer_info.dart';
 import 'guarantor_info.dart';
@@ -37,9 +37,25 @@ class SignUpController extends ChangeNotifier {
       var guarantorData = guarantorKey.currentState?.getGuarantorData() ?? {};
       var packageData = packageKey.currentState?.getPackageData() ?? {};
 
-      // کسٹمر کا موبائل نمبر حاصل کرنا (یقینی بنائیں کہ آپ کے customerData میں موبائل نمبر کی کلید 'phone' یا 'mobile' ہے)
-      // یہاں ہم فرض کرتے ہیں کہ کلید 'phone' یا 'mobileNumber' نام سے ہے۔ اپنے فارم کے مطابق اسے تبدیل کر سکتے ہیں۔
-      String phoneNumber = customerData['phone'] ?? customerData['mobile'] ?? '';
+      // کسٹمر کا موبائل نمبر درست طریقے سے حاصل کرنا (یہاں 'customerPhone' کو سب سے پہلے رکھا ہے)
+      String phoneNumber = customerData['customerPhone'] ?? 
+                           customerData['phone'] ?? 
+                           customerData['mobile'] ?? 
+                           customerData['phoneNumber'] ?? 
+                           customerData['cell'] ?? '';
+
+      // اگر موبائل نمبر خالی ہو تو یہیں روک دیں
+      if (phoneNumber.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('براہ کرم کسٹمر کا موبائل نمبر درج کریں'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return false;
+      }
 
       var customerBox = Hive.box('customerBox');
 
@@ -48,31 +64,27 @@ class SignUpController extends ChangeNotifier {
       notifyListeners();
 
       try {
-        // اگر موبائل نمبر موجود ہے تو فائر بیس پر بھی اکاؤنٹ رجسٹر کریں
-        if (phoneNumber.isNotEmpty) {
-          // نمبر کو صاف کرنا (اگر سپیس یا ڈیش ہوں تو ہٹا دیں)
-          String cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '');
-          
-          // آخری 4 ہندے بطور پاسورڈ نکالنا (اگر نمبر 4 ہندسوں سے چھوٹا ہو تو پورا نمبر لے لیں)
-          String password = cleanPhone.length >= 4 
-              ? cleanPhone.substring(cleanPhone.length - 4) 
-              : cleanPhone;
+        // نمبر کو بالکل صاف کرنا (صرف ہندسے رکھنا)
+        String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
+        
+        // سختی سے صرف آخری 4 ہندسے بطور پاسورڈ نکالنا
+        String password = cleanPhone.length >= 4 
+            ? cleanPhone.substring(cleanPhone.length - 4) 
+            : cleanPhone;
 
-          // فائر بیس کے لیے فرضی ای میل بنانا (موبائل نمبر @nayabqist.com)
-          String fakeEmail = '$cleanPhone@nayabqist.com';
+        // فائر بیس کے لیے فرضی ای میل بنانا
+        String fakeEmail = '$cleanPhone@nayabqist.com';
 
-          // فائر بیس اتھنٹیکیشن میں یوزر بنانا
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: fakeEmail,
-            password: password,
-          );
-        }
+        // فائر بیس اتھنٹیکیشن میں یوزر بنانا
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: fakeEmail,
+          password: password,
+        );
       } catch (e) {
-        // اگر فائر بیس پر پہلے سے اکاؤنٹ موجود ہو یا کوئی اور مسئلہ ہو تو ایپ کریش نہ ہو، بس پرنٹ ہو جائے
         debugPrint('Firebase Registration Error: $e');
       }
 
-      // ہلکا سا نقلی وقفہ تاکہ لوڈنگ فیل ہو سکے
+      // ہلکا سا نقلی وقفہ
       await Future.delayed(const Duration(milliseconds: 800));
 
       Map<String, dynamic> requestData = {
