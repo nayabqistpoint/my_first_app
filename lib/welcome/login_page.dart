@@ -18,7 +18,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool _isCustomerLogin = true;
   bool _obscurePassword = true; 
-  bool _rememberMe = false;     
+  bool _rememberMe = false;    
 
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -133,6 +133,7 @@ class _LoginPageState extends State<LoginPage> {
 
         var customerBox = Hive.box('customerBox');
         bool isCustomerFoundInHive = false;
+        Map<String, dynamic> foundCustomerData = {};
 
         for (var key in customerBox.keys) {
           var customerData = customerBox.get(key);
@@ -150,6 +151,7 @@ class _LoginPageState extends State<LoginPage> {
 
               if (password == expectedPin) {
                 isCustomerFoundInHive = true;
+                foundCustomerData = Map<String, dynamic>.from(customerData);
                 break;
               }
             }
@@ -161,9 +163,15 @@ class _LoginPageState extends State<LoginPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('لاگ ان کامیاب ہو گیا!')),
             );
+            // یہاں کسٹمر کا ڈیٹا اور isAdmin: false پاس کر دیا گیا ہے
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const CustomerLedgerPage()),
+              MaterialPageRoute(
+                builder: (context) => CustomerLedgerPage(
+                  customerData: foundCustomerData,
+                  isAdmin: false, 
+                ),
+              ),
             );
           }
         } else {
@@ -179,7 +187,12 @@ class _LoginPageState extends State<LoginPage> {
             );
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const CustomerLedgerPage()),
+              MaterialPageRoute(
+                builder: (context) => CustomerLedgerPage(
+                  customerData: {'name': username},
+                  isAdmin: false,
+                ),
+              ),
             );
           }
         }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'customer_ledger_controller.dart'; // فولڈر کے اندر ہونے کی وجہ سے سیدھا امپورٹ
+import 'customer_ledger_controller.dart';
 
 class LedgerMiddleWidget extends StatelessWidget {
   final CustomerLedgerController controller;
@@ -8,7 +8,7 @@ class LedgerMiddleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // کنٹرولر سے فلٹر شدہ لسٹ حاصل کر رہے ہیں
+    // کنٹرولر سے فلٹر شدہ لسٹ حاصل कर रहे हैं
     final transactions = controller.filteredTransactions;
 
     return Column(
@@ -37,11 +37,13 @@ class LedgerMiddleWidget extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text("ملی", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.green)),
-              SizedBox(width: 45),
-              Text("دیے", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.red)),
+              Text("ملی", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.green)),
+              SizedBox(width: 25),
+              Text("دیے", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.red)),
               Spacer(),
-              Text("تفصیل", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+              Text("بقایا / ٹوٹل", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black54)),
+              SizedBox(width: 15),
+              Text("تفصیل اور تاریخ", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ],
           ),
         ),
@@ -62,51 +64,82 @@ class LedgerMiddleWidget extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final tx = transactions[index];
                     bool isReceived = tx['type'] == 'received';
-                    Color entryColor = isReceived ? Colors.green : Colors.red;
                     
                     double amount = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
                     String dateStr = tx['date']?.toString() ?? '';
                     String descStr = tx['description']?.toString() ?? 'تفصیل...';
                     bool hasAttachment = tx['hasAttachment'] ?? false;
 
+                    // موجودہ انٹری تک کا رننگ بیلنس درست طریقے سے نکالنا
+                    double currentRunningBalance = 0.0;
+                    for (int i = transactions.length - 1; i >= index; i--) {
+                      var t = transactions[i];
+                      double amt = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
+                      if (t['type'] == 'given') {
+                        currentRunningBalance += amt;
+                      } else if (t['type'] == 'received') {
+                        currentRunningBalance -= amt;
+                      }
+                    }
+
+                    Color balanceColor = currentRunningBalance >= 0 ? Colors.red : Colors.green;
+
                     return Column(
                       children: [
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                          child: Row(
                             children: [
-                              Row(
-                                children: [
-                                  SizedBox(
-                                    width: 110,
-                                    child: Row(
+                              // بائیں طرف دیے اور ملی والی رقمیں
+                              SizedBox(
+                                width: 110,
+                                child: Row(
+                                  children: [
+                                    Expanded(child: Center(child: Text(isReceived ? amount.toStringAsFixed(0) : "", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)))),
+                                    Container(width: 1, height: 20, color: Colors.black26),
+                                    Expanded(child: Center(child: Text(isReceived ? "" : amount.toStringAsFixed(0), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)))),
+                                  ],
+                                ),
+                              ),
+                              const Spacer(),
+                              
+                              // دائیں طرف تفصیل، تاریخ اور بقایا
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
-                                        Expanded(child: Center(child: Text(isReceived ? amount.toStringAsFixed(0) : "", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 17)))),
-                                        Container(width: 1.5, height: 20, color: Colors.black38),
-                                        Expanded(child: Center(child: Text(isReceived ? "" : amount.toStringAsFixed(0), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 17)))),
+                                        // بقایا شو کرنے والی جگہ
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: balanceColor.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: balanceColor.withValues(alpha: 0.5), width: 0.8),
+                                          ),
+                                          child: Text(
+                                            "بقایا: ${currentRunningBalance.abs().toStringAsFixed(0)}",
+                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: balanceColor),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        if (hasAttachment) ...[
+                                          const Icon(Icons.attach_file, size: 13, color: Colors.grey),
+                                          const SizedBox(width: 4),
+                                        ],
+                                        Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                                       ],
                                     ),
-                                  ),
-                                  const Spacer(),
-                                  Row(
-                                    children: [
-                                      if (hasAttachment) ...[
-                                        Icon(Icons.attach_file, size: 14, color: entryColor),
-                                        const SizedBox(width: 5),
-                                      ],
-                                      Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                      const SizedBox(width: 10),
-                                      Text(amount.toStringAsFixed(0), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: entryColor)),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  descStr, 
-                                  style: const TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      descStr, 
+                                      style: const TextStyle(fontSize: 12, color: Colors.black87),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],

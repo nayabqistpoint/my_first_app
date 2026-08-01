@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../installment_calculater_page.dart'; // قسط کیلکولیٹر پیج کی امپورٹ
 
 class CustomerLedgerController extends ChangeNotifier {
   final Map<String, dynamic> customerData;
@@ -14,11 +15,19 @@ class CustomerLedgerController extends ChangeNotifier {
     loadCustomerTransactions();
   }
 
-  // کسٹمر کا نام محفوظ طریقے سے نکالنا
+  // کسٹمر کا نام محفوظ طریقے سے نکالنا (فارم اور ہائیو باکس کیز کے مطابق)
   String get customerName => 
-      customerData['name'] ?? 
       customerData['customerName'] ?? 
-      'خلیل سبزی والا';
+      customerData['name'] ?? 
+      customerData['fullName'] ?? 
+      'نام موجود نہیں';
+
+  // کسٹمر کی قوم (Cast) محفوظ طریقے سے نکالنے کا گیٹر جو اب ایرر ختم کر دے گا
+  String get customerCast => 
+      customerData['customerCaste'] ?? 
+      customerData['cast'] ?? 
+      customerData['caste'] ?? 
+      '';
 
   // کل بیلنس کا حساب
   double get totalBalance {
@@ -60,7 +69,7 @@ class CustomerLedgerController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ۱. سرچ فلٹر کا گیٹر (یہاں ایرر آ رہا تھا جو اب حل ہو گیا ہے)
+  // سرچ فلٹر کا گیٹر
   List<Map<String, dynamic>> get filteredTransactions {
     if (searchQuery.trim().isEmpty) return transactions;
     return transactions.where((t) {
@@ -70,9 +79,19 @@ class CustomerLedgerController extends ChangeNotifier {
     }).toList();
   }
 
-  // ۲. سرچ کیوری سیٹ کرنے کا فنکشن (یہ بھی یہاں شامل کر دیا گیا ہے)
+  // سرچ کیوری سیٹ کرنے کا فنکشن
   void setSearchQuery(String query) {
     searchQuery = query;
     notifyListeners();
+  }
+
+  // قسط کیلکولیٹر کھولنے کا فنکشن
+  void openInstallmentCalculator(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const InstallmentCalculaterPage(),
+      ),
+    );
   }
 }

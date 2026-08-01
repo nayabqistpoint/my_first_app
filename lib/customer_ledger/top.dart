@@ -8,11 +8,21 @@ class LedgerTopWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool isAdmin = controller.isAdmin;
+    
+    // کل بیلنس حاصل کر رہے ہیں (جو کنٹرولر سے آ رہا ہے)
+    double totalBalance = controller.totalBalance;
+    
+    // اگر بیلنس پلس میں ہے تو ریڈ (ادھار)، اگر مائنس میں ہے تو گرین (advance/ملی ہوئی رقم)
+    bool isDebit = totalBalance >= 0;
+    Color balanceColor = isDebit ? Colors.red : Colors.green;
+    String balanceTypeLabel = isDebit ? "بقایا دینا ہے" : "بقایا لینا ہے / ایڈوانس";
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ۱۔ ہیڈر (ایرو + سینٹر نام + تصویر)
+        // ۱۔ ہیڈر (رول بیسڈ: ایڈمن کے لیے نام + قوم، کسٹمر کے لیے بائیں طرف نایاب قسط پوائنٹ اور دائیں طرف نام)
         Container(
           color: const Color(0xFFE53935),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -25,13 +35,38 @@ class LedgerTopWidget extends StatelessWidget {
                   onTap: () => Navigator.pop(context),
                   child: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
                 ),
-                const Spacer(),
-                // نام (کنٹرولر سے ڈائنامک نام آ رہا ہے)
-                Text(
-                  controller.customerName,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                const SizedBox(width: 12),
+                
+                // رول کے لحاظ سے ہیڈر کا ٹائٹل اور نام (اوور فلو سے بچنے کے لیے Expanded کا استعمال)
+                Expanded(
+                  child: isAdmin
+                      ? // ایڈمن کے لیے: کسٹمر کا نام اور قوم
+                        Text(
+                          "${controller.customerName} ${controller.customerCast}".trim(),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : // کسٹمر کے لیے: بائیں طرف 'نایاب قسط پوائنٹ' اور دائیں طرف صرف کسٹمر کا نام
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              "نایاب قسط پوائنٹ",
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white70),
+                            ),
+                            Flexible(
+                              child: Text(
+                                controller.customerName,
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.end,
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
-                const Spacer(),
+
+                const SizedBox(width: 8),
                 // بڑا پروفائل آئکن
                 const CircleAvatar(
                   radius: 20,
@@ -45,40 +80,66 @@ class LedgerTopWidget extends StatelessWidget {
 
         const SizedBox(height: 10),
 
-        // ۲۔ بیلنس باکس (کنٹرولر سے کل بیلنس آ رہا ہے)
+        // ۲۔ بیلنس باکس (رنگ اور حساب اب نیچے کے رننگ بیلنس کے بالکل مطابق ہو گا)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFE53935), width: 1.2),
+              border: Border.all(color: balanceColor, width: 1.5),
               borderRadius: BorderRadius.circular(8),
               color: Colors.white,
             ),
-            child: Text(
-              "Rs ${controller.totalBalance.toStringAsFixed(0)}",
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFE53935)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Rs ${totalBalance.abs().toStringAsFixed(0)}",
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: balanceColor),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: balanceColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    balanceTypeLabel,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: balanceColor),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
 
         const SizedBox(height: 10),
 
-        // ۳۔ سمارٹ کیپسولز
+        // ۳۔ سمارٹ کیپسولز (رول بیسڈ: ایڈمن کے لیے پرانے چار، کسٹمر کے لیے قسط کیلکولیٹر)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              _buildActionCapsule(text: "رپورٹ"),
-              const SizedBox(width: 6),
-              _buildActionCapsule(text: "تاریخ"),
-              const SizedBox(width: 6),
-              _buildActionCapsule(text: "ریمائنڈر"),
-              const SizedBox(width: 6),
-              _buildActionCapsule(text: "ایس ایم ایس"),
-            ],
-          ),
+          child: isAdmin
+              ? Row(
+                  children: [
+                    _buildActionCapsule(text: "رپورٹ", onTap: () {}),
+                    const SizedBox(width: 6),
+                    _buildActionCapsule(text: "تاریخ", onTap: () {}),
+                    const SizedBox(width: 6),
+                    _buildActionCapsule(text: "ریمائنڈر", onTap: () {}),
+                    const SizedBox(width: 6),
+                    _buildActionCapsule(text: "ایس ایم ایس", onTap: () {}),
+                  ],
+                )
+              : Row(
+                  children: [
+                    _buildActionCapsule(
+                      text: "قسط کیلکولیٹر",
+                      onTap: () => controller.openInstallmentCalculator(context),
+                      isCalculator: true,
+                    ),
+                  ],
+                ),
         ),
         
         const SizedBox(height: 10),
@@ -88,29 +149,42 @@ class LedgerTopWidget extends StatelessWidget {
   }
 
   // کیپسول ڈیزائن
-  Widget _buildActionCapsule({required String text}) {
+  Widget _buildActionCapsule({
+    required String text, 
+    required VoidCallback onTap,
+    bool isCalculator = false,
+  }) {
     return Expanded(
       child: Material(
-        color: Colors.white,
+        color: isCalculator ? Colors.blue.shade50 : Colors.white,
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
-          onTap: () {},
+          onTap: onTap,
           borderRadius: BorderRadius.circular(20),
           splashColor: Colors.black12,
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.black26),
+              border: Border.all(color: isCalculator ? Colors.blue.shade300 : Colors.black26),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isCalculator) ...[
+                  Icon(Icons.calculate, size: 16, color: Colors.blue.shade800),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isCalculator ? Colors.blue.shade800 : Colors.black87,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
