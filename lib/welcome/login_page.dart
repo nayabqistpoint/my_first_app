@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:local_auth/local_auth.dart';
-import 'signup_page.dart'; // چونکہ یہ بھی welcome فولڈر کے اندر ہے
-import '../installment_calculater_page.dart'; // باہر روٹ سے کیلکولیٹر کا پاتھ
-import '../home_page.dart'; // باہر روٹ سے ہوم پیج کا پاتھ
-import '../customer_ledger_page.dart'; // باہر روٹ پر پڑی ہوئی کسٹمر لیجر فائل کا درست پاتھ
+import 'package:url_launcher/url_launcher.dart';
+import 'signup_page.dart'; 
+import '../installment_calculater_page.dart'; 
+import '../home_page.dart'; 
+import '../customer_ledger_page.dart'; 
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,60 +17,204 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _isCustomerLogin = true;
+  bool _obscurePassword = true; 
+  bool _rememberMe = false;    
 
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // فنگر پرنٹ کے لیے انسٹینس
   final LocalAuthentication auth = LocalAuthentication();
+  bool _isLoading = false;
 
-  void _handleLogin() {
-    String username = _usernameController.text.trim();
-    String password = _passwordController.text.trim();
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
 
-    if (username.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('براہ کرم یوزر نیم اور پاسورڈ درج کریں')),
-      );
-      return;
-    }
-
-    if (!_isCustomerLogin) {
-      // ایڈمن لاگ ان چیک
-      if (username == 'admin' && password == '1234') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ایڈمن لاگ ان کامیاب ہو گیا!')),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('غلط ایڈمن یوزر نیم یا پاسورڈ')),
-        );
+  // محفوظ شدہ ڈیٹا لوڈ کرنے کا فنکشن
+  Future<void> _loadSavedCredentials() async {
+    try {
+      var settingsBox = await Hive.openBox('settingsBox');
+      bool savedRemember = settingsBox.get('rememberMe', defaultValue: false);
+      if (savedRemember) {
+        setState(() {
+          _rememberMe = true;
+          _usernameController.text = settingsBox.get('savedUsername', defaultValue: '');
+          _passwordController.text = settingsBox.get('savedPassword', defaultValue: '');
+        });
       }
-    } else {
-      // کسٹمر لاگ ان چیک (پاسورڈ 1234)
-      if (password == '1234') {
+    } catch (e) {
+      // اگر باکس کھلنے میں کوئی مسئلہ ہو تو اگنور کریں
+    }
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+    try {
+      await launchUrl(launchUri);
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خوش آمدید! کسٹمر ($username) کا لاگ ان کامیاب ہو گیا')),
-        );
-        
-        // کامیاب لاگ ان کے بعد کسٹمر کو سیدھا باہر والی CustomerLedgerPage پر لے جانا
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const CustomerLedgerPage()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('غلط پاسورڈ! برائے مہربانی درست پاسورڈ درج کریں (مثلاً 1234)')),
+          const SnackBar(content: Text('کال کرنے میں مسئلہ پیش آیا')),
         );
       }
     }
   }
 
-  // فنگر پرنٹ لاگ ان کا فنکشن
+  Future<void> _openWhatsApp(String phoneNumber) async {
+    String formattedPhone = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
+    if (formattedPhone.startsWith('0')) {
+      formattedPhone = '92${formattedPhone.substring(1)}';
+    }
+
+    final Uri whatsappUri = Uri.parse('https://wa.me/$formattedPhone?text=السلام علیکم حافظ صابر صاحب، مجھے لاگ ان یا پاسورڈ کے معاملے میں مدد درکار ہے۔');
+    
+    try {
+      await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('واٹس ایپ کھولنے میں مسئلہ پیش آیا')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleLogin() async {
+    String username = _usernameController.text.trim();
+    String password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('براہ کرم موبائل نمبر اور پاسورڈ درج کریں')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // ریممبر می کا ڈیٹا ہائیو میں محفوظ یا ڈیلیٹ کرنا
+      var settingsBox = await Hive.openBox('settingsBox');
+      if (_rememberMe) {
+        await settingsBox.put('rememberMe', true);
+        await settingsBox.put('savedUsername', username);
+        await settingsBox.put('savedPassword', password);
+      } else {
+        await settingsBox.put('rememberMe', false);
+        await settingsBox.delete('savedUsername');
+        await settingsBox.delete('savedPassword');
+      }
+
+      if (!_isCustomerLogin) {
+        if (username == 'admin' && password == '1234') {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomePage()),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('غلط ایڈمن یوزر نیم یا پاسورڈ')),
+            );
+          }
+        }
+      } else {
+        String cleanPhone = username.replaceAll(RegExp(r'[^0-9]'), '');
+        
+        if (cleanPhone.length < 10) {
+          throw 'براہ کرم درست موبائل نمبر درج کریں';
+        }
+
+        var customerBox = Hive.box('customerBox');
+        bool isCustomerFoundInHive = false;
+        Map<String, dynamic> foundCustomerData = {};
+
+        for (var key in customerBox.keys) {
+          var customerData = customerBox.get(key);
+          if (customerData != null && customerData is Map) {
+            String savedPhone = customerData['customerPhone'] ?? 
+                                   customerData['phone'] ?? 
+                                   customerData['mobile'] ?? '';
+            
+            String cleanSavedPhone = savedPhone.replaceAll(RegExp(r'[^0-9]'), '');
+
+            if (cleanSavedPhone == cleanPhone) {
+              String expectedPin = cleanSavedPhone.length >= 4 
+                  ? cleanSavedPhone.substring(cleanSavedPhone.length - 4) 
+                  : cleanSavedPhone;
+
+              if (password == expectedPin) {
+                isCustomerFoundInHive = true;
+                foundCustomerData = Map<String, dynamic>.from(customerData);
+                break;
+              }
+            }
+          }
+        }
+
+        if (isCustomerFoundInHive) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('لاگ ان کامیاب ہو گیا!')),
+            );
+            // یہاں کسٹمر کا ڈیٹا اور isAdmin: false پاس کر دیا گیا ہے
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CustomerLedgerPage(
+                  customerData: foundCustomerData,
+                  isAdmin: false, 
+                ),
+              ),
+            );
+          }
+        } else {
+          String fakeEmail = '$cleanPhone@nayabqist.com';
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: fakeEmail,
+            password: password,
+          );
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('لاگ ان کامیاب ہو گیا!')),
+            );
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CustomerLedgerPage(
+                  customerData: {'name': username},
+                  isAdmin: false,
+                ),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لاگ ان ناکام: درج کردہ موبائل نمبر یا پاسورڈ درست نہیں ہے'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _handleBiometricLogin() async {
     try {
       bool canCheckBiometrics = await auth.canCheckBiometrics;
@@ -106,14 +253,14 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Container(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(16.0), 
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.red.shade200, width: 1.5),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -121,33 +268,33 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.red.shade100, width: 1),
                       ),
-                      child: Icon(Icons.phone_android, size: 36, color: Colors.red[800]),
+                      child: Icon(Icons.phone_android, size: 28, color: Colors.red[800]),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 6),
                   Text(
                     'نایاب قسط پوائنٹ',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.red[800]),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red[800]),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   const Text(
                     'آسان قسطوں پر موبائل اور الیکٹرانکس',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
                   ),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 12),
                   
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.grey.shade200),
                     ),
                     child: Row(
@@ -156,15 +303,15 @@ class _LoginPageState extends State<LoginPage> {
                           child: GestureDetector(
                             onTap: () => setState(() => _isCustomerLogin = true),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
                                 color: _isCustomerLogin ? Colors.red[800] : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 'کسٹمر لاگ ان',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontWeight: FontWeight.bold, color: _isCustomerLogin ? Colors.white : Colors.black87),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _isCustomerLogin ? Colors.white : Colors.black87),
                               ),
                             ),
                           ),
@@ -173,15 +320,15 @@ class _LoginPageState extends State<LoginPage> {
                           child: GestureDetector(
                             onTap: () => setState(() => _isCustomerLogin = false),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
                                 color: !_isCustomerLogin ? Colors.red[800] : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 'ایڈمن لاگ ان',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontWeight: FontWeight.bold, color: !_isCustomerLogin ? Colors.white : Colors.black87),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: !_isCustomerLogin ? Colors.white : Colors.black87),
                               ),
                             ),
                           ),
@@ -189,77 +336,167 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
 
                   TextField(
                     controller: _usernameController,
+                    keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
-                      labelText: _isCustomerLogin ? 'فون نمبر / شناختی کارڈ' : 'ایڈمن یوزر نیم',
-                      prefixIcon: Icon(Icons.person, color: Colors.red[800]),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      isDense: true,
+                      labelText: _isCustomerLogin ? 'موبایل نمبر' : 'ایڈمن یوزر نیم',
+                      labelStyle: const TextStyle(fontSize: 13),
+                      prefixIcon: Icon(Icons.person, color: Colors.red[800], size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       filled: true,
                       fillColor: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
 
                   TextField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword, 
+                    enableSuggestions: false,
+                    autocorrect: false,
                     decoration: InputDecoration(
-                      labelText: 'پاسورڈ / پن کوڈ',
-                      prefixIcon: Icon(Icons.lock, color: Colors.red[800]),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      isDense: true,
+                      labelText: _isCustomerLogin ? 'پاسورڈ (PIN)' : 'ایڈمن پاسورڈ',
+                      labelStyle: const TextStyle(fontSize: 13),
+                      prefixIcon: Icon(Icons.lock, color: Colors.red[800], size: 20),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.grey,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       filled: true,
                       fillColor: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 4),
+
+                  Row(
+                    children: [
+                      SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: Checkbox(
+                          value: _rememberMe,
+                          activeColor: Colors.red[800],
+                          onChanged: (value) {
+                            setState(() {
+                              _rememberMe = value ?? false;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text('پاسورڈ یاد رکھیں', style: TextStyle(fontSize: 11, color: Colors.black54)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
 
                   ElevatedButton(
-                    onPressed: _handleLogin,
+                    onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red[800],
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                    child: Text(_isCustomerLogin ? 'کسٹمر ڈیش بورڈ کھولیں' : 'ایڈمن پینل لاگ ان'),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : Text(_isCustomerLogin ? 'کسٹمر ڈیش بورڈ کھولیں' : 'ایڈمن پینل لاگ ان', style: const TextStyle(fontSize: 13)),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
 
                   OutlinedButton.icon(
                     onPressed: _handleBiometricLogin,
-                    icon: Icon(Icons.fingerprint, color: Colors.red[800], size: 28),
+                    icon: Icon(Icons.fingerprint, color: Colors.red[800], size: 22),
                     label: const Text(
                       'فنگر پرنٹ سے لاگ ان کریں',
-                      style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold),
                     ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: BorderSide(color: Colors.red.shade300, width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      side: BorderSide(color: Colors.red.shade300, width: 1.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
-                  Center(
-                    child: Text(
-                      'پاسورڈ بھول جانے کی صورت میں ایڈمن سے رابطہ کریں',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.red.shade700,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  // ہیلپ سیکشن (بڑے اور کھلے ہوئے بٹن)
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'معلومات یا پاسورڈ کے لیے رابطہ کریں:',
+                          style: TextStyle(fontSize: 10, color: Colors.black54, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'حافظ محمد صابر - 03012700351',
+                          style: TextStyle(fontSize: 11, color: Colors.red[800], fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _makePhoneCall('03012700351'),
+                                icon: const Icon(Icons.call, size: 16),
+                                label: const Text('کال کریں', style: TextStyle(fontSize: 12)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _openWhatsApp('03012700351'),
+                                icon: const Icon(Icons.chat, size: 16),
+                                label: const Text('واٹس ایپ', style: TextStyle(fontSize: 12)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 8),
 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('اکاؤنٹ نہیں بنا ہوا؟ ', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                      const Text('اکاؤنٹ نہیں بنا ہوا؟ ', style: TextStyle(fontSize: 11, color: Colors.grey)),
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -269,15 +506,12 @@ class _LoginPageState extends State<LoginPage> {
                         },
                         child: Text(
                           'نیا اکاؤنٹ بنائیں',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.red[800], decoration: TextDecoration.underline),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red[800], decoration: TextDecoration.underline),
                         ),
                       ),
                     ],
                   ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Divider(thickness: 1, color: Colors.grey),
-                  ),
+                  const SizedBox(height: 8),
 
                   InkWell(
                     onTap: () {
@@ -286,29 +520,28 @@ class _LoginPageState extends State<LoginPage> {
                         MaterialPageRoute(builder: (context) => const InstallmentCalculaterPage()),
                       );
                     },
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         border: Border.all(color: Colors.red.shade200),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.calculate, color: Colors.red[800], size: 28),
-                          const SizedBox(width: 12),
+                          Icon(Icons.calculate, color: Colors.red[800], size: 22),
+                          const SizedBox(width: 8),
                           const Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('آن لائن قسط کیلکولیٹر', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                                SizedBox(height: 2),
-                                Text('بغیر لاگ ان کیے اپنی ماہانہ قسط چیک کریں', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                Text('آن لائن قسط کیلکولیٹر', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                Text('بغیر لاگ ان کیے ماہانہ قسط چیک کریں', style: TextStyle(fontSize: 10, color: Colors.grey)),
                               ],
                             ),
                           ),
-                          Icon(Icons.arrow_forward_ios, size: 16, color: Colors.red[800]),
+                          Icon(Icons.arrow_forward_ios, size: 14, color: Colors.red[800]),
                         ],
                       ),
                     ),

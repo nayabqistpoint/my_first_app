@@ -1,7 +1,163 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_first_app/customer_ledger_page.dart';
-import '../controllers/customer_controller.dart';
 
+// ==========================================
+// 1. CUSTOMER TRANSACTION MODEL
+// ==========================================
+class CustomerTransaction {
+  String date;
+  double amount;
+  String type; // 'give' (دینا ہے) یا 'get' (لینا ہے)
+  String description;
+
+  CustomerTransaction({
+    required this.date,
+    required this.amount,
+    required this.type,
+    required this.description,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'date': date,
+        'amount': amount,
+        'type': type,
+        'description': description,
+      };
+
+  factory CustomerTransaction.fromJson(Map json) {
+    var rawAmount = json['amount'];
+    double parsedAmount = 0.0;
+    if (rawAmount is int) {
+      parsedAmount = rawAmount.toDouble();
+    } else if (rawAmount is double) {
+      parsedAmount = rawAmount;
+    } else if (rawAmount is String) {
+      parsedAmount = double.tryParse(rawAmount) ?? 0.0;
+    }
+
+    return CustomerTransaction(
+      date: json['date']?.toString() ?? '',
+      amount: parsedAmount,
+      type: json['type']?.toString() ?? 'get',
+      description: json['description']?.toString() ?? '',
+    );
+  }
+}
+
+// ==========================================
+// 2. CUSTOMER MODEL
+// ==========================================
+class CustomerModel {
+  String name;
+  String cast; // قوم
+  String phone;
+  List<CustomerTransaction> transactions;
+
+  CustomerModel({
+    required this.name,
+    required this.cast,
+    required this.phone,
+    required this.transactions,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'cast': cast,
+        'phone': phone,
+        'transactions': transactions.map((t) => t.toJson()).toList(),
+      };
+
+  factory CustomerModel.fromJson(Map json) {
+    var rawTxList = json['transactions'];
+    List<CustomerTransaction> txList = [];
+    
+    if (rawTxList is List) {
+      txList = rawTxList
+          .where((t) => t != null && t is Map)
+          .map((t) => CustomerTransaction.fromJson(t))
+          .toList();
+    }
+
+    return CustomerModel(
+      name: json['customerName']?.toString() ?? json['name']?.toString() ?? 'نامعلوم',
+      cast: json['customerCaste']?.toString() ?? json['cast']?.toString() ?? json['caste']?.toString() ?? '',
+      phone: json['customerPhone']?.toString() ?? json['phone']?.toString() ?? '',
+      transactions: txList,
+    );
+  }
+}
+
+// ==========================================
+// 3. CUSTOMER CONTROLLER
+// ==========================================
+class CustomerController extends ChangeNotifier {
+  static const String _boxName = 'customerBox';
+
+  Box get customerBox {
+    if (!Hive.isBoxOpen(_boxName)) {
+      throw HiveError('Box $_boxName is not open. Make sure to open it in main().');
+    }
+    return Hive.box(_boxName);
+  }
+
+  List<CustomerModel> get customers {
+    try {
+      final rawData = customerBox.values.toList();
+      List<CustomerModel> list = [];
+
+      for (var e in rawData) {
+        if (e != null && e is Map) {
+          try {
+            list.add(CustomerModel.fromJson(e));
+          } catch (_) {
+            // کریش سے بچنے کے لیے خراب ڈیٹا کو سکپ کر دیا گیا ہے
+          }
+        }
+      }
+
+      list.sort((a, b) {
+        double balanceA = _calculateBalance(a);
+        double balanceB = _calculateBalance(b);
+
+        if (balanceA == 0 && balanceB == 0) {
+          return a.name.compareTo(b.name);
+        }
+        if (balanceA == 0) return 1;
+        if (balanceB == 0) return -1;
+
+        return balanceB.abs().compareTo(balanceA.abs());
+      });
+
+      return list;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  double _calculateBalance(CustomerModel customer) {
+    double total = 0.0;
+    for (var tx in customer.transactions) {
+      if (tx.type == 'get') {
+        total += tx.amount;
+      } else if (tx.type == 'give') {
+        total -= tx.amount;
+      }
+    }
+    return total;
+  }
+
+  void removeCustomer(int index) {
+    customerBox.deleteAt(index);
+    notifyListeners();
+  }
+}
+
+final CustomerController customerController = CustomerController();
+
+// ==========================================
+// 4. CUSTOMERS LIST VIEW
+// ==========================================
 class CustomersListView extends StatelessWidget {
   const CustomersListView({super.key});
 
@@ -65,29 +221,6 @@ class CustomersListView extends StatelessWidget {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              child: Row(
-                children: [
-                  const SizedBox(
-                    width: 155,
-                    child: Row(
-                      children: [
-                        Text("رقم", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        Spacer(flex: 2),
-                        SizedBox(width: 1, height: 18, child: ColoredBox(color: Colors.black)),
-                        Spacer(flex: 3),
-                        Text("وعدہ", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        Spacer(),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Text("تفصیل", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22), textAlign: TextAlign.right),
-                  ),
-                ],
-              ),
-            ),
             const Divider(color: Colors.black, thickness: 1.2, height: 1),
             Expanded(
               child: customersList.isEmpty
@@ -104,9 +237,6 @@ class CustomersListView extends StatelessWidget {
                         final customer = customersList[index];
                         
                         double totalBalance = 0.0;
-                        String lastDate = "";
-                        String lastDesc = "پہلی ٹرانزیکشن";
-
                         if (customer.transactions.isNotEmpty) {
                           for (var tx in customer.transactions) {
                             if (tx.type == 'get') {
@@ -115,58 +245,54 @@ class CustomersListView extends StatelessWidget {
                               totalBalance -= tx.amount;
                             }
                           }
-                          lastDate = customer.transactions.last.date;
-                          lastDesc = customer.transactions.last.description;
-                          if (lastDesc.isEmpty) lastDesc = "قسط / سیل انٹری";
                         }
 
                         bool isAmountGreen = totalBalance >= 0; 
                         Color amountColor = isAmountGreen ? Colors.green : Colors.red;
-                        Color dateColor = Colors.black87;
 
                         return InkWell(
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const CustomerLedgerPage(),
+                                builder: (context) => CustomerLedgerPage(customer: customer),
                               ),
                             );
                           },
                           child: Column(
                             children: [
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    SizedBox(
-                                      width: 155,
-                                      child: Row(
-                                        children: [
-                                          Text("Rs ${totalBalance.abs().toStringAsFixed(0)}", style: TextStyle(color: amountColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                                          const Spacer(flex: 2),
-                                          Container(width: 1, height: 22, color: Colors.black),
-                                          const Spacer(flex: 3),
-                                          Text(lastDate.isNotEmpty ? lastDate : "-", style: TextStyle(color: dateColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                                          const Spacer(),
-                                        ],
+                                    Text(
+                                      "Rs ${totalBalance.abs().toStringAsFixed(0)}", 
+                                      style: TextStyle(
+                                        color: amountColor, 
+                                        fontWeight: FontWeight.bold, 
+                                        fontSize: 16,
                                       ),
                                     ),
-                                    Expanded(
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
-                                        children: [
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
-                                            children: [
-                                              Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                              Text(lastDesc, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                                            ],
-                                          ),
-                                          const SizedBox(width: 10),
-                                          const CircleAvatar(radius: 15, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 18, color: Colors.black54)),
-                                        ],
-                                      ),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              "${customer.name} ${customer.cast}".trim(), 
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 10),
+                                        const CircleAvatar(
+                                          radius: 15, 
+                                          backgroundColor: Colors.black12, 
+                                          child: Icon(Icons.person, size: 18, color: Colors.black54),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
