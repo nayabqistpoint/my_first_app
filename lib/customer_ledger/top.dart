@@ -10,7 +10,7 @@ class LedgerTopWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     bool isAdmin = controller.isAdmin;
     
-    // کل بیلنس حاصل کر رہے हैं
+    // کل بیلنس حاصل کر رہے ہیں
     double totalBalance = controller.totalBalance;
     
     // اگر بیلنس پلس میں ہے تو ریڈ (ادھار)، اگر مائنس میں ہے تو گرین (advance/ملی ہوئی رقم)
@@ -35,12 +35,12 @@ class LedgerTopWidget extends StatelessWidget {
               ),
               const SizedBox(width: 8),
 
-              // سینٹرلائزڈ مواد (ایڈمن اور کسٹمر کے حساب سے بالکل الگ رول)
+              // سینٹرلائزڈ مواد (ایڈمن اور کسٹمر کے حساب سے)
               Expanded(
                 child: Center(
                   child: isAdmin
                     ? Text(
-                        // 1️⃣ ایڈمن ویو: صرف نام اور قوم، کوئی بریکٹ نہیں، کوئی نایاب قسط پوائنٹ نہیں
+                        // 1️⃣ ایڈمن ویو: صرف نام اور قوم، کوئی بریکٹ نہیں
                         "${controller.customerName} ${controller.customerCast}".trim(),
                         style: const TextStyle(
                           fontSize: 18,
@@ -64,22 +64,54 @@ class LedgerTopWidget extends StatelessWidget {
 
               const SizedBox(width: 8),
 
-              // تصویر / سیلفی کا بڑا آئیکن
-              Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-                child: const CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Colors.white24,
-                  child: Icon(
-                    Icons.person,
-                    size: 22,
-                    color: Colors.white,
+              // تصویر اور ساتھ لاگ آؤٹ کا پاپ اپ مینو (تین ڈاٹس)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: const CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.white24,
+                      child: Icon(
+                        Icons.person,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                ),
+                  
+                  // کسٹمر ویو کے لیے لاگ آؤٹ کا پاپ اپ مینو (تین ڈاٹس)
+                  if (!isAdmin)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, color: Colors.white),
+                      onSelected: (value) {
+                        if (value == 'logout') {
+                          // 🛡️ پرفیکٹ لاگ آؤٹ لاجک: تمام پچھلی اسکرینز ختم کر کے روٹ سکرین (پہلی سکرین) پر واپس لے جائے گا
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                            '/', // یا آپ اپنی مین/لاگ ان روٹ کا نام یہاں دے سکتے ہیں
+                            (Route<dynamic> route) => false,
+                          );
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        const PopupMenuItem<String>(
+                          value: 'logout',
+                          child: Row(
+                            children: [
+                              Icon(Icons.logout, color: Colors.red, size: 20),
+                              SizedBox(width: 8),
+                              Text("لاگ آؤٹ", style: TextStyle(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
               ),
             ],
           ),
