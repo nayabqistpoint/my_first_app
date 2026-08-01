@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'customer_ledger_controller.dart';
 
 class LedgerTopWidget extends StatelessWidget {
-  const LedgerTopWidget({super.key});
+  final CustomerLedgerController controller;
+
+  const LedgerTopWidget({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -23,10 +26,10 @@ class LedgerTopWidget extends StatelessWidget {
                   child: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
                 ),
                 const Spacer(),
-                // نام (خلیل سبزی والا)
-                const Text(
-                  "خلیل سبزی والا",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                // نام (کنٹرولر سے ڈائنامک نام آ رہا ہے)
+                Text(
+                  controller.customerName,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const Spacer(),
                 // بڑا پروفائل آئکن
@@ -42,7 +45,7 @@ class LedgerTopWidget extends StatelessWidget {
 
         const SizedBox(height: 10),
 
-        // ۲۔ بیلنس باکس
+        // ۲۔ بیلنس باکس (کنٹرولر سے کل بیلنس آ رہا ہے)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
@@ -52,10 +55,10 @@ class LedgerTopWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               color: Colors.white,
             ),
-            child: const Text(
-              "Rs 161,630",
+            child: Text(
+              "Rs ${controller.totalBalance.toStringAsFixed(0)}",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFE53935)),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFE53935)),
             ),
           ),
         ),
