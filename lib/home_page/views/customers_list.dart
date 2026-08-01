@@ -25,12 +25,22 @@ class CustomerTransaction {
         'description': description,
       };
 
-  factory CustomerTransaction.fromJson(Map<dynamic, dynamic> json) {
+  factory CustomerTransaction.fromJson(Map json) {
+    var rawAmount = json['amount'];
+    double parsedAmount = 0.0;
+    if (rawAmount is int) {
+      parsedAmount = rawAmount.toDouble();
+    } else if (rawAmount is double) {
+      parsedAmount = rawAmount;
+    } else if (rawAmount is String) {
+      parsedAmount = double.tryParse(rawAmount) ?? 0.0;
+    }
+
     return CustomerTransaction(
-      date: json['date'] ?? '',
-      amount: (json['amount'] ?? 0).toDouble(),
-      type: json['type'] ?? 'get',
-      description: json['description'] ?? '',
+      date: json['date']?.toString() ?? '',
+      amount: parsedAmount,
+      type: json['type']?.toString() ?? 'get',
+      description: json['description']?.toString() ?? '',
     );
   }
 }
@@ -58,15 +68,21 @@ class CustomerModel {
         'transactions': transactions.map((t) => t.toJson()).toList(),
       };
 
-  factory CustomerModel.fromJson(Map<dynamic, dynamic> json) {
-    var rawTxList = json['transactions'] as List? ?? [];
-    List<CustomerTransaction> txList =
-        rawTxList.map((t) => CustomerTransaction.fromJson(t as Map<dynamic, dynamic>)).toList();
+  factory CustomerModel.fromJson(Map json) {
+    var rawTxList = json['transactions'];
+    List<CustomerTransaction> txList = [];
+    
+    if (rawTxList is List) {
+      txList = rawTxList
+          .where((t) => t != null && t is Map)
+          .map((t) => CustomerTransaction.fromJson(t))
+          .toList();
+    }
 
     return CustomerModel(
-      name: json['customerName'] ?? json['name'] ?? '',
-      cast: json['customerCaste'] ?? json['cast'] ?? json['caste'] ?? '',
-      phone: json['customerPhone'] ?? json['phone'] ?? '',
+      name: json['customerName']?.toString() ?? json['name']?.toString() ?? 'نامعلوم',
+      cast: json['customerCaste']?.toString() ?? json['cast']?.toString() ?? json['caste']?.toString() ?? '',
+      phone: json['customerPhone']?.toString() ?? json['phone']?.toString() ?? '',
       transactions: txList,
     );
   }
@@ -88,9 +104,17 @@ class CustomerController extends ChangeNotifier {
   List<CustomerModel> get customers {
     try {
       final rawData = customerBox.values.toList();
-      List<CustomerModel> list = rawData
-          .map((e) => CustomerModel.fromJson(e as Map<dynamic, dynamic>))
-          .toList();
+      List<CustomerModel> list = [];
+
+      for (var e in rawData) {
+        if (e != null && e is Map) {
+          try {
+            list.add(CustomerModel.fromJson(e));
+          } catch (_) {
+            // کریش سے بچنے کے لیے خراب ڈیٹا کو سکپ کر دیا گیا ہے
+          }
+        }
+      }
 
       list.sort((a, b) {
         double balanceA = _calculateBalance(a);
@@ -223,7 +247,6 @@ class CustomersListView extends StatelessWidget {
                           }
                         }
 
-                        // رنگ کا تعین: اگر پلس ہے تو گرین (لینے ہیں)، مائنس ہے تو ریڈ (دینے ہیں)
                         bool isAmountGreen = totalBalance >= 0; 
                         Color amountColor = isAmountGreen ? Colors.green : Colors.red;
 
@@ -232,7 +255,7 @@ class CustomersListView extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const CustomerLedgerPage(),
+                                builder: (context) => CustomerLedgerPage(customer: customer),
                               ),
                             );
                           },
@@ -243,7 +266,6 @@ class CustomersListView extends StatelessWidget {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    // بائیں طرف صرف رقم
                                     Text(
                                       "Rs ${totalBalance.abs().toStringAsFixed(0)}", 
                                       style: TextStyle(
@@ -252,7 +274,6 @@ class CustomersListView extends StatelessWidget {
                                         fontSize: 16,
                                       ),
                                     ),
-                                    // دائیں طرف نام، قوم اور چھوٹا آئیکن
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       children: [

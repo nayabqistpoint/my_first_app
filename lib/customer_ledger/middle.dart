@@ -8,7 +8,7 @@ class LedgerMiddleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // کنٹرولر سے فلٹر شدہ لسٹ حاصل कर रहे हैं
+    // کنٹرولر سے فلٹر شدہ لسٹ حاصل کر رہے ہیں
     final transactions = controller.filteredTransactions;
 
     return Column(
@@ -63,22 +63,55 @@ class LedgerMiddleWidget extends StatelessWidget {
                   itemCount: transactions.length,
                   itemBuilder: (context, index) {
                     final tx = transactions[index];
-                    bool isReceived = tx['type'] == 'received';
-                    
-                    double amount = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
-                    String dateStr = tx['date']?.toString() ?? '';
-                    String descStr = tx['description']?.toString() ?? 'تفصیل...';
-                    bool hasAttachment = tx['hasAttachment'] ?? false;
 
-                    // موجودہ انٹری تک کا رننگ بیلنس درست طریقے سے نکالنا
+                    // 🛡️ انتہائی محفوظ طریقے سے ٹرانزیکشن کی ویلیوز نکالنا (چاہے Map ہو یا Object)
+                    String type = 'get';
+                    double amount = 0.0;
+                    String dateStr = '';
+                    String descStr = 'تفصیل...';
+                    bool hasAttachment = false;
+
+                    if (tx is Map) {
+                      type = tx['type']?.toString() ?? 'get';
+                      amount = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
+                      dateStr = tx['date']?.toString() ?? '';
+                      descStr = tx['description']?.toString() ?? 'تفصیل...';
+                      hasAttachment = tx['hasAttachment'] ?? false;
+                    } else {
+                      try {
+                        type = tx.type?.toString() ?? 'get';
+                        amount = double.tryParse(tx.amount?.toString() ?? '0') ?? 0.0;
+                        dateStr = tx.date?.toString() ?? '';
+                        descStr = tx.description?.toString() ?? 'تفصیل...';
+                        hasAttachment = tx.hasAttachment ?? false;
+                      } catch (_) {}
+                    }
+
+                    bool isReceived = (type == 'received' || type == 'get');
+
+                    // موجودہ انٹری تک کا رننگ بیلنس درست طریقے سے نکالنا (مکمل محفوظ لوپ)
                     double currentRunningBalance = 0.0;
                     for (int i = transactions.length - 1; i >= index; i--) {
                       var t = transactions[i];
-                      double amt = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
-                      if (t['type'] == 'given') {
-                        currentRunningBalance += amt;
-                      } else if (t['type'] == 'received') {
-                        currentRunningBalance -= amt;
+                      if (t == null) continue;
+
+                      String tType = 'get';
+                      double tAmt = 0.0;
+
+                      if (t is Map) {
+                        tType = t['type']?.toString() ?? 'get';
+                        tAmt = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
+                      } else {
+                        try {
+                          tType = t.type?.toString() ?? 'get';
+                          tAmt = double.tryParse(t.amount?.toString() ?? '0') ?? 0.0;
+                        } catch (_) {}
+                      }
+
+                      if (tType == 'given' || tType == 'give') {
+                        currentRunningBalance += tAmt;
+                      } else if (tType == 'received' || tType == 'get') {
+                        currentRunningBalance -= tAmt;
                       }
                     }
 

@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'customer_ledger/customer_ledger_controller.dart';
 import 'customer_ledger/top.dart';
 import 'customer_ledger/middle.dart';
-import 'customer_ledger/bottom.dart'; // یہاں باٹم فائل کو امپورٹ کر لیا ہے
+import 'customer_ledger/bottom.dart';
 
 class CustomerLedgerPage extends StatefulWidget {
+  final dynamic customer; // 👈 اب ہم یہاں ماڈل یا ڈیٹا کچھ بھی ریسیو کر سکتے ہیں
   final Map<String, dynamic> customerData;
   final bool isAdmin; 
 
   const CustomerLedgerPage({
     super.key,
+    this.customer,
     this.customerData = const {}, 
     this.isAdmin = true, 
   });
@@ -25,6 +27,7 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
   void initState() {
     super.initState();
     _controller = CustomerLedgerController(
+      customer: widget.customer, // 👈 ماڈل کنٹرولر کو بھیج دیا
       customerData: widget.customerData,
       isAdmin: widget.isAdmin,
     );

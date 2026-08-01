@@ -10,7 +10,7 @@ class LedgerTopWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     bool isAdmin = controller.isAdmin;
     
-    // کل بیلنس حاصل کر رہے ہیں (جو کنٹرولر سے آ رہا ہے)
+    // کل بیلنس حاصل کر رہے हैं
     double totalBalance = controller.totalBalance;
     
     // اگر بیلنس پلس میں ہے تو ریڈ (ادھار)، اگر مائنس میں ہے تو گرین (advance/ملی ہوئی رقم)
@@ -22,65 +22,72 @@ class LedgerTopWidget extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ۱۔ ہیڈر (رول بیسڈ: ایڈمن کے لیے نام + قوم، کسٹمر کے لیے بائیں طرف نایاب قسط پوائنٹ اور دائیں طرف نام)
+        // 🟢 ایپ بار / ہیڈر
         Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           color: const Color(0xFFE53935),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: SafeArea(
-            bottom: false,
-            child: Row(
-              children: [
-                // بیک ایرو
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
-                ),
-                const SizedBox(width: 12),
-                
-                // رول کے لحاظ سے ہیڈر کا ٹائٹل اور نام (اوور فلو سے بچنے کے لیے Expanded کا استعمال)
-                Expanded(
-                  child: isAdmin
-                      ? // ایڈمن کے لیے: کسٹمر کا نام اور قوم
-                        Text(
-                          "${controller.customerName} ${controller.customerCast}".trim(),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : // کسٹمر کے لیے: بائیں طرف 'نایاب قسط پوائنٹ' اور دائیں طرف صرف کسٹمر کا نام
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              "نایاب قسط پوائنٹ",
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white70),
-                            ),
-                            Flexible(
-                              child: Text(
-                                controller.customerName,
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.end,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
+          child: Row(
+            children: [
+              // بیک بٹن
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+              const SizedBox(width: 8),
 
-                const SizedBox(width: 8),
-                // بڑا پروفائل آئکن
-                const CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.white24, 
-                  child: Icon(Icons.person, color: Colors.white, size: 25),
+              // سینٹرلائزڈ مواد (ایڈمن اور کسٹمر کے حساب سے بالکل الگ رول)
+              Expanded(
+                child: Center(
+                  child: isAdmin
+                    ? Text(
+                        // 1️⃣ ایڈمن ویو: صرف نام اور قوم، کوئی بریکٹ نہیں، کوئی نایاب قسط پوائنٹ نہیں
+                        "${controller.customerName} ${controller.customerCast}".trim(),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      )
+                    : Text(
+                        // 2️⃣ کسٹمر ویو: "نایاب قسط پوائنٹ" اور ساتھ چھوٹی گول بریکٹ میں نام
+                        "نایاب قسط پوائنٹ (${controller.customerName})",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                 ),
-              ],
-            ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // تصویر / سیلفی کا بڑا آئیکن
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: const CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.white24,
+                  child: Icon(
+                    Icons.person,
+                    size: 22,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
 
         const SizedBox(height: 10),
 
-        // ۲۔ بیلنس باکس (رنگ اور حساب اب نیچے کے رننگ بیلنس کے بالکل مطابق ہو گا)
+        // ۲۔ بیلنس باکس
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
@@ -116,7 +123,7 @@ class LedgerTopWidget extends StatelessWidget {
 
         const SizedBox(height: 10),
 
-        // ۳۔ سمارٹ کیپسولز (رول بیسڈ: ایڈمن کے لیے پرانے چار، کسٹمر کے لیے قسط کیلکولیٹر)
+        // ۳۔ سمارٹ کیپسولز
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: isAdmin
