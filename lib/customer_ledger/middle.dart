@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
+import 'customer_ledger_controller.dart'; // فولڈر کے اندر ہونے کی وجہ سے سیدھا امپورٹ
 
 class LedgerMiddleWidget extends StatelessWidget {
-  const LedgerMiddleWidget({super.key});
+  final CustomerLedgerController controller;
+
+  const LedgerMiddleWidget({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {
+    // کنٹرولر سے فلٹر شدہ لسٹ حاصل کر رہے ہیں
+    final transactions = controller.filteredTransactions;
+
     return Column(
       children: [
-        // سرچ بار
+        // ۱۔ سرچ بار
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: SizedBox(
             height: 35,
             child: TextField(
+              onChanged: (value) => controller.setSearchQuery(value),
               textAlign: TextAlign.right,
               decoration: InputDecoration(
                 hintText: "تلاش کریں...",
@@ -24,7 +31,7 @@ class LedgerMiddleWidget extends StatelessWidget {
           ),
         ),
 
-        // ہیڈنگ
+        // ۲۔ ہیڈنگ
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           child: Row(
@@ -40,61 +47,76 @@ class LedgerMiddleWidget extends StatelessWidget {
         ),
         const Divider(color: Colors.black, thickness: 1.2, height: 1),
 
-        // ٹرانزیکشن لسٹ
+        // ۳۔ ٹرانزیکشن لسٹ
         Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.zero,
-            itemCount: 15,
-            itemBuilder: (context, index) {
-              bool isReceived = (index % 2 == 0); 
-              Color entryColor = isReceived ? Colors.green : Colors.red;
-              
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+          child: transactions.isEmpty
+              ? const Center(
+                  child: Text(
+                    "کوئی ٹرانزیکشن موجود نہیں",
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                )
+              : ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: transactions.length,
+                  itemBuilder: (context, index) {
+                    final tx = transactions[index];
+                    bool isReceived = tx['type'] == 'received';
+                    Color entryColor = isReceived ? Colors.green : Colors.red;
+                    
+                    double amount = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
+                    String dateStr = tx['date']?.toString() ?? '';
+                    String descStr = tx['description']?.toString() ?? 'تفصیل...';
+                    bool hasAttachment = tx['hasAttachment'] ?? false;
+
+                    return Column(
                       children: [
-                        Row(
-                          children: [
-                            // کالمز والا حصہ
-                            SizedBox(
-                              width: 110,
-                              child: Row(
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Row(
                                 children: [
-                                  Expanded(child: Center(child: Text(isReceived ? "500" : "", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 17)))),
-                                  Container(width: 1.5, height: 20, color: Colors.black38),
-                                  Expanded(child: Center(child: Text(isReceived ? "" : "300", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 17)))),
+                                  SizedBox(
+                                    width: 110,
+                                    child: Row(
+                                      children: [
+                                        Expanded(child: Center(child: Text(isReceived ? amount.toStringAsFixed(0) : "", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 17)))),
+                                        Container(width: 1.5, height: 20, color: Colors.black38),
+                                        Expanded(child: Center(child: Text(isReceived ? "" : amount.toStringAsFixed(0), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 17)))),
+                                      ],
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Row(
+                                    children: [
+                                      if (hasAttachment) ...[
+                                        Icon(Icons.attach_file, size: 14, color: entryColor),
+                                        const SizedBox(width: 5),
+                                      ],
+                                      Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                      const SizedBox(width: 10),
+                                      Text(amount.toStringAsFixed(0), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: entryColor)),
+                                    ],
+                                  ),
                                 ],
                               ),
-                            ),
-                            const Spacer(),
-                            // ترتیب: رقم -> تاریخ -> اٹیچمنٹ پن
-                            Row(
-                              children: [
-                                Icon(Icons.attach_file, size: 14, color: entryColor), // پن اب آخر میں ہے
-                                const SizedBox(width: 5),
-                                Text("18 Jul 26", style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                const SizedBox(width: 10),
-                                Text("161,630", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: entryColor)),
-                              ],
-                            ),
-                          ],
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  descStr, 
+                                  style: const TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        // تفصیل
-                        const Align(
-                          alignment: Alignment.centerRight,
-                          child: Text("تفصیل...", style: TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic)),
-                        ),
+                        const Divider(color: Colors.black12, thickness: 0.5, height: 1),
                       ],
-                    ),
-                  ),
-                  const Divider(color: Colors.black12, thickness: 0.5, height: 1),
-                ],
-              );
-            },
-          ),
+                    );
+                  },
+                ),
         ),
       ],
     );

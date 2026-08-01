@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'customer_ledger_controller.dart'; // کنٹرولر کی امپورٹ
 
 class LedgerBottomWidget extends StatelessWidget {
-  const LedgerBottomWidget({super.key});
+  final CustomerLedgerController controller;
+
+  const LedgerBottomWidget({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +26,9 @@ class LedgerBottomWidget extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: const StadiumBorder(), // یہ کیپسول شیپ بناتا ہے
               ),
-              onPressed: () {},
+              onPressed: () {
+                // یہاں ہم بعد میں پیمنٹ آؤٹ کا ڈائیلاگ یا فنکشن کال کریں گے
+              },
               child: const Text("پیمنٹ آؤٹ", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ),
           ),
@@ -38,7 +43,9 @@ class LedgerBottomWidget extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: const StadiumBorder(), // یہ کیپسول شیپ بناتا ہے
               ),
-              onPressed: () {},
+              onPressed: () {
+                // یہاں ہم بعد میں پیمنٹ ان کا ڈائیلاگ یا فنکشن کال کریں گے
+              },
               child: const Text("پیمنٹ ان", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ),
           ),

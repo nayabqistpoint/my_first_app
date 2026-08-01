@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'customer_ledger/customer_ledger_controller.dart';
-import 'customer_ledger/top.dart'; // یہاں ہم نے ٹاپ فائل کو امپورٹ کر لیا ہے
+import 'customer_ledger/top.dart';
+import 'customer_ledger/middle.dart';
+import 'customer_ledger/bottom.dart'; // یہاں باٹم فائل کو امپورٹ کر لیا ہے
 
 class CustomerLedgerPage extends StatefulWidget {
   final Map<String, dynamic> customerData;
@@ -41,25 +43,18 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
       builder: (context, child) {
         return Scaffold(
           backgroundColor: Colors.white,
-          // چونکہ ٹاپ فائل کے اندر اپنا ریڈ کلر کا ہیڈر اور بیک ایرو موجود ہے، 
-          // اس لیے ہم نے یہاں سے پرانا AppBar ہٹا دیا ہے تاکہ ڈیزائن دو دفعہ نہ آئے
           body: Column(
             children: [
-              // ۱. یہاں ٹاپ وجٹ کو جوڑ دیا گیا ہے اور کنٹرولر پاس کر دیا ہے
+              // ۱. اوپر والا حصہ (ٹاپ: نام، بیلنس، کیپسولز)
               LedgerTopWidget(controller: _controller),
               
-              // ۲. مڈل اور باٹم کے لیے فی الحال عارضی جگہ
+              // ۲. درمیان والا حصہ (مڈل: سرچ بار اور ٹرانزیکشنز کی لسٹ)
               Expanded(
-                child: Center(
-                  child: Text(
-                    _controller.isAdmin 
-                        ? "اوپر والا حصہ (ٹاپ) کامیابی سے جڑ گیا ہے!\n(اب مڈل اور باٹم کی باری ہے)"
-                        : "کسٹمر کا ٹاپ ویو بالکل تیار ہے!",
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
-                  ),
-                ),
+                child: LedgerMiddleWidget(controller: _controller),
               ),
+
+              // ۳. نیچے والا حصہ (باٹم: پیمنٹ آؤٹ اور پیمنٹ ان کے دو بٹن)
+              LedgerBottomWidget(controller: _controller),
             ],
           ),
         );

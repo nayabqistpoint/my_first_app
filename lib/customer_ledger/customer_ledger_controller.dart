@@ -48,8 +48,31 @@ class CustomerLedgerController extends ChangeNotifier {
           'description': 'ماہانہ قسط وصولی',
           'hasAttachment': true,
         },
+        {
+          'date': '10 Jul 26',
+          'amount': 300,
+          'type': 'given',
+          'description': 'انسٹالمنٹ ایڈوانس',
+          'hasAttachment': false,
+        },
       ];
     }
+    notifyListeners();
+  }
+
+  // ۱. سرچ فلٹر کا گیٹر (یہاں ایرر آ رہا تھا جو اب حل ہو گیا ہے)
+  List<Map<String, dynamic>> get filteredTransactions {
+    if (searchQuery.trim().isEmpty) return transactions;
+    return transactions.where((t) {
+      String desc = t['description']?.toString().toLowerCase() ?? '';
+      String amt = t['amount']?.toString() ?? '';
+      return desc.contains(searchQuery.toLowerCase()) || amt.contains(searchQuery);
+    }).toList();
+  }
+
+  // ۲. سرچ کیوری سیٹ کرنے کا فنکشن (یہ بھی یہاں شامل کر دیا گیا ہے)
+  void setSearchQuery(String query) {
+    searchQuery = query;
     notifyListeners();
   }
 }
