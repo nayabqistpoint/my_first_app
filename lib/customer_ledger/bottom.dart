@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'customer_ledger_controller.dart'; // کنٹرولر کی امپورٹ
-// درست پاتھ: کسٹمر لیजर فولڈر سے نکل کر ہوم پیج اور پھر پیمنٹ ان تک پہنچنے کا طریقہ
+// درست پاتھ: کسٹمر لیجر فولڈر سے نکل کر ہوم پیج اور پھر پیمنٹ ان اور پیمنٹ آؤٹ تک پہنچنے کا طریقہ
 import '../home_page/transaction_forms/payment_in/payment_in_screen.dart';
+import '../home_page/transaction_forms/payment_out/payment_out_screen.dart';
 
 class LedgerBottomWidget extends StatelessWidget {
   final CustomerLedgerController controller;
@@ -38,7 +39,13 @@ class LedgerBottomWidget extends StatelessWidget {
               ),
               onPressed: () {
                 if (isAdmin) {
-                  // یہاں ہم بعد میں پیمنٹ آؤٹ کا ڈائیلاگ یا فنکشن کال کریں گے
+                  // یہاں ایڈمن کے لیے پیمنٹ آؤٹ اسکرین اوپن ہو گی
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentOutScreen(),
+                    ),
+                  );
                 } else {
                   // کسٹمر کے لیے خریداری کی درخواست (Purchase Request) کا فنکشن
                 }
