@@ -8,7 +8,7 @@ class LedgerMiddleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // کنٹرولر سے فلٹر شدہ لسٹ حاصل کر رہے ہیں
+    // کنٹرولر سے فلٹر شدہ لسٹ حاصل कर रहे हैं
     final transactions = controller.filteredTransactions;
 
     return Column(
@@ -64,7 +64,7 @@ class LedgerMiddleWidget extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final tx = transactions[index];
 
-                    // 🛡️ انتہائی محفوظ طریقے سے ٹرانزیکشن کی ویلیوز نکالنا (چاہے Map ہو یا Object)
+                    // 🛡️ انتہائی محفوظ طریقے سے ٹرانزیکشن کی ویلیوز نکالنا
                     String type = 'get';
                     double amount = 0.0;
                     String dateStr = '';
@@ -87,9 +87,10 @@ class LedgerMiddleWidget extends StatelessWidget {
                       } catch (_) {}
                     }
 
+                    // سبز والی انٹریز (Received یا Get)
                     bool isReceived = (type == 'received' || type == 'get');
 
-                    // موجودہ انٹری تک کا رننگ بیلنس درست طریقے سے نکالنا (مکمل محفوظ لوپ)
+                    // موجودہ انٹری تک کا رننگ بیلنس درست طریقے سے نکالنا (جس میں paid اور given دونوں مائنس/پلس ہوں گے)
                     double currentRunningBalance = 0.0;
                     for (int i = transactions.length - 1; i >= index; i--) {
                       var t = transactions[i];
@@ -108,9 +109,12 @@ class LedgerMiddleWidget extends StatelessWidget {
                         } catch (_) {}
                       }
 
-                      if (tType == 'given' || tType == 'give') {
+                      // دیے گئے یا آؤٹ والی انٹریز بیلنس میں جمع ہوں گی
+                      if (tType == 'given' || tType == 'give' || tType == 'paid' || tType == 'out') {
                         currentRunningBalance += tAmt;
-                      } else if (tType == 'received' || tType == 'get') {
+                      } 
+                      // ملی والی انٹریز بیلنس سے کم ہوں گی
+                      else if (tType == 'received' || tType == 'get') {
                         currentRunningBalance -= tAmt;
                       }
                     }

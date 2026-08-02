@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'customer_ledger_controller.dart'; // کنٹرولر کی امپورٹ
+// درست پاتھ: کسٹمر لیجر فولڈر سے نکل کر ہوم پیج اور پھر پیمنٹ ان اور پیمنٹ آؤٹ تک پہنچنے کا طریقہ
+import '../home_page/transaction_forms/payment_in/payment_in_screen.dart';
+import '../home_page/transaction_forms/payment_out/payment_out_screen.dart';
 
 class LedgerBottomWidget extends StatelessWidget {
   final CustomerLedgerController controller;
@@ -32,11 +35,17 @@ class LedgerBottomWidget extends StatelessWidget {
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: const StadiumBorder(), // یہ کیپسول شیپ بناتا ہے
+                shape: const StadiumBorder(),
               ),
               onPressed: () {
                 if (isAdmin) {
-                  // یہاں ہم بعد میں پیمنٹ آؤٹ کا ڈائیلاگ یا فنکشن کال کریں گے
+                  // یہاں ایڈمن کے لیے پیمنٹ آؤٹ اسکرین اوپن ہو گی
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentOutScreen(),
+                    ),
+                  );
                 } else {
                   // کسٹمر کے لیے خریداری کی درخواست (Purchase Request) کا فنکشن
                 }
@@ -57,11 +66,17 @@ class LedgerBottomWidget extends StatelessWidget {
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: const StadiumBorder(), // یہ کیپسول شیپ بناتا ہے
+                shape: const StadiumBorder(),
               ),
               onPressed: () {
                 if (isAdmin) {
-                  // یہاں ہم بعد میں پیمنٹ ان کا ڈائیلاگ یا فنکشن کال کریں گے
+                  // یہاں ایڈمن کے لیے پیمنٹ ان اسکرین اوپن ہو گی
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentInScreen(),
+                    ),
+                  );
                 } else {
                   // کسٹمر کے لیے قسط ادا کرنے کا بٹن
                 }

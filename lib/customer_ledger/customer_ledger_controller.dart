@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../installment_calculater_page.dart';
 
 class CustomerLedgerController extends ChangeNotifier {
@@ -18,10 +19,49 @@ class CustomerLedgerController extends ChangeNotifier {
     this.directCast,
     this.isAdmin = true,
   }) {
-    loadCustomerTransactions();
+    _initBoxAndLoad();
   }
 
-  // نام کے لیے انتہائی محفوظ طریقہ
+  Future<void> _initBoxAndLoad() async {
+    try {
+      if (!Hive.isBoxOpen('transactionBox')) {
+        await Hive.openBox('transactionBox');
+      }
+    } catch (_) {}
+    
+    loadCustomerTransactions();
+    _listenToHiveBox();
+  }
+
+  void _listenToHiveBox() {
+    try {
+      if (Hive.isBoxOpen('transactionBox')) {
+        Hive.box('transactionBox').listenable().addListener(() {
+          loadCustomerTransactions();
+        });
+      }
+    } catch (_) {}
+  }
+
+  String get customerId {
+    if (customer != null) {
+      try {
+        if (customer.id != null && customer.id.toString().trim().isNotEmpty) {
+          return customer.id.toString();
+        }
+        if (customer.key != null && customer.key.toString().trim().isNotEmpty) {
+          return customer.key.toString();
+        }
+      } catch (_) {}
+    }
+    if (customerData.isNotEmpty) {
+      String id = customerData['id']?.toString() ?? 
+                 customerData['customerId']?.toString() ?? '';
+      if (id.trim().isNotEmpty) return id;
+    }
+    return customerName;
+  }
+
   String get customerName {
     if (directName != null && directName!.trim().isNotEmpty) {
       return directName!;
@@ -42,7 +82,6 @@ class CustomerLedgerController extends ChangeNotifier {
     return 'نام موجود نہیں';
   }
 
-  // قوم کے لیے انتہائی محفوظ طریقہ
   String get customerCast {
     if (directCast != null && directCast!.trim().isNotEmpty) {
       return directCast!;
@@ -61,7 +100,7 @@ class CustomerLedgerController extends ChangeNotifier {
     return '';
   }
 
-  // 🛡️ کل بیلنس کا متفقہ اور درست حساب (جو مین سکرین اور اندر لیجر دونوں کے لیے ایک جیسا ہو)
+  // یہاں تمام ٹائپس ('give', 'given', 'paid' اور 'get', 'received') کا حساب درست کر دیا گیا ہے
   double get totalBalance {
     double total = 0.0;
     for (var t in transactions) {
@@ -79,23 +118,23 @@ class CustomerLedgerController extends ChangeNotifier {
         } catch (_) {}
       }
 
-      // یہاں ٹائپ کا معیار بالکل درست کر دیا گیا ہے
-      if (type == 'get' || type == 'received') {
+      // 'give', 'given' یا 'paid' (پیمنٹ آؤٹ/سرخ) بیلنس میں جمع ہوں گے
+      if (type == 'give' || type == 'given' || type == 'paid') {
         total += amount;
-      } else if (type == 'give' || type == 'given') {
+      } 
+      // 'get' یا 'received' (پیمنٹ ان/سبز) بیلنس میں سے مائنس ہوں گے
+      else if (type == 'get' || type == 'received') {
         total -= amount;
       }
     }
-    // اگر ٹوٹل بالکل صفر کے قریب ہے (جیسے -0.0 یا 0.0001)، تو اسے بالکل 0.0 کر دیں تاکہ ریड کلر کا جھنجھٹ نہ رہے
     if (total.abs() < 0.01) {
       return 0.0;
     }
     return total;
   }
 
-  // ٹرانزیکشنز لوڈ کرنا (کریش سے پاک)
   void loadCustomerTransactions() {
-    transactions = [];
+    List<dynamic> tempTransactions = [];
     try {
       if (customer != null) {
         dynamic rawTxs;
@@ -104,21 +143,46 @@ class CustomerLedgerController extends ChangeNotifier {
         } catch (_) {}
 
         if (rawTxs != null && rawTxs is List) {
-          transactions = List<dynamic>.from(rawTxs);
+          tempTransactions.addAll(List<dynamic>.from(rawTxs));
         }
       } else if (customerData.isNotEmpty) {
         var txs = customerData['transactions'] ?? customerData['customerTransactions'];
         if (txs != null && txs is List) {
-          transactions = List<dynamic>.from(txs);
+          tempTransactions.addAll(List<dynamic>.from(txs));
         }
       }
-    } catch (_) {
-      transactions = [];
-    }
+
+      if (Hive.isBoxOpen('transactionBox')) {
+        var box = Hive.box('transactionBox');
+        String targetId = customerId.trim().toLowerCase();
+        String targetName = customerName.trim().toLowerCase();
+
+        for (var key in box.keys) {
+          var txValue = box.get(key);
+          if (txValue != null && txValue is Map) {
+            String txCustomerId = (txValue['customerId'] ?? '').toString().trim().toLowerCase();
+            
+            if (txCustomerId == targetId || 
+                txCustomerId == targetName || 
+                txCustomerId.contains(targetName) ||
+                targetName.contains(txCustomerId) ||
+                (txCustomerId == 'default_customer' && targetName.isNotEmpty)) {
+              
+              // فالتو فلٹر ہٹا دیا گیا ہے تاکہ کوئی بھی انٹری خودبخود غائب نہ ہو
+              String amtCheck = txValue['amount']?.toString() ?? '';
+              if (amtCheck.isNotEmpty && txCustomerId.isNotEmpty) {
+                tempTransactions.add(Map<String, dynamic>.from(txValue));
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    transactions = tempTransactions.reversed.toList();
     notifyListeners();
   }
 
-  // فلٹر شدہ ٹرانزیکشنز (محفوظ طریقے سے)
   List<dynamic> get filteredTransactions {
     if (searchQuery.trim().isEmpty) return transactions;
     return transactions.where((t) {
@@ -126,7 +190,7 @@ class CustomerLedgerController extends ChangeNotifier {
       String desc = '';
       String amt = '';
       if (t is Map) {
-        desc = t['description']?.toString().toLowerCase() ?? '';
+        desc = (t['description'] ?? t['remarks'])?.toString().toLowerCase() ?? '';
         amt = t['amount']?.toString() ?? '';
       } else {
         try {
