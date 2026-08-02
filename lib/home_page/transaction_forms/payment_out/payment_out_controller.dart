@@ -9,6 +9,7 @@ class PaymentOutController {
 
   final ValueNotifier<bool> hasAmountEntered = ValueNotifier<bool>(false);
   final ValueNotifier<double> currentAmountNotifier = ValueNotifier<double>(0.0);
+  final ValueNotifier<bool> isSaving = ValueNotifier<bool>(false);
 
   double _discountValue = 0.0;
   bool _isPercentageDiscount = false;
@@ -44,10 +45,12 @@ class PaymentOutController {
     amountFocusNode.dispose();
     hasAmountEntered.dispose();
     currentAmountNotifier.dispose();
+    isSaving.dispose();
   }
 
-  // ٹرانزیکشن کو ہائیو کے 'transactionBox' میں 'paid' ٹائپ کے ساتھ محفوظ کرنے کا فنکشن
   Future<void> savePaymentOut(BuildContext context, {String? customerId}) async {
+    if (isSaving.value) return;
+
     String amountText = amountController.text.trim();
     if (amountText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -56,11 +59,13 @@ class PaymentOutController {
       return;
     }
 
+    isSaving.value = true;
+
     double amount = double.tryParse(amountText) ?? 0.0;
     String remarks = remarksController.text.trim();
 
     final Map<String, dynamic> transactionData = {
-      'type': 'paid', // پیمنٹ آؤت کے لیے 'paid' تاکہ دی گئی رقم شو ہو
+      'type': 'paid', 
       'customerId': customerId ?? 'default_customer', 
       'amount': amount,
       'description': remarks,
@@ -90,6 +95,10 @@ class PaymentOutController {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('خرابی پیش آئی: $e')),
         );
+      }
+    } finally {
+      if (context.mounted) {
+        isSaving.value = false;
       }
     }
   }

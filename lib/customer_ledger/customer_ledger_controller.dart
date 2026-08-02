@@ -100,6 +100,7 @@ class CustomerLedgerController extends ChangeNotifier {
     return '';
   }
 
+  // یہاں تمام ٹائپس ('give', 'given', 'paid' اور 'get', 'received') کا حساب درست کر دیا گیا ہے
   double get totalBalance {
     double total = 0.0;
     for (var t in transactions) {
@@ -117,9 +118,12 @@ class CustomerLedgerController extends ChangeNotifier {
         } catch (_) {}
       }
 
-      if (type == 'give' || type == 'given') {
+      // 'give', 'given' یا 'paid' (پیمنٹ آؤٹ/سرخ) بیلنس میں جمع ہوں گے
+      if (type == 'give' || type == 'given' || type == 'paid') {
         total += amount;
-      } else if (type == 'get' || type == 'received') {
+      } 
+      // 'get' یا 'received' (پیمنٹ ان/سبز) بیلنس میں سے مائنس ہوں گے
+      else if (type == 'get' || type == 'received') {
         total -= amount;
       }
     }
@@ -132,7 +136,6 @@ class CustomerLedgerController extends ChangeNotifier {
   void loadCustomerTransactions() {
     List<dynamic> tempTransactions = [];
     try {
-      // ۱. کسٹمر ماڈل کی اپنی پرانی ٹرانزیکشنز
       if (customer != null) {
         dynamic rawTxs;
         try {
@@ -149,7 +152,6 @@ class CustomerLedgerController extends ChangeNotifier {
         }
       }
 
-      // ۲. ہائیو باکس سے تمام متعلقہ ڈیٹا اٹھانا
       if (Hive.isBoxOpen('transactionBox')) {
         var box = Hive.box('transactionBox');
         String targetId = customerId.trim().toLowerCase();
@@ -160,16 +162,15 @@ class CustomerLedgerController extends ChangeNotifier {
           if (txValue != null && txValue is Map) {
             String txCustomerId = (txValue['customerId'] ?? '').toString().trim().toLowerCase();
             
-            // 🛡️ وہ پرانا محفوظ طریقہ جو آپ کا سارا ڈیٹا واپس لے کر آیا تھا
             if (txCustomerId == targetId || 
                 txCustomerId == targetName || 
                 txCustomerId.contains(targetName) ||
                 targetName.contains(txCustomerId) ||
                 (txCustomerId == 'default_customer' && targetName.isNotEmpty)) {
               
-              // 🧹 یہاں ہم اس ایک فالتو/اونٹ پٹانگ انٹری کو فلٹر کر رہے ہیں (مثلاً جس کی اماؤنٹ یا آئی ڈی نامکمل ہو)
+              // فالتو فلٹر ہٹا دیا گیا ہے تاکہ کوئی بھی انٹری خودبخود غائب نہ ہو
               String amtCheck = txValue['amount']?.toString() ?? '';
-              if (amtCheck != '6' && txCustomerId.isNotEmpty) { // یہاں آپ اس فالتو انٹری کی رقم یا نشانی دیکھ سکتے ہیں
+              if (amtCheck.isNotEmpty && txCustomerId.isNotEmpty) {
                 tempTransactions.add(Map<String, dynamic>.from(txValue));
               }
             }
@@ -178,7 +179,6 @@ class CustomerLedgerController extends ChangeNotifier {
       }
     } catch (_) {}
 
-    // جدید ترین انٹری سب سے اوپر (Newest to Oldest)
     transactions = tempTransactions.reversed.toList();
     notifyListeners();
   }
