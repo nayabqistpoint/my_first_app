@@ -5,7 +5,7 @@ import 'customer_ledger/middle.dart';
 import 'customer_ledger/bottom.dart';
 
 class CustomerLedgerPage extends StatefulWidget {
-  final dynamic customer; // 👈 اب ہم یہاں ماڈل یا ڈیٹا کچھ بھی ریسیو کر سکتے ہیں
+  final dynamic customer;
   final Map<String, dynamic> customerData;
   final bool isAdmin; 
 
@@ -27,7 +27,7 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
   void initState() {
     super.initState();
     _controller = CustomerLedgerController(
-      customer: widget.customer, // 👈 ماڈل کنٹرولر کو بھیج دیا
+      customer: widget.customer,
       customerData: widget.customerData,
       isAdmin: widget.isAdmin,
     );
@@ -48,15 +48,15 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
           backgroundColor: Colors.white,
           body: Column(
             children: [
-              // ۱. اوپر والا حصہ (ٹاپ: نام، بیلنس، کیپسولز)
+              // ۱. ٹاپ ویجٹ (نام، بیلنس اور دیگر معلومات)
               LedgerTopWidget(controller: _controller),
               
-              // ۲. درمیان والا حصہ (مڈل: سرچ بار اور ٹرانزیکشنز کی لسٹ)
+              // ۲. مڈل ویجٹ (سرچ بار اور ٹرانزیکشن لسٹ)
               Expanded(
                 child: LedgerMiddleWidget(controller: _controller),
               ),
 
-              // ۳. نیچے والا حصہ (باٹم: پیمنٹ آؤٹ اور پیمنٹ ان کے دو بٹن)
+              // ۳. باٹم ویجٹ (پیمنٹ ان اور پیمنٹ آؤٹ کے بٹن)
               LedgerBottomWidget(controller: _controller),
             ],
           ),

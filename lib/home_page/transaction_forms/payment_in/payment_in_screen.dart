@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'payment_in_controller.dart'; // کنٹرولر کی امپورٹ
+import 'payment_in_controller.dart';
+import 'payment_header.dart';
+import 'payment_body.dart';
 
 class PaymentInScreen extends StatefulWidget {
   const PaymentInScreen({super.key});
@@ -9,7 +11,6 @@ class PaymentInScreen extends StatefulWidget {
 }
 
 class _PaymentInScreenState extends State<PaymentInScreen> {
-  // یہاں کنٹرولر کا ابجیکٹ بنا لیا ہے
   final PaymentInController _controller = PaymentInController();
 
   @override
@@ -22,70 +23,33 @@ class _PaymentInScreenState extends State<PaymentInScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // بیک بٹن اور ٹائ틀 (اپنی مرضی کا ڈیزائن)
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.black),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'پیمنٹ ان (Payment In)',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
+      // اوپر والا ہیڈر (فروزن / فکسڈ)
+      appBar: const PaymentHeader(
+        title: 'پیمنٹ ان (Payment In)',
+        themeColor: Colors.green,
+      ),
+      // درمیان والا فارم باڈی
+      body: PaymentBody(controller: _controller),
+      // نیچے سیو کرنے کا بٹن (فکسڈ فوٹر)
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16.0),
+        color: Colors.white,
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              const SizedBox(height: 20),
-
-              // رقم لکھنے کی فیلڈ
-              TextField(
-                controller: _controller.amountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'رقم درج کریں (Amount)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 15),
-
-              // ریمارکس لکھنے کی فیلڈ
-              TextField(
-                controller: _controller.remarksController,
-                decoration: const InputDecoration(
-                  labelText: 'تفصیل / ریمارکس (Remarks)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // سیو کرنے کا بٹن
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  onPressed: () => _controller.savePaymentIn(context),
-                  child: const Text(
-                    'پیمنٹ محفوظ کریں',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ],
+            ),
+            onPressed: () => _controller.savePaymentIn(context),
+            child: const Text(
+              'پیمنٹ محفوظ کریں',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ),
