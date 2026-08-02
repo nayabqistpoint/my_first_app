@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'customer_ledger_controller.dart'; // کنٹرولر کی امپورٹ
+// درست پاتھ: کسٹمر لیजर فولڈر سے نکل کر ہوم پیج اور پھر پیمنٹ ان تک پہنچنے کا طریقہ
+import '../home_page/transaction_forms/payment_in/payment_in_screen.dart';
 
 class LedgerBottomWidget extends StatelessWidget {
   final CustomerLedgerController controller;
@@ -32,7 +34,7 @@ class LedgerBottomWidget extends StatelessWidget {
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: const StadiumBorder(), // یہ کیپسول شیپ بناتا ہے
+                shape: const StadiumBorder(),
               ),
               onPressed: () {
                 if (isAdmin) {
@@ -57,11 +59,17 @@ class LedgerBottomWidget extends StatelessWidget {
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: const StadiumBorder(), // یہ کیپسول شیپ بناتا ہے
+                shape: const StadiumBorder(),
               ),
               onPressed: () {
                 if (isAdmin) {
-                  // یہاں ہم بعد میں پیمنٹ ان کا ڈائیلاگ یا فنکشن کال کریں گے
+                  // یہاں ایڈمن کے لیے پیمنٹ ان اسکرین اوپن ہو گی
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentInScreen(),
+                    ),
+                  );
                 } else {
                   // کسٹمر کے لیے قسط ادا کرنے کا بٹن
                 }
