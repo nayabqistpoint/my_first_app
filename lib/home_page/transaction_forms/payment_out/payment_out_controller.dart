@@ -64,9 +64,13 @@ class PaymentOutController {
     double amount = double.tryParse(amountText) ?? 0.0;
     String remarks = remarksController.text.trim();
 
+    // موبائل نمبر کو مکمل صاف کرنا تاکہ یونیک کی میچنگ میں کوئی خامی نہ رہے
+    String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+
     final Map<String, dynamic> transactionData = {
       'type': 'paid', 
-      'customerId': customerId ?? 'default_customer', 
+      'customerPhone': cleanPhone, // 🔑 یہاں موبائل نمبر لازمی جوڑ دیا گیا ہے
+      'customerId': cleanPhone, 
       'amount': amount,
       'description': remarks,
       'remarks': remarks,
@@ -78,6 +82,7 @@ class PaymentOutController {
       'source': _selectedSource,
       'splitPayments': _splitPayments,
       'hasAttachment': false,
+      'timestamp': DateTime.now().toString(),
     };
 
     try {

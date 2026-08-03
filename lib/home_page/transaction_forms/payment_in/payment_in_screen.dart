@@ -4,14 +4,21 @@ import 'payment_header.dart';
 import 'payment_body.dart';
 
 class PaymentInScreen extends StatefulWidget {
-  const PaymentInScreen({super.key});
+  final String? customerId; // 🔑 کسٹमर آئی ڈی (موبائل نمبر) یہاں وصول کی جائے گی
+  const PaymentInScreen({super.key, this.customerId});
 
   @override
   State<PaymentInScreen> createState() => _PaymentInScreenState();
 }
 
 class _PaymentInScreenState extends State<PaymentInScreen> {
-  final PaymentInController _controller = PaymentInController();
+  late final PaymentInController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PaymentInController();
+  }
 
   @override
   void dispose() {
@@ -23,14 +30,11 @@ class _PaymentInScreenState extends State<PaymentInScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      // اوپر والا ہیڈر (فروزن / فکسڈ)
       appBar: const PaymentHeader(
         title: 'پیمنٹ ان (Payment In)',
         themeColor: Colors.green,
       ),
-      // درمیان والا فارم باڈی
       body: PaymentBody(controller: _controller),
-      // نیچے سیو کرنے کا بٹن (فکسڈ فوٹر)
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16.0),
         color: Colors.white,
@@ -45,7 +49,8 @@ class _PaymentInScreenState extends State<PaymentInScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            onPressed: () => _controller.savePaymentIn(context),
+            // 🔑 یہاں اب درست طریقے سے customerId پاس ہو رہا ہے
+            onPressed: () => _controller.savePaymentIn(context, customerId: widget.customerId),
             child: const Text(
               'پیمنٹ محفوظ کریں',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

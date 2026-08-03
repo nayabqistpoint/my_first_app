@@ -37,7 +37,7 @@ class SignUpController extends ChangeNotifier {
       var guarantorData = guarantorKey.currentState?.getGuarantorData() ?? {};
       var packageData = packageKey.currentState?.getPackageData() ?? {};
 
-      // کسٹمر کا موبائل نمبر درست طریقے سے حاصل کرنا (یہاں 'customerPhone' کو سب سے پہلے رکھا ہے)
+      // کسٹمر کا موبائل نمبر درست طریقے سے حاصل کرنا
       String phoneNumber = customerData['customerPhone'] ?? 
                            customerData['phone'] ?? 
                            customerData['mobile'] ?? 
@@ -63,10 +63,10 @@ class SignUpController extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
+      // نمبر کو بالکل صاف کرنا (صرف ہندسے رکھنا) تاکہ یہ یونیک کی (Unique Key) بن سکے
+      String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
+
       try {
-        // نمبر کو بالکل صاف کرنا (صرف ہندسے رکھنا)
-        String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
-        
         // سختی سے صرف آخری 4 ہندسے بطور پاسورڈ نکالنا
         String password = cleanPhone.length >= 4 
             ? cleanPhone.substring(cleanPhone.length - 4) 
@@ -91,12 +91,15 @@ class SignUpController extends ChangeNotifier {
         ...customerData,
         ...guarantorData,
         ...packageData,
+        'customerPhone': cleanPhone, // موبائل نمبر کو پکا محفوظ کرنا
         'isTermsAccepted': _isTermsAccepted,
         'status': 'Pending',
         'timestamp': DateTime.now().toString(),
       };
 
-      await customerBox.add(requestData);
+      // **اہم ترین تبدیلی**: .add() کی بجائے .put(cleanPhone, ...) استعمال کیا ہے
+      // تاکہ ہائیو باکس کے اندر کسٹمر کی اصل شناخت (Key) اس کا موبائل نمبر بن جائے!
+      await customerBox.put(cleanPhone, requestData);
 
       // 3. لوڈنگ ختم
       _isLoading = false;

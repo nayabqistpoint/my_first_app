@@ -58,7 +58,7 @@ class CustomerModel {
 
     return CustomerModel(
       name: json['name'] ?? '',
-      cast: json['cast'] ?? '', // اگر پرانے ڈیٹا میں نہ ہو تو خالی
+      cast: json['cast'] ?? '', 
       phone: json['phone'] ?? '',
       transactions: txList,
     );
@@ -83,21 +83,16 @@ class CustomerController extends ChangeNotifier {
           .map((e) => CustomerModel.fromJson(e as Map<dynamic, dynamic>))
           .toList();
 
-      // سارٹنگ: جن کا بیلنس ہے وہ اوپر، جن کا زیرو ہے وہ بالکل نیچے
       list.sort((a, b) {
         double balanceA = _calculateBalance(a);
         double balanceB = _calculateBalance(b);
 
-        // اگر دونوں کا بیلنس زیرو ہے تو نام کے لحاظ سے ترتیب دیں
         if (balanceA == 0 && balanceB == 0) {
           return a.name.compareTo(b.name);
         }
-        // اگر a کا بیلنس زیرو ہے تو اسے نیچے بھیجیں
         if (balanceA == 0) return 1;
-        // اگر b کا بیلنس زیرو ہے تو اسے نیچے بھیجیں
         if (balanceB == 0) return -1;
 
-        // بڑی رقم والے کو اوپر رکھیں
         return balanceB.abs().compareTo(balanceA.abs());
       });
 
@@ -107,7 +102,6 @@ class CustomerController extends ChangeNotifier {
     }
   }
 
-  // کل بیلنس نکالنے کا اندرونی فنکشن
   double _calculateBalance(CustomerModel customer) {
     double total = 0.0;
     for (var tx in customer.transactions) {
@@ -118,6 +112,21 @@ class CustomerController extends ChangeNotifier {
       }
     }
     return total;
+  }
+
+  // صرف نام اور فون کے ساتھ مینول پارٹی ایڈ کرنے کا آسان فنکشن (زیرو بیلنس)
+  void addManualCustomer({required String name, required String phone}) {
+    if (name.trim().isEmpty) return;
+
+    CustomerModel newCustomer = CustomerModel(
+      name: name.trim(),
+      cast: '',
+      phone: phone.trim().isNotEmpty ? phone.trim() : 'نامعلوم',
+      transactions: [], // زیرو بیلنس
+    );
+
+    customerBox.add(newCustomer.toJson());
+    notifyListeners(); // اب یہ کنٹرولر کے اندر ہے اس لیے بالکل پرفیکٹ کام کرے گا
   }
 
   void addOrUpdateCustomer({
@@ -169,7 +178,7 @@ class CustomerController extends ChangeNotifier {
         name: name.trim(),
         cast: cast.trim(),
         phone: phone.trim().isNotEmpty ? phone.trim() : 'نامعلوم',
-        transactions: amount > 0 ? [newTx] : [], // اگر رقم صفر ہو تو ٹرانزیکشن خالی بنے گی (زیرو بیلنس کسٹمر)
+        transactions: amount > 0 ? [newTx] : [],
       );
       customerBox.add(newCustomer.toJson());
     }

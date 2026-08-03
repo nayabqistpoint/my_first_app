@@ -10,7 +10,6 @@ class PaymentInController {
   final ValueNotifier<bool> hasAmountEntered = ValueNotifier<bool>(false);
   final ValueNotifier<double> currentAmountNotifier = ValueNotifier<double>(0.0);
   
-  // بٹن کو پھنسنے یا ڈبل کلک سے بچانے کے لیے فلیگ
   final ValueNotifier<bool> isSaving = ValueNotifier<bool>(false);
 
   double _discountValue = 0.0;
@@ -66,9 +65,13 @@ class PaymentInController {
     double amount = double.tryParse(amountText) ?? 0.0;
     String remarks = remarksController.text.trim();
 
+    // موبائل نمبر کو مکمل صاف کرنا تاکہ یونیک کی میچنگ میں کوئی خامی نہ رہے
+    String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+
     final Map<String, dynamic> transactionData = {
       'type': 'received', 
-      'customerId': customerId ?? 'default_customer', 
+      'customerPhone': cleanPhone, // 🔑 یہاں موبائل نمبر لازمی جوڑ دیا گیا ہے
+      'customerId': cleanPhone, 
       'amount': amount,
       'description': remarks,
       'remarks': remarks,
@@ -80,6 +83,7 @@ class PaymentInController {
       'source': _selectedSource,
       'splitPayments': _splitPayments,
       'hasAttachment': false,
+      'timestamp': DateTime.now().toString(),
     };
 
     try {
