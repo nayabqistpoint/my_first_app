@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_first_app/customer_ledger_page.dart';
+import '../../features/add_party_dialog.dart';
 
 // ==========================================
 // 1. CUSTOMER TRANSACTION MODEL
@@ -8,7 +9,7 @@ import 'package:my_first_app/customer_ledger_page.dart';
 class CustomerTransaction {
   String date;
   double amount;
-  String type; // 'give' (دینا ہے) یا 'get' (لینا ہے)
+  String type; 
   String description;
 
   CustomerTransaction({
@@ -49,26 +50,84 @@ class CustomerTransaction {
 // 2. CUSTOMER MODEL
 // ==========================================
 class CustomerModel {
+  dynamic hiveKey;
   String name;
-  String cast; // قوم
+  String cast; 
   String phone;
   List<CustomerTransaction> transactions;
 
   CustomerModel({
+    this.hiveKey,
     required this.name,
     required this.cast,
     required this.phone,
     required this.transactions,
   });
 
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'cast': cast,
-        'phone': phone,
-        'transactions': transactions.map((t) => t.toJson()).toList(),
-      };
+  String get cleanPhone {
+    return phone.replaceAll(RegExp(r'[^0-9]'), '');
+  }
 
-  factory CustomerModel.fromJson(Map json) {
+  // 🎯 100% ایکوریٹ بیلنس نکالنے کا طریقہ (بالکل لیجر کنٹرولر کی نقل)
+  double get calculateTotalBalance {
+    List<Map<String, dynamic>> tempTransactions = [];
+
+    // 1. کسٹمر کی اپنی بنیادی لسٹ
+    for (var tx in transactions) {
+      tempTransactions.add({
+        'date': tx.date,
+        'amount': tx.amount,
+        'type': tx.type,
+        'description': tx.description,
+      });
+    }
+
+    // 2. ٹرانزیکشن باکس سے میچنگ
+    if (Hive.isBoxOpen('transactionBox')) {
+      var box = Hive.box('transactionBox');
+      String targetPhone = cleanPhone;
+
+      for (var key in box.keys) {
+        var txValue = box.get(key);
+        if (txValue != null && txValue is Map) {
+          String txPhone = (txValue['customerPhone'] ?? '').toString().replaceAll(RegExp(r'[^0-9]'), '');
+          
+          if (targetPhone.isNotEmpty && txPhone == targetPhone) {
+            bool alreadyExists = tempTransactions.any((existing) {
+              if (existing['timestamp'] != null && txValue['timestamp'] != null) {
+                return existing['timestamp'] == txValue['timestamp'];
+              }
+              return existing['date'] == txValue['date'] && 
+                     existing['amount'].toString() == txValue['amount'].toString() &&
+                     existing['description'] == txValue['description'];
+            });
+
+            if (!alreadyExists) {
+              tempTransactions.add(Map<String, dynamic>.from(txValue));
+            }
+          }
+        }
+      }
+    }
+
+    // 3. وہی لیجر والا جمع/تفریق کا حساب
+    double total = 0.0;
+    for (var t in tempTransactions) {
+      double amount = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
+      String type = (t['type'] ?? 'get').toString().toLowerCase();
+
+      if (type == 'give' || type == 'given' || type == 'paid' || type == 'out') {
+        total += amount;
+      } else if (type == 'get' || type == 'received' || type == 'in') {
+        total -= amount;
+      }
+    }
+
+    if (total.abs() < 0.01) return 0.0;
+    return total;
+  }
+
+  factory CustomerModel.fromJson(dynamic key, Map json) {
     var rawTxList = json['transactions'];
     List<CustomerTransaction> txList = [];
     
@@ -79,10 +138,15 @@ class CustomerModel {
           .toList();
     }
 
+    String resolvedName = json['customerName']?.toString() ?? json['name']?.toString() ?? 'نامعلوم';
+    String resolvedCast = json['customerCaste']?.toString() ?? json['cast']?.toString() ?? json['caste']?.toString() ?? '';
+    String resolvedPhone = json['customerPhone']?.toString() ?? json['phone']?.toString() ?? '';
+
     return CustomerModel(
-      name: json['customerName']?.toString() ?? json['name']?.toString() ?? 'نامعلوم',
-      cast: json['customerCaste']?.toString() ?? json['cast']?.toString() ?? json['caste']?.toString() ?? '',
-      phone: json['customerPhone']?.toString() ?? json['phone']?.toString() ?? '',
+      hiveKey: key, 
+      name: resolvedName,
+      cast: resolvedCast,
+      phone: resolvedPhone,
       transactions: txList,
     );
   }
@@ -103,22 +167,21 @@ class CustomerController extends ChangeNotifier {
 
   List<CustomerModel> get customers {
     try {
-      final rawData = customerBox.values.toList();
+      final box = customerBox;
       List<CustomerModel> list = [];
 
-      for (var e in rawData) {
+      for (var key in box.keys) {
+        final e = box.get(key);
         if (e != null && e is Map) {
           try {
-            list.add(CustomerModel.fromJson(e));
-          } catch (_) {
-            // کریش سے بچنے کے لیے خراب ڈیٹا کو سکپ کر دیا گیا ہے
-          }
+            list.add(CustomerModel.fromJson(key, e));
+          } catch (_) {}
         }
       }
 
       list.sort((a, b) {
-        double balanceA = _calculateBalance(a);
-        double balanceB = _calculateBalance(b);
+        double balanceA = a.calculateTotalBalance;
+        double balanceB = b.calculateTotalBalance;
 
         if (balanceA == 0 && balanceB == 0) {
           return a.name.compareTo(b.name);
@@ -135,20 +198,26 @@ class CustomerController extends ChangeNotifier {
     }
   }
 
-  double _calculateBalance(CustomerModel customer) {
-    double total = 0.0;
-    for (var tx in customer.transactions) {
-      if (tx.type == 'get') {
-        total += tx.amount;
-      } else if (tx.type == 'give') {
-        total -= tx.amount;
-      }
-    }
-    return total;
+  void addManualCustomer({required String name, required String phone}) {
+    if (name.trim().isEmpty) return;
+
+    final Map<String, dynamic> manualCustomerData = {
+      'customerName': name.trim(),
+      'customerCaste': '',
+      'customerPhone': phone.trim().isNotEmpty ? phone.trim() : 'نامعلوم',
+      'transactions': [], 
+    };
+
+    customerBox.add(manualCustomerData);
+    notifyListeners(); 
   }
 
   void removeCustomer(int index) {
     customerBox.deleteAt(index);
+    notifyListeners();
+  }
+
+  void refreshList() {
     notifyListeners();
   }
 }
@@ -204,7 +273,9 @@ class CustomersListView extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      showAddPartyDialog(context);
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black87,
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -236,19 +307,9 @@ class CustomersListView extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final customer = customersList[index];
                         
-                        double totalBalance = 0.0;
-                        if (customer.transactions.isNotEmpty) {
-                          for (var tx in customer.transactions) {
-                            if (tx.type == 'get') {
-                              totalBalance += tx.amount;
-                            } else if (tx.type == 'give') {
-                              totalBalance -= tx.amount;
-                            }
-                          }
-                        }
+                        double totalBalance = customer.calculateTotalBalance;
 
-                        bool isAmountGreen = totalBalance >= 0; 
-                        Color amountColor = isAmountGreen ? Colors.green : Colors.red;
+                        Color amountColor = totalBalance == 0 ? Colors.black54 : (totalBalance > 0 ? Colors.red : Colors.green);
 
                         return InkWell(
                           onTap: () {
@@ -257,7 +318,9 @@ class CustomersListView extends StatelessWidget {
                               MaterialPageRoute(
                                 builder: (context) => CustomerLedgerPage(customer: customer),
                               ),
-                            );
+                            ).then((_) {
+                              customerController.refreshList();
+                            });
                           },
                           child: Column(
                             children: [

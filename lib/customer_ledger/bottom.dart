@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'customer_ledger_controller.dart'; // کنٹرولر کی امپورٹ
-// درست پاتھ: کسٹمر لیجر فولڈر سے نکل کر ہوم پیج اور پھر پیمنٹ ان اور پیمنٹ آؤٹ تک پہنچنے کا طریقہ
 import '../home_page/transaction_forms/payment_in/payment_in_screen.dart';
 import '../home_page/transaction_forms/payment_out/payment_out_screen.dart';
 
@@ -11,7 +10,6 @@ class LedgerBottomWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // یہ چیک کرتا ہے کہ آیا ایڈمن ہے یا کسٹمر (کنٹرولر کے مطابق)
     bool isAdmin = true;
     try {
       isAdmin = (controller as dynamic).isAdmin ?? true;
@@ -27,7 +25,7 @@ class LedgerBottomWidget extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // پہلا بٹن (ایڈمن کے لیے: پیمنٹ آؤٹ | کسٹمر کے لیے: خریداری کی درخواست)
+          // پہلا بٹن: پیمنٹ آؤٹ
           Expanded(
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -37,17 +35,19 @@ class LedgerBottomWidget extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: const StadiumBorder(),
               ),
-              onPressed: () {
+              onPressed: () async {
                 if (isAdmin) {
-                  // یہاں ایڈمن کے لیے پیمنٹ آؤٹ اسکرین اوپن ہو گی
-                  Navigator.push(
+                  // 🔑 await لگایا گیا ہے تاکہ واپس آتے ہی ڈیٹا ریفریش ہو جائے
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const PaymentOutScreen(),
+                      builder: (context) => PaymentOutScreen(
+                        customerId: controller.customerPhone,
+                      ),
                     ),
                   );
-                } else {
-                  // کسٹمر کے لیے خریداری کی درخواست (Purchase Request) کا فنکشن
+                  // واپس آتے ہی لیجر کا ڈیٹا دوبارہ لوڈ ہو گا
+                  controller.loadCustomerTransactions();
                 }
               },
               child: Text(
@@ -56,9 +56,9 @@ class LedgerBottomWidget extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 15), // بٹنوں کے درمیان فاصلہ
+          const SizedBox(width: 15),
           
-          // دوسرا بٹن (ایڈمن کے لیے: پیمنٹ ان | کسٹمر کے لیے: قسط ادا کریں)
+          // دوسرا بٹن: پیمنٹ ان
           Expanded(
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -68,17 +68,19 @@ class LedgerBottomWidget extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: const StadiumBorder(),
               ),
-              onPressed: () {
+              onPressed: () async {
                 if (isAdmin) {
-                  // یہاں ایڈمن کے لیے پیمنٹ ان اسکرین اوپن ہو گی
-                  Navigator.push(
+                  // 🔑 await لگایا گیا ہے تاکہ واپس آتے ہی ڈیٹا ریفریش ہو جائے
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const PaymentInScreen(),
+                      builder: (context) => PaymentInScreen(
+                        customerId: controller.customerPhone,
+                      ),
                     ),
                   );
-                } else {
-                  // کسٹمر کے لیے قسط ادا کرنے کا بٹن
+                  // واپس آتے ہی لیجر کا ڈیٹا دوبارہ لوڈ ہو گا
+                  controller.loadCustomerTransactions();
                 }
               },
               child: Text(
