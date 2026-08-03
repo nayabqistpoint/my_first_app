@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'customer_ledger_controller.dart'; // کنٹرولر کی امپورٹ
-import '../home_page/transaction_forms/payment_in/payment_in_screen.dart';
+import '../home_page/transaction_forms/payment_in/payment_in_screen.dart'; // ایڈمن کے لیے پیمنٹ ان اسکرین
 import '../home_page/transaction_forms/payment_out/payment_out_screen.dart';
+import '../features/pay_now/pay_now_widget.dart'; // کسٹمر کے لیے نیا PayNowWidget
 
 class LedgerBottomWidget extends StatelessWidget {
   final CustomerLedgerController controller;
@@ -25,7 +26,7 @@ class LedgerBottomWidget extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // پہلا بٹن: پیمنٹ آؤٹ
+          // پہلا بٹن: پیمنٹ آؤٹ / خریداری کی درخواست
           Expanded(
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -37,7 +38,6 @@ class LedgerBottomWidget extends StatelessWidget {
               ),
               onPressed: () async {
                 if (isAdmin) {
-                  // 🔑 await لگایا گیا ہے تاکہ واپس آتے ہی ڈیٹا ریفریش ہو جائے
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -46,7 +46,6 @@ class LedgerBottomWidget extends StatelessWidget {
                       ),
                     ),
                   );
-                  // واپس آتے ہی لیجر کا ڈیٹا دوبارہ لوڈ ہو گا
                   controller.loadCustomerTransactions();
                 }
               },
@@ -58,7 +57,7 @@ class LedgerBottomWidget extends StatelessWidget {
           ),
           const SizedBox(width: 15),
           
-          // دوسرا بٹن: پیمنٹ ان
+          // دوسرا بٹن: ایڈمن کے لیے 'پیمنٹ ان' (PaymentInScreen) اور کسٹمر کے لیے 'قسط ادا کریں' (PayNowWidget)
           Expanded(
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -70,7 +69,7 @@ class LedgerBottomWidget extends StatelessWidget {
               ),
               onPressed: () async {
                 if (isAdmin) {
-                  // 🔑 await لگایا گیا ہے تاکہ واپس آتے ہی ڈیٹا ریفریش ہو جائے
+                  // ایڈمن کے لیے پرانی پیمنٹ ان اسکرین کھلے گی
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -79,9 +78,16 @@ class LedgerBottomWidget extends StatelessWidget {
                       ),
                     ),
                   );
-                  // واپس آتے ہی لیجر کا ڈیٹا دوبارہ لوڈ ہو گا
-                  controller.loadCustomerTransactions();
+                } else {
+                  // کسٹمر کے لیے نیا PayNowWidget کھلے گا
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PayNowWidget(),
+                    ),
+                  );
                 }
+                controller.loadCustomerTransactions();
               },
               child: Text(
                 isAdmin ? "پیمنٹ ان" : "قسط ادا کریں",
