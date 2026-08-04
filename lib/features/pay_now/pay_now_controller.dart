@@ -8,7 +8,6 @@ class PayNowController extends ChangeNotifier {
   double _enteredAmount = 0.0;
   double get enteredAmount => _enteredAmount;
 
-  // کسٹمر کا موبائل نمبر جو اب بالکل درست ریسیو اور سیو ہوگا
   String customerMobileNumber = "";
 
   PayNowController() {
@@ -23,14 +22,14 @@ class PayNowController extends ChangeNotifier {
     }
   }
 
-  // پیمنٹ محفوظ کرنے کا فنکشن (ٹیسٹ شدہ اور ایرر فری)
+  // پیمنٹ محفوظ کرنے کا فنکشن (اب یہ باقاعدہ پینڈنگ سٹیٹس کے ساتھ سیو ہوگی)
   Future<void> savePayment(BuildContext context) async {
     if (_enteredAmount <= 0) return;
 
     final String description = descriptionController.text.trim();
     final String currentDate = "${DateTime.now().day} اگست ${DateTime.now().year}";
 
-    // ٹرانزیکشن ڈیٹا (ٹائپ 'paid' اور کسٹمر فون کے ساتھ)
+    // یہاں ہم نے ڈیٹا بیس میں باقاعدہ پینڈنگ کی فیلڈز ایڈ کر دی ہیں
     final Map<String, dynamic> transactionData = {
       'type': 'paid',
       'customerPhone': customerMobileNumber,
@@ -44,12 +43,14 @@ class PayNowController extends ChangeNotifier {
       'splitPayments': [],
       'hasAttachment': false,
       'timestamp': DateTime.now().toIso8601String(),
+      'status': 'pending',     // 👈 یہ بتائے گا کہ انٹری پینڈنگ ہے
+      'isApproved': false,     // 👈 یہ بتائے گا کہ ابھی ایڈمن منظوری باقی ہے
     };
 
     try {
       var transactionBox = await Hive.openBox('transactionBox');
       await transactionBox.add(transactionData);
-      debugPrint("Successfully saved to Transaction Box: $transactionData");
+      debugPrint("Successfully saved as Pending: $transactionData");
     } catch (e) {
       debugPrint("Error saving to Hive box: $e");
     }
@@ -63,7 +64,7 @@ class PayNowController extends ChangeNotifier {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("قسط کامیابی سے ٹرانزیکشن باکس میں درج کر دی گئی ہے!"),
+        content: Text("قسط کامیابی سے پینڈنگ لسٹ میں جمع ہو گئی ہے!"),
         backgroundColor: Colors.green,
         duration: Duration(seconds: 2),
       ),
