@@ -48,11 +48,13 @@ class LedgerBottomWidget extends StatelessWidget {
                     ),
                   );
                 } else {
-                  // کسٹمر کے لیے خریداری کی درخواست (بالکل بلینک پاس ہو رہا ہے)
+                  // کسٹمر کے لیے خریداری کی درخواست (اب یہاں درست طریقے سے موبائل نمبر پاس ہو رہا ہے)
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const PurchaseNow(),
+                      builder: (context) => PurchaseNow(
+                        customerMobileNumber: controller.customerPhone,
+                      ),
                     ),
                   );
                 }

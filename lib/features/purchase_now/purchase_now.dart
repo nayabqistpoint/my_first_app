@@ -3,7 +3,12 @@ import '../../welcome/signup/item_package_ui.dart';
 import 'purchase_now_controller.dart';
 
 class PurchaseNow extends StatefulWidget {
-  const PurchaseNow({super.key});
+  final String customerMobileNumber;
+
+  const PurchaseNow({
+    super.key,
+    required this.customerMobileNumber,
+  });
 
   @override
   State<PurchaseNow> createState() => _PurchaseNowState();
@@ -11,6 +16,7 @@ class PurchaseNow extends StatefulWidget {
 
 class _PurchaseNowState extends State<PurchaseNow> {
   final PurchaseNowController _controller = PurchaseNowController();
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +32,8 @@ class _PurchaseNowState extends State<PurchaseNow> {
         ),
         elevation: 0,
       ),
-      body: const ItemPackageUI(),
+      // پیکج یو آئی کو کنٹرولر کی کی کے ساتھ جوڑنا
+      body: ItemPackageUI(key: _controller.packageKey),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         color: Colors.white,
@@ -42,13 +49,58 @@ class _PurchaseNowState extends State<PurchaseNow> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              onPressed: () {
-                _controller.tempSubmit();
-              },
-              child: const Text(
-                "سبمٹ کریں",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
+              onPressed: _isLoading
+                  ? null
+                  : () async {
+                      if (widget.customerMobileNumber.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("خامی: کسٹمر کا موبائل نمبر غائب ہے!")),
+                        );
+                        return;
+                      }
+
+                      setState(() {
+                        _isLoading = true;
+                      });
+
+                      // کنٹرولر کے ذریعے کسٹمر کے موبائل نمبر کو بطور کلید استعمال کرتے ہوئے ڈیٹا سیو کرنا
+                      await _controller.submitPurchaseRequest(
+                        customerMobileNumber: widget.customerMobileNumber,
+                        onSuccess: () {
+                          if (mounted) {
+                            setState(() {
+                              _isLoading = false;
+                            });
+                            Navigator.of(context).pop(true);
+                          }
+                        },
+                        onError: (errorMsg) {
+                          if (mounted) {
+                            setState(() {
+                              _isLoading = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(errorMsg)),
+                            );
+                          }
+                        },
+                      );
+                    },
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      "سبمٹ کریں",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
             ),
           ),
         ),
