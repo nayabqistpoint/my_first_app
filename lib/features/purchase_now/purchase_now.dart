@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../welcome/signup/item_package_ui.dart'; // صحیح فائل کی امپورٹ
+import '../../welcome/signup/item_package_ui.dart';
+import 'purchase_now_controller.dart';
 
-class PurchaseNow extends StatelessWidget {
+class PurchaseNow extends StatefulWidget {
   const PurchaseNow({super.key});
+
+  @override
+  State<PurchaseNow> createState() => _PurchaseNowState();
+}
+
+class _PurchaseNowState extends State<PurchaseNow> {
+  final PurchaseNowController _controller = PurchaseNowController();
 
   @override
   Widget build(BuildContext context) {
@@ -18,14 +26,7 @@ class PurchaseNow extends StatelessWidget {
         ),
         elevation: 0,
       ),
-      // یہاں ہم نے بالکل درست کلاس نیم کے ساتھ یو آئی ویجٹ کو کال کر لیا ہے
-      body: const Padding(
-        padding: EdgeInsets.all(12.0),
-        child: SingleChildScrollView(
-          child: ItemPackageUI(),
-        ),
-      ),
-      // نیچے باٹم پر سمارٹ 'سبمٹ کریں' کا بٹن
+      body: const ItemPackageUI(),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         color: Colors.white,
@@ -42,7 +43,7 @@ class PurchaseNow extends StatelessWidget {
                 ),
               ),
               onPressed: () {
-                // سبمٹ کرنے کی لاجک یہاں آئے گی
+                _controller.tempSubmit();
               },
               child: const Text(
                 "سبمٹ کریں",
