@@ -97,14 +97,25 @@ class AdminPanelController extends ChangeNotifier {
         }
         map['password'] = map['password']?.toString() ?? defaultPassword;
 
-        bool hasPackage = map['packageName'] != null || map['mobileName'] != null || map['cashPrice'] != null;
-        
-        if (hasPackage) {
-          map['requestType'] = 'سائن اپ + پرچیز';
-          map['filterKey'] = 'both';
+        // یہاں ہم چیک کرتے ہیں کہ آیا ہائیو کے اندر پہلے سے کوئی مخصوص filterKey موجود ہے یا نہیں
+        if (map['filterKey'] != null) {
+          // اگر یہ 'purchase_only' ہے تو اسے 'صرف پرچیز' رکھیں، ورنہ ہائیو والا پرانا ٹائپ برقرار رکھیں
+          if (map['filterKey'] == 'purchase_only') {
+            map['requestType'] = 'صرف پرچیز';
+          } else {
+            map['requestType'] = map['requestType']?.toString() ?? 'سائن اپ + پرچیز';
+          }
         } else {
-          map['requestType'] = 'صرف سائن اپ';
-          map['filterKey'] = 'signup';
+          // پرانا آٹومیٹک چیک (اگر فلٹر کی موجود نہ ہو)
+          bool hasPackage = map['packageName'] != null || map['mobileName'] != null || map['cashPrice'] != null;
+          
+          if (hasPackage) {
+            map['requestType'] = 'سائن اپ + پرچیز';
+            map['filterKey'] = 'both';
+          } else {
+            map['requestType'] = 'صرف سائن اپ';
+            map['filterKey'] = 'signup';
+          }
         }
 
         map['mobileName'] = map['mobileName']?.toString() ?? 'کوئی ڈیوائس نہیں';
@@ -196,7 +207,7 @@ class AdminPanelController extends ChangeNotifier {
     String message = 
       "\u200Fالسلام علیکم محترم و معزز کسٹمر صاحب!\n\n"
       "آپ کی درخواست کے حوالے سے معذرت خواہ ہیں؛ آپ کی درج کردہ قیمت اور مارکیٹ کے ریٹ میں فرق آ رہا ہے۔\n\n"
-      "برائے مہربانی درست مارکیٹ ریٹ کے حساب سے دوبارہ درخواست (اپلائی) کریں تاکہ آپ کی کارروائی کو آگے بڑھایا جا سکے۔ شکریہ!";
+      "برائے مہربانی درست مارکیٹ ریٹ کے حساب سے دوبارہ درخواست (اپلائی) کریں تاکہ آپ کی کارروائی کو آگے بڑھایا جا سکے؛ شکریہ!";
 
     await openWhatsApp(phone, message);
   }

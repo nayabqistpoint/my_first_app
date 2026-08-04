@@ -9,7 +9,7 @@ class PurchaseNowController {
 
   /// پرچیز ریکوئسٹ سبمٹ کرنے کا فائنل اور پرفیکٹ طریقہ
   Future<void> submitPurchaseRequest({
-    required String customerMobileNumber, // کسٹمر کی اصل شناخت (मोबाइल नंबर/ID) جو سب کچھ جوڑتی ہے
+    required String customerMobileNumber, // کسٹمر کی اصل شناخت (موبائل نمبر/ID) جو سب کچھ جوڑتی ہے
     Map<String, dynamic>? packageDetails,
     required VoidCallback onSuccess,
     required Function(String error) onError,
@@ -34,19 +34,21 @@ class PurchaseNowController {
 
       // چیک کرنا کہ آیا یہ کسٹمر ہائیو باکس میں پہلے سے موجود ہے یا نہیں
       if (customerBox.containsKey(customerMobileNumber)) {
+        // پرانا تمام ڈیٹا (نام، ایڈریس، ضامن وغیرہ) نکالنا تاکہ کوئی چیز ضائع نہ ہو
         var existingData = Map<String, dynamic>.from(customerBox.get(customerMobileNumber));
 
-        // ایڈمن پینل اور فلٹرز کے لیے ریکوئسٹ کی اقسام اور فلیگز سیٹ کرنا
-        existingData['requestType'] = 'purchase_only';
+        // یہاں ہم نے بالکل درست طور پر 'purchase' کر دیا ہے تاکہ ایڈمن پینل کا چپ اسے فوراً اٹھا لے
+        existingData['requestType'] = 'پرچیز';
+        existingData['filterKey'] = 'purchase'; 
         existingData['purchaseStatus'] = 'pending';
         existingData['isPurchaseRequested'] = true;
         existingData['status'] = 'Pending';
         
-        // پیکج کا تمام ڈیٹا کسٹمر کے پرانے ریکارڈ میں بالکل درست طریقے سے مرج کرنا
+        // پیکج کا نیا تمام ڈیٹا کسٹمر کے پرانے ریکارڈ میں بالکل درست طریقے سے مرج کرنا 
         existingData.addAll(finalPackageData); 
         existingData['purchaseDate'] = DateTime.now().toIso8601String();
 
-        // اسی کسٹمر کے موبائل نمبر (ID) پر ڈیٹا واپس اپ ڈیٹ کر کے محفوظ کرنا
+        // اسی کسٹمر کے موبائل نمبر (ID) پر مکمل اپ ڈیٹ شدہ ڈیٹا واپس محفوظ کرنا
         await customerBox.put(customerMobileNumber, existingData);
         
         onSuccess();
