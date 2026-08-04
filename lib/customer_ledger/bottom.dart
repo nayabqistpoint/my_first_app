@@ -48,7 +48,7 @@ class LedgerBottomWidget extends StatelessWidget {
                     ),
                   );
                 } else {
-                  // کسٹمر کے لیے خریداری کی درخواست (اب یہاں درست طریقے سے موبائل نمبر پاس ہو رہا ہے)
+                  // کسٹمر کے لیے خریداری کی درخواست
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -89,10 +89,13 @@ class LedgerBottomWidget extends StatelessWidget {
                     ),
                   );
                 } else {
+                  // کسٹمر کے لیے قسط ادا کریں (یہاں موبائل نمبر کامیابی سے پاس ہو رہا ہے)
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const PayNowWidget(),
+                      builder: (context) => PayNowWidget(
+                        customerMobileNumber: controller.customerPhone,
+                      ),
                     ),
                   );
                 }

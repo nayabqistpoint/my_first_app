@@ -29,9 +29,9 @@ class PayNowBody extends StatelessWidget {
         ),
         const SizedBox(height: 12),
 
-        // 2. ریکارڈنگ / پلے والا خانہ (دوسرا کنٹرولر)
+        // 2. ریکارڈنگ / پلے والا خانہ (دوسرا کنٹرولر) - ہدایات سمیت
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey.shade400),
             borderRadius: BorderRadius.circular(10),
@@ -39,15 +39,36 @@ class PayNowBody extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                "آڈیو ریکارڈنگ",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              // بائیں طرف مدھم انسٹرکشنز اور ٹائتل تاکہ جگہ کم لے
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      "آڈیو ریکارڈنگ (اختیاری)",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      "اپنا نام، کل بقایا رقم اور ماہانہ قسط زبانی ریکارڈ کروائیں۔",
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey, // مدھم رنگ تاکہ نمایاں نہ ہو لیکن پڑھا جا سکے
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
+              // دائیں طرف مائیک کا بٹن
               IconButton(
                 onPressed: () {
-                  // ریکارڈنگ کی لاجک یہاں آئے گی
+                  // آڈیو ریکارڈنگ یا پلے کرنے کی لاجک یہاں آئے گی
                 },
                 icon: const Icon(Icons.mic, color: Colors.red),
+                tooltip: "آڈیو ریکارڈ کریں",
               ),
             ],
           ),

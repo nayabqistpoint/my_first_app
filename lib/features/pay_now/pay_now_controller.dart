@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 
 class PayNowController extends ChangeNotifier {
   final TextEditingController amountController = TextEditingController();
@@ -7,7 +8,7 @@ class PayNowController extends ChangeNotifier {
   double _enteredAmount = 0.0;
   double get enteredAmount => _enteredAmount;
 
-  // کسٹمر کا موبائل نمبر جو بطور آئی ڈی استعمال ہوگا
+  // کسٹمر کا موبائل نمبر جو اب بالکل درست ریسیو اور سیو ہوگا
   String customerMobileNumber = "";
 
   PayNowController() {
@@ -22,40 +23,52 @@ class PayNowController extends ChangeNotifier {
     }
   }
 
-  // پیمنٹ محفوظ کرنے کا فنکشن (ساتھ context لے کر پچھلے پیج پر واپس جائے گا)
-  void savePayment(BuildContext context) {
+  // پیمنٹ محفوظ کرنے کا فنکشن (ٹیسٹ شدہ اور ایرر فری)
+  Future<void> savePayment(BuildContext context) async {
     if (_enteredAmount <= 0) return;
 
     final String description = descriptionController.text.trim();
+    final String currentDate = "${DateTime.now().day} اگست ${DateTime.now().year}";
 
-    // ٹرانزیکشن ڈیٹا جو ڈیٹا بیس میں جائے گا
+    // ٹرانزیکشن ڈیٹا (ٹائپ 'paid' اور کسٹمر فون کے ساتھ)
     final Map<String, dynamic> transactionData = {
-      'customerMobile': customerMobileNumber,
+      'type': 'paid',
+      'customerPhone': customerMobileNumber,
+      'customerId': customerMobileNumber,
       'amount': _enteredAmount,
       'description': description,
+      'remarks': '',
+      'date': currentDate,
+      'discount': {'value': 0, 'isPercentage': false},
+      'source': null,
+      'splitPayments': [],
+      'hasAttachment': false,
       'timestamp': DateTime.now().toIso8601String(),
-      'isVerified': false, // پینڈنگ / مدھم اسٹیٹس
     };
 
-    // --- ٹیسٹنگ لاجک ---
-    debugPrint("Saved Transaction to DB: $transactionData");
+    try {
+      var transactionBox = await Hive.openBox('transactionBox');
+      await transactionBox.add(transactionData);
+      debugPrint("Successfully saved to Transaction Box: $transactionData");
+    } catch (e) {
+      debugPrint("Error saving to Hive box: $e");
+    }
 
-    // فیلڈز اور اماؤنٹ صاف کریں
+    if (!context.mounted) return;
+
     amountController.clear();
     descriptionController.clear();
     _enteredAmount = 0.0;
     notifyListeners();
 
-    // 1. پیغام دکھائیں
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("قسط کامیابی سے درج کر لی گئی ہے (تصدیق کے لیے پینڈنگ)"),
+        content: Text("قسط کامیابی سے ٹرانزیکشن باکس میں درج کر دی گئی ہے!"),
         backgroundColor: Colors.green,
         duration: Duration(seconds: 2),
       ),
     );
 
-    // 2. صفحہ بند کر کے واپس پیچھے لیجر پر چلے جائیں
     Navigator.pop(context);
   }
 

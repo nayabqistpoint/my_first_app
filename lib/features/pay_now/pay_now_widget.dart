@@ -4,10 +4,18 @@ import 'pay_now_controller.dart';
 import '../../dashboard/widgets/source_selecter.dart';
 
 class PayNowWidget extends StatelessWidget {
-  const PayNowWidget({super.key});
+  final String customerMobileNumber;
+
+  const PayNowWidget({
+    super.key,
+    required this.customerMobileNumber,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // یہاں ہم نے کسٹمر کا موبائل نمبر کنٹرولر کو پاس کر دیا ہے تاکہ ڈیٹا بیس میں سیو ہو سکے
+    payNowController.customerMobileNumber = customerMobileNumber;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -123,7 +131,6 @@ class PayNowWidget extends StatelessWidget {
                   shape: const StadiumBorder(),
                 ),
                 onPressed: () {
-                  // یہاں کنٹرولر کا فنکشن کال ہو رہا ہے اور context بھی پاس ہو رہا ہے
                   payNowController.savePayment(context);
                 },
                 child: const Text(
