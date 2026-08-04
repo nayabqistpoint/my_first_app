@@ -87,18 +87,19 @@ class SignUpController extends ChangeNotifier {
       // ہلکا سا نقلی وقفہ
       await Future.delayed(const Duration(milliseconds: 800));
 
+      // یہاں packageData کے ساتھ آڈیو کا اسٹیٹس (hasAudioRecorded) اور پاتھ (audioPath)
+      // آپشنل کے طور پر خود بخود ہائیو میں سیو ہو جائے گا، چاہے آڈیو ریکارڈ ہو یا نہ ہو۔
       Map<String, dynamic> requestData = {
         ...customerData,
         ...guarantorData,
-        ...packageData,
+        ...packageData, 
         'customerPhone': cleanPhone, // موبائل نمبر کو پکا محفوظ کرنا
         'isTermsAccepted': _isTermsAccepted,
         'status': 'Pending',
         'timestamp': DateTime.now().toString(),
       };
 
-      // **اہم ترین تبدیلی**: .add() کی بجائے .put(cleanPhone, ...) استعمال کیا ہے
-      // تاکہ ہائیو باکس کے اندر کسٹمر کی اصل شناخت (Key) اس کا موبائل نمبر بن جائے!
+      // ہائیو باکس میں محفوظ کرنا (فون نمبر کی بنیاد پر)
       await customerBox.put(cleanPhone, requestData);
 
       // 3. لوڈنگ ختم

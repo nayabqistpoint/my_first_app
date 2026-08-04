@@ -10,9 +10,13 @@ class ItemPackageUI extends StatefulWidget {
 }
 
 class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveClientMixin {
-  // اب لاجک کا ابجیکٹ یہاں مکمل استعمال ہوگا
   late final ItemPackageLogic _logic;
   bool _isPurchaseRequested = false;
+  
+  // آڈیو ریکارڈنگ سے متعلقہ اسٹیٹس
+  bool _isRecording = false;
+  bool _hasRecordedAudio = false;
+  String? _audioPath;
 
   @override
   bool get wantKeepAlive => true;
@@ -20,16 +24,17 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
   @override
   void initState() {
     super.initState();
-    _logic = ItemPackageLogic(); // لاجک انیشیलाइज ہو گئی
+    _logic = ItemPackageLogic();
   }
 
-  // اب یہ براہ راست لاجک سے ڈیٹا اٹھا کر آگے بھیجے گا
   Map<String, dynamic> getPackageData() {
     if (!_isPurchaseRequested) {
       return {'isPurchaseRequested': false};
     }
     return {
       'isPurchaseRequested': true,
+      'hasAudioRecorded': _hasRecordedAudio,
+      'audioPath': _audioPath,
       ..._logic.getPackageData(),
     };
   }
@@ -44,7 +49,6 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
 
     if (result != null && result is Map<String, dynamic>) {
       setState(() {
-        // کیلکولیٹر سے آنے والا ڈیٹا سیدھا لاجک کے اندر سیو ہوگا
         _logic.updatePackageData(
           name: result['mobileName'] ?? '',
           pkgName: result['packageName'] ?? '',
@@ -62,11 +66,23 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
     }
   }
 
+  void _toggleRecording() {
+    setState(() {
+      if (_isRecording) {
+        _isRecording = false;
+        _hasRecordedAudio = true;
+        _audioPath = "audio_recorded_placeholder_path";
+      } else {
+        _isRecording = true;
+        _hasRecordedAudio = false;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    // اب تمام ویلیوز براہ راست لاجک سے سکرین پر شو ہوں گی
     final String modelName = _logic.mobileName ?? '';
     final String packageName = _logic.packageName ?? '';
     final String cashPrice = _logic.cashPrice ?? '';
@@ -114,6 +130,7 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
               ],
             ),
             
+            // جب پرچیز ریکویسٹ آن ہو گی، تب ہی کیلکولیٹر، تفصیلات اور آڈیو سیکشن نظر آئے گا
             if (_isPurchaseRequested) ...[
               const SizedBox(height: 8),
               SizedBox(
@@ -190,6 +207,69 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
                     ),
                   ],
                 ],
+              ),
+              
+              const SizedBox(height: 12),
+              const Divider(color: Colors.red, thickness: 1),
+              const SizedBox(height: 4),
+
+              // --- قانونی اعتراف کے لیے لازمی آڈیو ریکارڈنگ سیکشن (اب پرچیز سوئچ آن ہونے پر یہیں شو ہوگا) ---
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'قانونی تصدیق (لازمی آڈیو اعتراف):',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'موبائل ماڈل، ایڈوانس اور قسط کی رقم بول کر وائس ریکارڈ لازمی کریں تاکہ ریکوئسٹ جمع ہو سکے۔',
+                      style: TextStyle(fontSize: 9, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _toggleRecording,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isRecording ? Colors.green : Colors.red[800],
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(120, 30),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                          icon: Icon(_isRecording ? Icons.stop : Icons.mic, size: 14),
+                          label: Text(_isRecording ? 'ریکارڈنگ روکیں' : 'آڈیو ریکارڈ کریں', style: const TextStyle(fontSize: 10)),
+                        ),
+                        Row(
+                          children: [
+                            Icon(
+                              _hasRecordedAudio ? Icons.check_circle : Icons.warning_amber_rounded,
+                              size: 16,
+                              color: _hasRecordedAudio ? Colors.green : Colors.orange,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _hasRecordedAudio ? 'آڈیو محفوظ ہو گئی' : 'آڈیو درکار ہے',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: _hasRecordedAudio ? Colors.green : Colors.orange.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
