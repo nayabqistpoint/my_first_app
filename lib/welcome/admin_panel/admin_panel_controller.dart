@@ -22,7 +22,7 @@ class AdminPanelController extends ChangeNotifier {
     loadRequestsFromHive();
   }
 
-  // 🔢 تمام پینڈنگ ریکوئسٹس کی درست تعداد گننے کا گیٹر (چاہے ایک بندے کی جتنی بھی انٹریز ہوں)
+  // 🔢 تمام پینڈنگ ریکوئسٹس کی درست تعداد گننے کا گیٹر
   int get pendingRequestsCount {
     return _allRequests.where((r) {
       String status = r['status']?.toString().toLowerCase() ?? '';
@@ -153,15 +153,24 @@ class AdminPanelController extends ChangeNotifier {
   }
 
   Future<void> updateRequestStatus(int index, String newStatus) async {
-    var customerBox = Hive.box('customerBox');
-    
-    int originalIndex = _allRequests.indexWhere((r) => r['id'] == requests[index]['id']);
-    if (originalIndex != -1) {
-      _allRequests[originalIndex]['status'] = newStatus;
-      await customerBox.putAt(originalIndex, _allRequests[originalIndex]);
+    try {
+      var customerBox = Hive.box('customerBox');
+      
+      int originalIndex = _allRequests.indexWhere((r) => r['id'] == requests[index]['id']);
+      if (originalIndex != -1) {
+        _allRequests[originalIndex]['status'] = newStatus;
+        if (newStatus.toLowerCase() == 'approved') {
+          _allRequests[originalIndex]['isApproved'] = true;
+        }
+        await customerBox.putAt(originalIndex, _allRequests[originalIndex]);
+      }
+      
+      // 🔄 ڈیٹا دوبارہ لوڈ کریں اور باہر والی سکرین کو فورا مطلع کریں تاکہ بیج زیرو ہو جائے
+      loadRequestsFromHive();
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Update Status Error: $e");
     }
-    
-    notifyListeners();
   }
 
   Future<void> makePhoneCall(String phoneNumber) async {

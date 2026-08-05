@@ -5,6 +5,7 @@ import 'welcome/admin_panel/approved_view.dart';
 import 'welcome/admin_panel/pending_view.dart';
 import 'welcome/admin_panel/completed_view.dart'; 
 import 'welcome/admin_panel/pending/pending_approvals_drawer.dart'; 
+import 'welcome/admin_panel/pending/pending_approvals_controller.dart'; // 📌 نیا امپورٹ
 
 class AdminPanelPage extends StatefulWidget {
   const AdminPanelPage({super.key});
@@ -15,17 +16,21 @@ class AdminPanelPage extends StatefulWidget {
 
 class _AdminPanelPageState extends State<AdminPanelPage> {
   final AdminPanelController _controller = AdminPanelController();
+  final PendingApprovalsController _drawerController = PendingApprovalsController(); // 📌 ڈراور والا کنٹرولر
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(_refreshState);
+    _drawerController.addListener(_refreshState); // 📌 اسے بھی لسن پر لگا دیا تاکہ بیج لائیو اپ ڈیٹ ہو
   }
 
   @override
   void dispose() {
     _controller.removeListener(_refreshState);
+    _drawerController.removeListener(_refreshState); // 📌 رِموو کرنا نہ بھولیں
     _controller.dispose();
+    _drawerController.dispose();
     super.dispose();
   }
 
@@ -37,7 +42,8 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
 
   @override
   Widget build(BuildContext context) {
-    final int pendingCount = _controller.pendingRequestsCount;
+    // 🔢 اب یہ کاؤنٹر سائن اپ کا نہیں بلکہ صرف ڈراور والی پیمنٹ ریکوئسٹس (pendingCount) کا گنے گا
+    final int pendingDrawerCount = _drawerController.pendingCount;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -50,10 +56,9 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
           ),
           centerTitle: true,
-          leadingWidth: 120, // 📏 جگہ کو مزید کھلا کر دیا تاکہ لکھائی کی طرف آنے کی جگہ بنے
+          leadingWidth: 120, 
           leading: Builder(
             builder: (context) => Transform.translate(
-              // 🚀 یہاں مینس (Minus) سائن کی وجہ سے دونوں چیزیں اب سیدھی ٹائتل (لکھائی) کی طرف بڑھیں گی
               offset: const Offset(-12, 0),
               child: Padding(
                 padding: const EdgeInsets.only(right: 6),
@@ -61,16 +66,16 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    // 🍔 سب سے پہلے تھری لائنز مینو بٹن
+                    // 🍔 تھری لائنز مینو بٹن
                     IconButton(
                       icon: const Icon(Icons.menu, color: Colors.white, size: 28),
                       onPressed: () => Scaffold.of(context).openDrawer(),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
-                    if (pendingCount > 0) const SizedBox(width: 8),
-                    // 🔢 اور اس کے بعد ریڈ بیج
-                    if (pendingCount > 0)
+                    if (pendingDrawerCount > 0) const SizedBox(width: 8),
+                    // 🔢 اب یہ بیج بالکل درست طور پر ڈراور والی پینڈنگ ریکوئسٹس کو فالو کرے گا
+                    if (pendingDrawerCount > 0)
                       Container(
                         width: 23,
                         height: 23,
@@ -80,7 +85,7 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          '$pendingCount',
+                          '$pendingDrawerCount',
                           style: const TextStyle(
                             color: Color(0xFFE53935),
                             fontWeight: FontWeight.bold,
