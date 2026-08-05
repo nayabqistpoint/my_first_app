@@ -15,11 +15,10 @@ class ApprovedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // صرف 'approved' سٹیٹس والی ریکویسٹس کو فلٹر کریں
+    // صرف 'approved' سٹیٹس والی ریکویسٹس کو فلٹر کریں (یہاں requests کی جگہ approvedRequests کر دیا ہے)
     String currentSubFilter = controller.pageFilters['approved'] ?? 'all';
 
-    List<Map<String, dynamic>> filteredList = controller.requests.where((req) {
-      if (req['status'] != 'approved') return false;
+    List<Map<String, dynamic>> filteredList = controller.approvedRequests.where((req) {
       if (currentSubFilter == 'all') return true;
       return req['filterKey'] == currentSubFilter;
     }).toList();

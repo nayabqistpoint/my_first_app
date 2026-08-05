@@ -8,7 +8,6 @@ class LedgerMiddleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // کنٹرولر سے فلٹر شدہ لسٹ حاصل कर रहे हैं
     final transactions = controller.filteredTransactions;
 
     return Column(
@@ -64,12 +63,12 @@ class LedgerMiddleWidget extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final tx = transactions[index];
 
-                    // 🛡️ انتہائی محفوظ طریقے سے ٹرانزیکشن کی ویلیوز نکالنا
                     String type = 'get';
                     double amount = 0.0;
                     String dateStr = '';
                     String descStr = 'تفصیل...';
                     bool hasAttachment = false;
+                    bool isPending = false; // پینڈنگ سٹیٹس چیک
 
                     if (tx is Map) {
                       type = tx['type']?.toString() ?? 'get';
@@ -77,6 +76,12 @@ class LedgerMiddleWidget extends StatelessWidget {
                       dateStr = tx['date']?.toString() ?? '';
                       descStr = tx['description']?.toString() ?? 'تفصیل...';
                       hasAttachment = tx['hasAttachment'] ?? false;
+                      
+                      // چیک کریں آیا انٹری پینڈنگ ہے
+                      String status = tx['status']?.toString() ?? '';
+                      if (status == 'pending' || tx['isApproved'] == false) {
+                        isPending = true;
+                      }
                     } else {
                       try {
                         type = tx.type?.toString() ?? 'get';
@@ -84,13 +89,16 @@ class LedgerMiddleWidget extends StatelessWidget {
                         dateStr = tx.date?.toString() ?? '';
                         descStr = tx.description?.toString() ?? 'تفصیل...';
                         hasAttachment = tx.hasAttachment ?? false;
+                        
+                        if (tx.status == 'pending' || tx.isApproved == false) {
+                          isPending = true;
+                        }
                       } catch (_) {}
                     }
 
-                    // سبز والی انٹریز (Received یا Get)
-                    bool isReceived = (type == 'received' || type == 'get');
+                    bool isReceived = (type == 'received' || type == 'get' || type == 'paid');
 
-                    // موجودہ انٹری تک کا رننگ بیلنس درست طریقے سے نکالنا (جس میں paid اور given دونوں مائنس/پلس ہوں گے)
+                    // رننگ بیلنس کا حساب لگاتے ہوئے پینڈنگ انٹریز کو اگنور کرنا
                     double currentRunningBalance = 0.0;
                     for (int i = transactions.length - 1; i >= index; i--) {
                       var t = transactions[i];
@@ -98,92 +106,105 @@ class LedgerMiddleWidget extends StatelessWidget {
 
                       String tType = 'get';
                       double tAmt = 0.0;
+                      bool tIsPending = false;
 
                       if (t is Map) {
                         tType = t['type']?.toString() ?? 'get';
                         tAmt = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
+                        if (t['status']?.toString() == 'pending' || t['isApproved'] == false) {
+                          tIsPending = true;
+                        }
                       } else {
                         try {
                           tType = t.type?.toString() ?? 'get';
                           tAmt = double.tryParse(t.amount?.toString() ?? '0') ?? 0.0;
+                          if (t.status == 'pending' || t.isApproved == false) {
+                            tIsPending = true;
+                          }
                         } catch (_) {}
                       }
 
-                      // دیے گئے یا آؤٹ والی انٹریز بیلنس میں جمع ہوں گی
+                      // پینڈنگ انٹریز کو رننگ بیلنس میں شامل نہیں کرنا
+                      if (tIsPending) continue;
+
                       if (tType == 'given' || tType == 'give' || tType == 'paid' || tType == 'out') {
                         currentRunningBalance += tAmt;
-                      } 
-                      // ملی والی انٹریز بیلنس سے کم ہوں گی
-                      else if (tType == 'received' || tType == 'get') {
+                      } else if (tType == 'received' || tType == 'get') {
                         currentRunningBalance -= tAmt;
                       }
                     }
 
                     Color balanceColor = currentRunningBalance >= 0 ? Colors.red : Colors.green;
 
-                    return Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          child: Row(
-                            children: [
-                              // بائیں طرف دیے اور ملی والی رقمیں
-                              SizedBox(
-                                width: 110,
-                                child: Row(
-                                  children: [
-                                    Expanded(child: Center(child: Text(isReceived ? amount.toStringAsFixed(0) : "", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)))),
-                                    Container(width: 1, height: 20, color: Colors.black26),
-                                    Expanded(child: Center(child: Text(isReceived ? "" : amount.toStringAsFixed(0), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)))),
-                                  ],
+                    // 🌟 اگر انٹری پینڈنگ ہے تو اس کی ظاہری شکل کو مدھم (Opacity 0.4) کر دیں گے
+                    return Opacity(
+                      opacity: isPending ? 0.45 : 1.0,
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 110,
+                                  child: Row(
+                                    children: [
+                                      Expanded(child: Center(child: Text(isReceived ? amount.toStringAsFixed(0) : "", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)))),
+                                      Container(width: 1, height: 20, color: Colors.black26),
+                                      Expanded(child: Center(child: Text(isReceived ? "" : amount.toStringAsFixed(0), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)))),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const Spacer(),
-                              
-                              // دائیں طرف تفصیل، تاریخ اور بقایا
-                              Expanded(
-                                flex: 2,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        // بقایا شو کرنے والی جگہ
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: balanceColor.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(4),
-                                            border: Border.all(color: balanceColor.withValues(alpha: 0.5), width: 0.8),
+                                const Spacer(),
+                                
+                                Expanded(
+                                  flex: 2,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: balanceColor.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(4),
+                                              border: Border.all(color: balanceColor.withValues(alpha: 0.5), width: 0.8),
+                                            ),
+                                            child: Text(
+                                              "بقایا: ${currentRunningBalance.abs().toStringAsFixed(0)}",
+                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: balanceColor),
+                                            ),
                                           ),
-                                          child: Text(
-                                            "بقایا: ${currentRunningBalance.abs().toStringAsFixed(0)}",
-                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: balanceColor),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        if (hasAttachment) ...[
-                                          const Icon(Icons.attach_file, size: 13, color: Colors.grey),
-                                          const SizedBox(width: 4),
+                                          const SizedBox(width: 8),
+                                          if (hasAttachment) ...[
+                                            const Icon(Icons.attach_file, size: 13, color: Colors.grey),
+                                            const SizedBox(width: 4),
+                                          ],
+                                          Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                                         ],
-                                        Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      descStr, 
-                                      style: const TextStyle(fontSize: 12, color: Colors.black87),
-                                      textAlign: TextAlign.right,
-                                    ),
-                                  ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      // اگر پینڈنگ ہے تو تفصیل کے ساتھ واضح ٹیکسٹ شو ہو گا
+                                      Text(
+                                        isPending ? "$descStr (منظوری کا منتظر...)" : descStr, 
+                                        style: TextStyle(
+                                          fontSize: 12, 
+                                          color: isPending ? Colors.orange[800] : Colors.black87,
+                                          fontWeight: isPending ? FontWeight.bold : FontWeight.normal,
+                                        ),
+                                        textAlign: TextAlign.right,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const Divider(color: Colors.black12, thickness: 0.5, height: 1),
-                      ],
+                          const Divider(color: Colors.black12, thickness: 0.5, height: 1),
+                        ],
+                      ),
                     );
                   },
                 ),

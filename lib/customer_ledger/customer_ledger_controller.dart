@@ -26,7 +26,7 @@ class CustomerLedgerController extends ChangeNotifier {
     loadCustomerTransactions();
   }
 
-  // 🛡️ کسٹمر کا موبائل نمبر جو اب ہائیو باکس کی واحد اور حتمی یونیک آئی ڈی (Primary Key) ہے
+  // 🛡️ کسٹمر کا موبائل نمبر جو ہائیو باکس کی یونیک آئی ڈی ہے
   String get customerPhone {
     String phone = '';
     if (customer != null) {
@@ -44,7 +44,6 @@ class CustomerLedgerController extends ChangeNotifier {
               customerData['mobile']?.toString() ?? 
               customerData['phoneNumber']?.toString() ?? '';
     }
-    // صرف ہندسے نکال کر بالکل صاف کرنا تاکہ 100% پرفیکٹ میچنگ ہو
     return phone.replaceAll(RegExp(r'[^0-9]'), '');
   }
 
@@ -91,22 +90,34 @@ class CustomerLedgerController extends ChangeNotifier {
     return '';
   }
 
+  // 💰 ٹوٹل بیلنس (اگر ایڈمن ہے تو پینڈنگ انٹریز بیلنس میں شمار نہیں ہوں گی)
   double get totalBalance {
     double total = 0.0;
     for (var t in transactions) {
       if (t == null) continue;
       double amount = 0.0;
       String type = 'get';
+      bool isPending = false;
 
       if (t is Map) {
         amount = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
         type = t['type']?.toString() ?? 'get';
+        String status = t['status']?.toString() ?? '';
+        if (status == 'pending' || t['isApproved'] == false) {
+          isPending = true;
+        }
       } else {
         try {
           amount = double.tryParse(t.amount?.toString() ?? '0') ?? 0.0;
           type = t.type?.toString() ?? 'get';
+          if (t.status == 'pending' || t.isApproved == false) {
+            isPending = true;
+          }
         } catch (_) {}
       }
+
+      // اگر ایڈمن ہے اور انٹری پینڈنگ ہے تو اسے ٹوٹل بیلنس سے نکال باہر رکھیں
+      if (isAdmin && isPending) continue;
 
       if (type == 'give' || type == 'given' || type == 'paid' || type == 'out') {
         total += amount;
@@ -123,7 +134,6 @@ class CustomerLedgerController extends ChangeNotifier {
   void loadCustomerTransactions() {
     List<dynamic> tempTransactions = [];
     try {
-      // 1. کسٹمر کے اپنے ابجیکٹ یا میپ سے ٹرانزیکشنز اٹھانا
       if (customer != null) {
         dynamic rawTxs;
         try {
@@ -140,7 +150,6 @@ class CustomerLedgerController extends ChangeNotifier {
         }
       }
 
-      // 2. ٹرانزیکشن باکس سے صرف اور صرف کسٹمر کے موبائل نمبر کی بنیاد پر پکی میچنگ
       if (Hive.isBoxOpen('transactionBox')) {
         var box = Hive.box('transactionBox');
         String targetPhone = customerPhone.trim();
@@ -149,10 +158,14 @@ class CustomerLedgerController extends ChangeNotifier {
           var txValue = box.get(key);
           if (txValue != null && txValue is Map) {
             String txPhone = (txValue['customerPhone'] ?? '').toString().trim();
-            // صفا صاف صرف موبائل نمبر کا موازنہ
             if (targetPhone.isNotEmpty && txPhone == targetPhone) {
               
-              // 🔑 ٹائم اسٹیمپ یا ہাইভ کی کی مدد سے ڈپلیکیشن چیک تاکہ پیمنٹ آؤٹ مس نہ ہو
+              // 🔍 اگر یہ ایڈمن ہے اور انٹری پینڈنگ ہے، تو اسے ایڈمن کے لیجر سے بالکل ہٹا دو
+              bool isPendingTx = (txValue['status']?.toString() == 'pending' || txValue['isApproved'] == false);
+              if (isAdmin && isPendingTx) {
+                continue; 
+              }
+
               bool alreadyExists = tempTransactions.any((existing) {
                 if (existing is Map) {
                   if (existing['timestamp'] != null && txValue['timestamp'] != null) {
@@ -181,7 +194,6 @@ class CustomerLedgerController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 🚀 پیمنٹ ان/آؤٹ انٹری سیو کرنے کا خودکار فنکشن جو صرف موبائل نمبر ساتھ جوڑے گا
   Future<void> saveTransaction({
     required String type, 
     required double amount,
@@ -202,6 +214,7 @@ class CustomerLedgerController extends ChangeNotifier {
         'date': date,
         'hasAttachment': hasAttachment,
         'timestamp': DateTime.now().toString(),
+        'status': 'approved', // عام انٹریز فوری منظور شدہ ہوتی ہیں
       };
 
       await box.add(newTx);

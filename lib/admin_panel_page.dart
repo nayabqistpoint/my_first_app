@@ -3,7 +3,9 @@ import 'welcome/admin_panel/admin_panel_controller.dart';
 import 'welcome/admin_panel/capsule_filter.dart';
 import 'welcome/admin_panel/approved_view.dart';
 import 'welcome/admin_panel/pending_view.dart';
-import 'welcome/admin_panel/completed_view.dart'; // مکمل شدہ ویو کا آخری امپورٹ
+import 'welcome/admin_panel/completed_view.dart'; 
+import 'welcome/admin_panel/pending/pending_approvals_drawer.dart'; 
+import 'welcome/admin_panel/pending/pending_approvals_controller.dart';
 
 class AdminPanelPage extends StatefulWidget {
   const AdminPanelPage({super.key});
@@ -13,22 +15,35 @@ class AdminPanelPage extends StatefulWidget {
 }
 
 class _AdminPanelPageState extends State<AdminPanelPage> {
-  // مین کنٹرولر کا انسٹینس
   final AdminPanelController _controller = AdminPanelController();
+  final PendingApprovalsController _drawerController = PendingApprovalsController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_refreshState);
+    _drawerController.addListener(_refreshState);
+  }
 
   @override
   void dispose() {
+    _controller.removeListener(_refreshState);
+    _drawerController.removeListener(_refreshState);
     _controller.dispose();
+    _drawerController.dispose();
     super.dispose();
   }
 
-  // یو آئی کو ریفریش کرنے کے لیے ہیلپر فنکشن
   void _refreshState() {
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final int pendingDrawerCount = _drawerController.pendingCount;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -40,17 +55,55 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
           ),
           centerTitle: true,
+          leadingWidth: 120, 
+          leading: Builder(
+            builder: (context) => Transform.translate(
+              offset: const Offset(-12, 0),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    if (pendingDrawerCount > 0) const SizedBox(width: 8),
+                    if (pendingDrawerCount > 0)
+                      Container(
+                        width: 23,
+                        height: 23,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '$pendingDrawerCount',
+                          style: const TextStyle(
+                            color: Color(0xFFE53935),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
+        drawer: const PendingApprovalsDrawer(),
         body: Column(
           children: [
-            // اوپر والے کیپسول ٹیبز
             CapsuleFilterWidget(
               controller: _controller,
               onStateChanged: _refreshState,
             ),
             const Divider(height: 1, color: Colors.grey),
-
-            // ویوز کا سیکشن (PageView)
             Expanded(
               child: PageView(
                 controller: _controller.pageController,
@@ -60,19 +113,14 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
                   });
                 },
                 children: [
-                  // 0: منظور شدہ ویو
                   ApprovedView(
                     controller: _controller,
                     onStateChanged: _refreshState,
                   ),
-                  
-                  // 1: پینڈنگ ویو
                   PendingView(
                     controller: _controller,
                     onStateChanged: _refreshState,
                   ),
-
-                  // 2: مکمل شدہ ویو (اب یہ بھی لائیو کنیکٹ ہو چکا ہے)
                   CompletedView(
                     controller: _controller,
                     onStateChanged: _refreshState,
