@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'admin_panel_controller.dart';
-// یہ رہی آپ کی دونوں نئی فائلیں جو اوپر فولڈر میں موجود ہیں:
+import 'widgets/card_action_buttons.dart';
 
 class RequestCardItem extends StatelessWidget {
   final Map<String, dynamic> request;
@@ -16,10 +16,8 @@ class RequestCardItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // محفوظ آئی ڈی حاصل کرنا تاکہ نل ایرر نہ آئے
     String reqId = request['id']?.toString() ?? 'temp_id_${request.hashCode}';
 
-    // اگر اس ریکویسٹ کے لیے پرائس کنٹرولر موجود نہیں تو بنا لیں (صحیح کی: cashPrice)
     if (!controller.priceControllers.containsKey(reqId)) {
       controller.priceControllers[reqId] = TextEditingController(
         text: request['cashPrice']?.toString() ?? '',
@@ -28,7 +26,6 @@ class RequestCardItem extends StatelessWidget {
     final priceController = controller.priceControllers[reqId]!;
     bool isExpanded = request['isExpanded'] ?? false;
 
-    // یہ چیک کرنا کہ آیا اس ریکویسٹ میں موبائل/پیکج موجود ہے یا نہیں
     bool hasMobilePackage = request['mobileName'] != null && 
         request['mobileName'].toString() != 'کوئی ڈیوائس نہیں' && 
         request['mobileName'].toString().isNotEmpty &&
@@ -44,7 +41,6 @@ class RequestCardItem extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // کولैپسڈ موڈ (بند حالت والی چھوٹی پٹی)
           InkWell(
             onTap: () {
               request['isExpanded'] = !isExpanded;
@@ -104,7 +100,6 @@ class RequestCardItem extends StatelessWidget {
             ),
           ),
 
-          // ایکسپینڈڈ موڈ (کھلنے کے بعد اندر کا تمام ڈیٹا)
           if (isExpanded) ...[
             const Divider(height: 1, color: Colors.grey),
             Padding(
@@ -157,7 +152,6 @@ class RequestCardItem extends StatelessWidget {
                     ),
                   ),
 
-                  // اگر موبائل/پیکج موجود ہو تو ہی یہ حصہ دکھائے گا
                   if (hasMobilePackage) ...[
                     const SizedBox(height: 12),
                     const Text("■ منتخب کردہ موبائل اور قسط پیکج", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFE53935), fontSize: 14)),
@@ -175,8 +169,6 @@ class RequestCardItem extends StatelessWidget {
                         children: [
                           Text("موبائل ماڈل: ${request['mobileName'] ?? 'N/A'}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 3),
-                          
-                          // خریداری کا موڈ (صحیح کی: isBuyStockMode)
                           Text("خریداری کا موڈ: ${request['isBuyStockMode'] == true ? 'بائے اسٹاک' : 'مینول'}", style: const TextStyle(fontSize: 12)),
                           
                           if (request['isBuyStockMode'] != true) ...[
@@ -205,7 +197,6 @@ class RequestCardItem extends StatelessWidget {
                     ),
                   ],
 
-                  // اگر ضامن موجود ہو تو ہی دکھائے گا
                   if (request['hasGuarantor'] == true) ...[
                     const SizedBox(height: 12),
                     const Text("■ ضامن کی معلومات", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFE53935), fontSize: 14)),
@@ -256,40 +247,14 @@ class RequestCardItem extends StatelessWidget {
 
                   const SizedBox(height: 15),
 
-                  // واٹس ایپ کے دونوں اہم بٹن (اب کنٹرولر کے تفصیلی فنکشنز کو کال کر رہے ہیں)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            // براہ راست کنٹرولر کا مکمل اور تفصیلی فنکشن کال ہو گا جس میں یوزر نیم اور پاسورڈ شامل ہیں
-                            controller.sendApprovalWhatsApp(request);
-                          },
-                          icon: const Icon(Icons.check_circle, color: Colors.white, size: 18),
-                          label: const Text("منظور کریں", style: TextStyle(color: Colors.white, fontSize: 12)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            // براہ راست کنٹرولر کا ریجیکشن والا فنکشن کال ہو گا
-                            controller.sendRejectionWhatsApp(request);
-                          },
-                          icon: const Icon(Icons.cancel, color: Colors.white, size: 18),
-                          label: const Text("اعتراض / مس میچ", style: TextStyle(color: Colors.white, fontSize: 11)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE53935),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          ),
-                        ),
-                      ),
-                    ],
+                  // --- چاروں فائنل ایکشن بٹنز ---
+                  CardActionButtons(
+                    controller: controller,
+                    hiveKey: reqId,
+                    isPurchase: hasMobilePackage,
+                    request: request,
                   ),
+
                 ],
               ),
             ),
