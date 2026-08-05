@@ -4,6 +4,7 @@ import 'welcome/admin_panel/capsule_filter.dart';
 import 'welcome/admin_panel/approved_view.dart';
 import 'welcome/admin_panel/pending_view.dart';
 import 'welcome/admin_panel/completed_view.dart'; // مکمل شدہ ویو کا آخری امپورٹ
+import 'welcome/admin_panel/pending/pending_approvals_drawer.dart'; // پینڈنگ ڈراور کا امپورٹ
 
 class AdminPanelPage extends StatefulWidget {
   const AdminPanelPage({super.key});
@@ -40,7 +41,16 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
           ),
           centerTitle: true,
+          // ایپ بار کی بائیں جانب ڈبل لائنز والا مینو آئیکن جو ڈراور کھولے گا
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu, color: Colors.white),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
+          ),
         ),
+        // پینڈنگ اپروول ڈراور کو یہاں لنک کر دیا گیا ہے
+        drawer: const PendingApprovalsDrawer(),
         body: Column(
           children: [
             // اوپر والے کیپسول ٹیبز
