@@ -59,7 +59,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
           width: MediaQuery.of(context).size.width * 0.88,
           child: Column(
             children: [
-              // ہیڈر اور رئیل ٹائم بیج کاؤنٹ
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 color: const Color(0xFFE53935),
@@ -101,7 +100,11 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                         ? const Center(
                             child: Text(
                               "کوئی پینڈنگ انٹری موجود نہیں",
-                              style: TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                color: Colors.black87,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           )
                         : ListView.builder(
@@ -186,7 +189,8 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                                                       ? Image.network(
                                                           selfiePath,
                                                           fit: BoxFit.cover,
-                                                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 30, color: Colors.grey),
+                                                          errorBuilder: (context, error, stackTrace) =>
+                                                              const Icon(Icons.person, size: 30, color: Colors.grey),
                                                         )
                                                       : const Icon(Icons.person, size: 30, color: Colors.grey),
                                                 ),
@@ -223,12 +227,15 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                                                   children: [
                                                     const Icon(Icons.phone, size: 18, color: Colors.blue),
                                                     const SizedBox(width: 6),
-                                                    Text(
-                                                      phone,
-                                                      style: const TextStyle(
-                                                        fontWeight: FontWeight.bold,
-                                                        fontSize: 14,
-                                                        color: Colors.black87,
+                                                    Expanded(
+                                                      child: Text(
+                                                        phone,
+                                                        style: const TextStyle(
+                                                          fontWeight: FontWeight.bold,
+                                                          fontSize: 14,
+                                                          color: Colors.black87,
+                                                        ),
+                                                        overflow: TextOverflow.ellipsis,
                                                       ),
                                                     ),
                                                   ],

@@ -5,7 +5,7 @@ import 'welcome/admin_panel/approved_view.dart';
 import 'welcome/admin_panel/pending_view.dart';
 import 'welcome/admin_panel/completed_view.dart'; 
 import 'welcome/admin_panel/pending/pending_approvals_drawer.dart'; 
-import 'welcome/admin_panel/pending/pending_approvals_controller.dart'; // 📌 نیا امپورٹ
+import 'welcome/admin_panel/pending/pending_approvals_controller.dart';
 
 class AdminPanelPage extends StatefulWidget {
   const AdminPanelPage({super.key});
@@ -16,19 +16,19 @@ class AdminPanelPage extends StatefulWidget {
 
 class _AdminPanelPageState extends State<AdminPanelPage> {
   final AdminPanelController _controller = AdminPanelController();
-  final PendingApprovalsController _drawerController = PendingApprovalsController(); // 📌 ڈراور والا کنٹرولر
+  final PendingApprovalsController _drawerController = PendingApprovalsController();
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(_refreshState);
-    _drawerController.addListener(_refreshState); // 📌 اسے بھی لسن پر لگا دیا تاکہ بیج لائیو اپ ڈیٹ ہو
+    _drawerController.addListener(_refreshState);
   }
 
   @override
   void dispose() {
     _controller.removeListener(_refreshState);
-    _drawerController.removeListener(_refreshState); // 📌 رِموو کرنا نہ بھولیں
+    _drawerController.removeListener(_refreshState);
     _controller.dispose();
     _drawerController.dispose();
     super.dispose();
@@ -42,7 +42,6 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 🔢 اب یہ کاؤنٹر سائن اپ کا نہیں بلکہ صرف ڈراور والی پیمنٹ ریکوئسٹس (pendingCount) کا گنے گا
     final int pendingDrawerCount = _drawerController.pendingCount;
 
     return Directionality(
@@ -66,7 +65,6 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    // 🍔 تھری لائنز مینو بٹن
                     IconButton(
                       icon: const Icon(Icons.menu, color: Colors.white, size: 28),
                       onPressed: () => Scaffold.of(context).openDrawer(),
@@ -74,7 +72,6 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
                       constraints: const BoxConstraints(),
                     ),
                     if (pendingDrawerCount > 0) const SizedBox(width: 8),
-                    // 🔢 اب یہ بیج بالکل درست طور پر ڈراور والی پینڈنگ ریکوئسٹس کو فالو کرے گا
                     if (pendingDrawerCount > 0)
                       Container(
                         width: 23,
