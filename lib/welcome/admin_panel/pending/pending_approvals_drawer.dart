@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart'; // کال اور واٹس ایپ لانچ کرنے کے لیے
+import 'package:url_launcher/url_launcher.dart';
 import 'pending_approvals_controller.dart';
 
 class PendingApprovalsDrawer extends StatefulWidget {
@@ -24,7 +24,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
     super.dispose();
   }
 
-  // 📞 فون کال کرنے کا فنکشن
   Future<void> _makePhoneCall(String phoneNumber) async {
     final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
     try {
@@ -36,7 +35,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
     }
   }
 
-  // 💚 واٹس ایپ اوپن کرنے کا فنکشن
   Future<void> _openWhatsApp(String phoneNumber) async {
     String formattedPhone = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
     if (formattedPhone.startsWith('0')) {
@@ -61,7 +59,7 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
           width: MediaQuery.of(context).size.width * 0.88,
           child: Column(
             children: [
-              // 🎨 ڈراور کا ہیڈر
+              // ہیڈر اور رئیل ٹائم بیج کاؤنٹ
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 color: const Color(0xFFE53935),
@@ -77,7 +75,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      // 🔴 سرخ بیج
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
@@ -97,8 +94,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                   ),
                 ),
               ),
-
-              // 📋 پینڈنگ انٹریز کی لسٹ
               Expanded(
                 child: _controller.isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -119,7 +114,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                               final String date = tx['date']?.toString() ?? '';
                               final String description = tx['description']?.toString() ?? 'کوئی تفصیل نہیں';
 
-                              // 🔍 کسٹمر باکس سے مکمل تفصیلات حاصل کرنا
                               final details = _controller.getCustomerDetails(phone);
                               String rawName = details['name'] ?? '';
                               if (rawName.isEmpty) {
@@ -128,7 +122,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                               final String caste = details['caste'] ?? '';
                               final String selfiePath = details['selfie'] ?? '';
 
-                              // 🏷️ نام اور کاسٹ بریکٹ میں
                               final String displayName = caste.isNotEmpty ? "$rawName ($caste)" : rawName;
 
                               return Card(
@@ -136,7 +129,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                                 elevation: 3,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 child: ExpansionTile(
-                                  // 🔽 بند حالت میں (واضح اور ہائی لائٹڈ لکھائی)
                                   title: Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
@@ -172,14 +164,12 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                                       ),
                                     ),
                                   ),
-                                  // 🔽 ایکسپینڈ ہونے پر کسٹمر کی مکمل تفصیلات، کال/واٹس ایپ اور پاسپورٹ سائز (چورس) تصویر
                                   children: [
                                     Padding(
                                       padding: const EdgeInsets.all(12.0),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          // 📷 کسٹمر کی چورس (پاسپورٹ سائز) تصویر اور نام کا سیکشن
                                           Row(
                                             children: [
                                               Container(
@@ -225,8 +215,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                                             ],
                                           ),
                                           const Divider(height: 20, thickness: 1),
-
-                                          // 📞 فون نمبر اور ڈائلر/واٹس ایپ ہائپر لنکس
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
@@ -246,7 +234,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                                                   ],
                                                 ),
                                               ),
-                                              // کال اور واٹس ایپ کے آئیکنز
                                               Row(
                                                 children: [
                                                   IconButton(
@@ -257,7 +244,7 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                                                   const SizedBox(width: 4),
                                                   IconButton(
                                                     onPressed: () => _openWhatsApp(phone),
-                                                    icon: const Icon(Icons.chat, color: Colors.teal, size: 24), // واٹس ایپ آئیکن
+                                                    icon: const Icon(Icons.chat, color: Colors.teal, size: 24),
                                                     tooltip: 'واٹس ایپ پر رابطہ کریں',
                                                   ),
                                                 ],
@@ -265,8 +252,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                                             ],
                                           ),
                                           const SizedBox(height: 8),
-
-                                          // 📝 تفصیل
                                           Row(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
@@ -285,8 +270,6 @@ class _PendingApprovalsDrawerState extends State<PendingApprovalsDrawer> {
                                             ],
                                           ),
                                           const SizedBox(height: 16),
-
-                                          // ❌ رد کریں اور ✅ منظور کریں بٹنز
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.end,
                                             children: [

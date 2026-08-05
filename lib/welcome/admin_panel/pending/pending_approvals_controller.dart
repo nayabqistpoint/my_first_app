@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class PendingApprovalsController extends ChangeNotifier {
-  List<Map<String, dynamic>> pendingTransactions = [];
-  bool isLoading = true;
+  List<Map<String, dynamic>> _pendingTransactions = [];
+  List<Map<String, dynamic>> get pendingTransactions => _pendingTransactions;
+
+  bool _isLoading = true;
+  bool get isLoading => _isLoading;
+
+  // 🔴 رئیل ٹائم اور بالکل درست کاؤنٹ گیٹر
+  int get pendingCount => _pendingTransactions.length;
 
   PendingApprovalsController() {
     loadPendingTransactions();
@@ -11,7 +17,7 @@ class PendingApprovalsController extends ChangeNotifier {
 
   // 📥 ہائیو باکس سے صرف پینڈنگ انٹریز لوڈ کرنا
   Future<void> loadPendingTransactions() async {
-    isLoading = true;
+    _isLoading = true;
     notifyListeners();
 
     List<Map<String, dynamic>> tempPending = [];
@@ -26,8 +32,10 @@ class PendingApprovalsController extends ChangeNotifier {
             String status = txValue['status']?.toString() ?? '';
             bool isApproved = txValue['isApproved'] ?? true;
 
+            // صرف پینڈنگ انٹریز اٹھائیں
             if (status == 'pending' || status.toLowerCase() == 'pending' || isApproved == false) {
               Map<String, dynamic> txMap = Map<String, dynamic>.from(txValue);
+              // ہر انٹری کو اس کی اپنی اصل ہائیو کی (hiveKey) کے ساتھ محفوظ کریں
               txMap['hiveKey'] = key;
               tempPending.add(txMap);
             }
@@ -38,9 +46,9 @@ class PendingApprovalsController extends ChangeNotifier {
       debugPrint("Error loading pending transactions: $e");
     }
 
-    pendingTransactions = tempPending.reversed.toList();
-    isLoading = false;
-    notifyListeners();
+    _pendingTransactions = tempPending.reversed.toList();
+    _isLoading = false;
+    notifyListeners(); // یہ باہر اور اندر دونوں کے کاؤنٹ کو فورا سنک کر دے گا
   }
 
   // 🔍 'customerBox' سے موبائل نمبر کے ذریعے نام، کاسٹ اور تصویر (سیلفی) نکالنا
@@ -82,7 +90,7 @@ class PendingApprovalsController extends ChangeNotifier {
     return {'name': name, 'caste': caste, 'selfie': selfie};
   }
 
-  // ✅ انٹری کو منظور (Approve) کرنا
+  // ✅ صرف اس مخصوص انٹری کو منظور (Approve) کرنا جس پر کلک ہوا ہو
   Future<void> approveTransaction(dynamic hiveKey) async {
     try {
       if (Hive.isBoxOpen('transactionBox')) {
@@ -94,7 +102,14 @@ class PendingApprovalsController extends ChangeNotifier {
           updatedTx['status'] = 'approved';
           updatedTx['isApproved'] = true;
 
+          // صرف اسی خاص کی (hiveKey) پر اپڈیٹ کریں
           await box.put(hiveKey, updatedTx);
+          
+          // لسٹ سے صرف اسی ایک انٹری کو فوری نکالیں تاکہ پوری لسٹ دوبارہ لوڈ ہونے کا انتظار نہ کرنا پڑے
+          _pendingTransactions.removeWhere((item) => item['hiveKey'] == hiveKey);
+          notifyListeners(); // بیج اور لسٹ کو فورا ریفریش کریں
+          
+          // بیک گراؤنڈ میں ڈیٹا کو مکمل سنک بھی کر لیں
           await loadPendingTransactions();
           debugPrint("Transaction approved successfully!");
         }
@@ -104,13 +119,20 @@ class PendingApprovalsController extends ChangeNotifier {
     }
   }
 
-  // ❌ انٹری کو مسترد (Reject/Delete) کرنا
+  // ❌ صرف اس مخصوص انٹری کو مسترد (Reject/Delete) کرنا جس پر کلک ہوا ہو
   Future<void> rejectTransaction(dynamic hiveKey) async {
     try {
       if (Hive.isBoxOpen('transactionBox')) {
         var box = Hive.box('transactionBox');
+        
+        // صرف اسی خاص کی (hiveKey) کو ڈیلیٹ کریں
         await box.delete(hiveKey);
         
+        // لسٹ سے صرف اسی ایک انٹری کو فوری نکالیں
+        _pendingTransactions.removeWhere((item) => item['hiveKey'] == hiveKey);
+        notifyListeners(); // بیج اور لسٹ کو فورا ریفریش کریں
+
+        // بیک گراؤنڈ میں ڈیٹا کو مکمل سنک بھی کر لیں
         await loadPendingTransactions();
         debugPrint("Transaction rejected/deleted successfully!");
       }
@@ -118,6 +140,4 @@ class PendingApprovalsController extends ChangeNotifier {
       debugPrint("Error rejecting transaction: $e");
     }
   }
-
-  int get pendingCount => pendingTransactions.length;
 }

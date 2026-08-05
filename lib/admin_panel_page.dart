@@ -3,8 +3,8 @@ import 'welcome/admin_panel/admin_panel_controller.dart';
 import 'welcome/admin_panel/capsule_filter.dart';
 import 'welcome/admin_panel/approved_view.dart';
 import 'welcome/admin_panel/pending_view.dart';
-import 'welcome/admin_panel/completed_view.dart'; // مکمل شدہ ویو کا آخری امپورٹ
-import 'welcome/admin_panel/pending/pending_approvals_drawer.dart'; // پینڈنگ ڈراور کا امپورٹ
+import 'welcome/admin_panel/completed_view.dart'; 
+import 'welcome/admin_panel/pending/pending_approvals_drawer.dart'; 
 
 class AdminPanelPage extends StatefulWidget {
   const AdminPanelPage({super.key});
@@ -14,22 +14,31 @@ class AdminPanelPage extends StatefulWidget {
 }
 
 class _AdminPanelPageState extends State<AdminPanelPage> {
-  // مین کنٹرولر کا انسٹینس
   final AdminPanelController _controller = AdminPanelController();
 
   @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_refreshState);
+  }
+
+  @override
   void dispose() {
+    _controller.removeListener(_refreshState);
     _controller.dispose();
     super.dispose();
   }
 
-  // یو آئی کو ریفریش کرنے کے لیے ہیلپر فنکشن
   void _refreshState() {
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final int pendingCount = _controller.pendingRequestsCount;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -41,26 +50,58 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
           ),
           centerTitle: true,
-          // ایپ بار کی بائیں جانب ڈبل لائنز والا مینو آئیکن جو ڈراور کھولے گا
+          leadingWidth: 120, // 📏 جگہ کو مزید کھلا کر دیا تاکہ لکھائی کی طرف آنے کی جگہ بنے
           leading: Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white),
-              onPressed: () => Scaffold.of(context).openDrawer(),
+            builder: (context) => Transform.translate(
+              // 🚀 یہاں مینس (Minus) سائن کی وجہ سے دونوں چیزیں اب سیدھی ٹائتل (لکھائی) کی طرف بڑھیں گی
+              offset: const Offset(-12, 0),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    // 🍔 سب سے پہلے تھری لائنز مینو بٹن
+                    IconButton(
+                      icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    if (pendingCount > 0) const SizedBox(width: 8),
+                    // 🔢 اور اس کے بعد ریڈ بیج
+                    if (pendingCount > 0)
+                      Container(
+                        width: 23,
+                        height: 23,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '$pendingCount',
+                          style: const TextStyle(
+                            color: Color(0xFFE53935),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
-        // پینڈنگ اپروول ڈراور کو یہاں لنک کر دیا گیا ہے
         drawer: const PendingApprovalsDrawer(),
         body: Column(
           children: [
-            // اوپر والے کیپسول ٹیبز
             CapsuleFilterWidget(
               controller: _controller,
               onStateChanged: _refreshState,
             ),
             const Divider(height: 1, color: Colors.grey),
-
-            // ویوز کا سیکشن (PageView)
             Expanded(
               child: PageView(
                 controller: _controller.pageController,
@@ -70,19 +111,14 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
                   });
                 },
                 children: [
-                  // 0: منظور شدہ ویو
                   ApprovedView(
                     controller: _controller,
                     onStateChanged: _refreshState,
                   ),
-                  
-                  // 1: پینڈنگ ویو
                   PendingView(
                     controller: _controller,
                     onStateChanged: _refreshState,
                   ),
-
-                  // 2: مکمل شدہ ویو (اب یہ بھی لائیو کنیکٹ ہو چکا ہے)
                   CompletedView(
                     controller: _controller,
                     onStateChanged: _refreshState,

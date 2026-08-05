@@ -13,6 +13,9 @@ class CapsuleFilterWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🔗 یہاں بھی اب کنٹرولر سے ہی کاؤنٹ لیا جائے گا
+    final int pendingCount = controller.pendingRequestsCount;
+
     return Column(
       children: [
         Container(
@@ -20,14 +23,14 @@ class CapsuleFilterWidget extends StatelessWidget {
           color: Colors.white,
           child: Row(
             children: [
-              Expanded(child: Center(child: _buildCapsuleTab(0, 'منظور شدہ'))),
+              Expanded(child: Center(child: _buildCapsuleTab(0, 'منظور شدہ', 0))),
               const SizedBox(width: 8),
               Expanded(
                 flex: 2,
-                child: Center(child: _buildCapsuleTab(1, 'پینڈنگ ریکویسٹس')),
+                child: Center(child: _buildCapsuleTab(1, 'پینڈنگ ریکویسٹس', pendingCount)),
               ),
               const SizedBox(width: 8),
-              Expanded(child: Center(child: _buildCapsuleTab(2, 'مکمل شدہ'))),
+              Expanded(child: Center(child: _buildCapsuleTab(2, 'مکمل شدہ', 0))),
             ],
           ),
         ),
@@ -36,7 +39,7 @@ class CapsuleFilterWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildCapsuleTab(int index, String title) {
+  Widget _buildCapsuleTab(int index, String title, int count) {
     bool isSelected = controller.currentIndex == index;
     return GestureDetector(
       onTap: () {
@@ -60,15 +63,43 @@ class CapsuleFilterWidget extends StatelessWidget {
             width: isSelected ? 1.5 : 1,
           ),
         ),
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFE53935),
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFE53935),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (count > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                width: 18,
+                height: 18,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE53935),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -121,10 +152,10 @@ class InPageSubFiltersWidget extends StatelessWidget {
               onSelected: (value) async {
                 if (value == 'newest') {
                   controller.toggleSortOrder(true);
-                  onStateChanged(); // <--- یہاں سکرین کو ریفریش کرنے کا سگنل جوڑ دیا گیا ہے
+                  onStateChanged(); 
                 } else if (value == 'oldest') {
                   controller.toggleSortOrder(false);
-                  onStateChanged(); // <--- یہاں بھی سکرین ریفریش ہوگی
+                  onStateChanged(); 
                 } else if (value == 'by_date') {
                   DateTime? pickedDate = await showDatePicker(
                     context: context,

@@ -22,6 +22,15 @@ class AdminPanelController extends ChangeNotifier {
     loadRequestsFromHive();
   }
 
+  // 🔢 تمام پینڈنگ ریکوئسٹس کی درست تعداد گننے کا گیٹر (چاہے ایک بندے کی جتنی بھی انٹریز ہوں)
+  int get pendingRequestsCount {
+    return _allRequests.where((r) {
+      String status = r['status']?.toString().toLowerCase() ?? '';
+      bool isApproved = r['isApproved'] ?? true;
+      return status == 'pending' || isApproved == false;
+    }).length;
+  }
+
   List<Map<String, dynamic>> get requests {
     var filtered = _allRequests.where((req) {
       if (selectedFilterDate == null) return true;
@@ -97,16 +106,13 @@ class AdminPanelController extends ChangeNotifier {
         }
         map['password'] = map['password']?.toString() ?? defaultPassword;
 
-        // یہاں ہم چیک کرتے ہیں کہ آیا ہائیو کے اندر پہلے سے کوئی مخصوص filterKey موجود ہے یا نہیں
         if (map['filterKey'] != null) {
-          // اگر یہ 'purchase_only' ہے تو اسے 'صرف پرچیز' رکھیں، ورنہ ہائیو والا پرانا ٹائپ برقرار رکھیں
           if (map['filterKey'] == 'purchase_only') {
             map['requestType'] = 'صرف پرچیز';
           } else {
             map['requestType'] = map['requestType']?.toString() ?? 'سائن اپ + پرچیز';
           }
         } else {
-          // پرانا آٹومیٹک چیک (اگر فلٹر کی موجود نہ ہو)
           bool hasPackage = map['packageName'] != null || map['mobileName'] != null || map['cashPrice'] != null;
           
           if (hasPackage) {
@@ -183,7 +189,6 @@ class AdminPanelController extends ChangeNotifier {
     }
   }
 
-  // مکمل اور تفصیلی منظوری کا میسج
   Future<void> sendApprovalWhatsApp(Map<String, dynamic> req) async {
     String phone = req['phone'] ?? '';
     String username = req['username'] ?? phone;
@@ -200,7 +205,6 @@ class AdminPanelController extends ChangeNotifier {
     await openWhatsApp(phone, message);
   }
 
-  // مکمل اور تفصیلی ریجیکشن / اعتراض کا میسج
   Future<void> sendRejectionWhatsApp(Map<String, dynamic> req) async {
     String phone = req['phone'] ?? '';
 
