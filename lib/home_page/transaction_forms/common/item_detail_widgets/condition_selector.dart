@@ -5,7 +5,7 @@ class ConditionSelectorWidget extends StatefulWidget {
   final ValueChanged<String> onConditionChanged;
   final TextEditingController nameController;
   final TextEditingController imeiController;
-  final TextEditingController colorController; // اب کلر کے لیے ٹیکسٹ کنٹرولر بھی شامل ہے
+  final TextEditingController colorController; // کلر کے لیے ٹیکسٹ کنٹرولر
   final String? selectedColor;
   final ValueChanged<String?> onColorChanged;
   final int selectedWarrantyMonths;
@@ -33,16 +33,17 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // اردو اور انگلش کلر لسٹ
     final List<String> commonColors = [
-      'ब्लैक (Black)',
-      'व्हाइट (White)',
-      'गोल्ड (Gold)',
-      'सिल्वर (Silver)',
-      'ब्लू (Blue)',
-      'ग्रीन (Green)',
-      'रेड (Red)',
-      'परपल (Purple)',
-      'अन्य (Other - خود لکھیں)'
+      'بلیک (Black)',
+      'وائٹ (White)',
+      'گولڈ (Gold)',
+      'سلور (Silver)',
+      'بلیو (Blue)',
+      'گرین (Green)',
+      'ریڈ (Red)',
+      'پرپل (Purple)',
+      'دیگر (Other - خود لکھیں)'
     ];
 
     return Column(
@@ -91,7 +92,7 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
         ),
         const SizedBox(height: 12),
 
-        // 2. پہلی لائن: موبائل کا نام اور IMEI نمبر (دونوں برابر سائز میں)
+        // 2. پہلی لائن: موبائل کا نام اور IMEI نمبر
         Row(
           children: [
             Expanded(
@@ -126,7 +127,7 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
         // 3. دوسری لائن: کلر (ڈراپ ڈاؤن + مینوئل لکھنے کی سہولت) اور وارنٹی ڈراپ ڈاؤن
         Row(
           children: [
-            // کلر والا باکس (اگر 'अन्य' سلیکٹ ہو تو ٹیکسٹ ف باکس کھل جائے گا)
+            // کلر والا باکس (اگر 'دیگر' سلیکٹ ہو تو ٹیکسٹ فیلڈ کھل جائے گا)
             Expanded(
               child: isCustomColor
                   ? TextField(
@@ -159,7 +160,7 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
                         children: [
                           const Text('کلر:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           DropdownButton<String>(
-                            value: widget.selectedColor,
+                            value: commonColors.contains(widget.selectedColor) ? widget.selectedColor : null,
                             hint: const Text('منتخب کریں', style: TextStyle(fontSize: 12)),
                             underline: const SizedBox(),
                             dropdownColor: Colors.white,
@@ -171,7 +172,7 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
                               );
                             }).toList(),
                             onChanged: (val) {
-                              if (val == 'अन्य (Other - خود لکھیں)') {
+                              if (val == 'دیگر (Other - خود لکھیں)') {
                                 setState(() {
                                   isCustomColor = true;
                                 });
@@ -186,7 +187,7 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
             ),
             const SizedBox(width: 10),
 
-            // وارنٹی ڈراپ ڈاؤن (بالکل برابر سائز میں)
+            // وارنٹی ڈراپ ڈاؤن
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -207,7 +208,7 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
                       items: List.generate(13, (index) {
                         return DropdownMenuItem<int>(
                           value: index,
-                        child: Text(
+                          child: Text(
                             index == 0 ? 'کوئی نہیں' : '$index ماہ',
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                           ),

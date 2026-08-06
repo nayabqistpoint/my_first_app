@@ -1,41 +1,47 @@
 import 'package:flutter/material.dart';
 
+// درست امپورٹ پاتھ: کیونکہ کنٹرولر ذیلی فولڈر 'item_detail_widgets' کے اندر ہے
+import 'item_detail_widgets/item_detail_controller.dart';
 import 'item_detail_widgets/action_buttons.dart';
 import 'item_detail_widgets/condition_selector.dart';
 import 'item_detail_widgets/manual_boxes.dart';
 
 class ItemDetailWidget extends StatefulWidget {
-  const ItemDetailWidget({super.key});
+  final Map<String, dynamic>? initialData;
+
+  const ItemDetailWidget({super.key, this.initialData});
 
   @override
   State<ItemDetailWidget> createState() => _ItemDetailWidgetState();
 }
 
 class _ItemDetailWidgetState extends State<ItemDetailWidget> {
-  // تمام فیلڈز کے کنٹرولرز
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController imeiController = TextEditingController();
-  final TextEditingController colorController = TextEditingController();
-  final TextEditingController purchasePriceController = TextEditingController();
-  final TextEditingController quantityController = TextEditingController(text: '1');
-  final TextEditingController salePriceController = TextEditingController();
-  final TextEditingController supplierController = TextEditingController();
+  final ItemDetailController controller = ItemDetailController();
 
-  String selectedCondition = 'new';
-  int selectedWarrantyMonths = 0;
-  String? selectedColor;
-  bool isPercentageMode = false; // فالس کا مطلب روپیہ موڈ، ٹرو کا مطلب پرسنٹیج موڈ
+  @override
+  void initState() {
+    super.initState();
+    controller.initWithData(widget.initialData);
+  }
 
   @override
   void dispose() {
-    nameController.dispose();
-    imeiController.dispose();
-    colorController.dispose();
-    purchasePriceController.dispose();
-    quantityController.dispose();
-    salePriceController.dispose();
-    supplierController.dispose();
+    controller.dispose();
     super.dispose();
+  }
+
+  // 1. صرف محفوظ کر کے بند کرنا
+  void _saveAndClose() {
+    final data = controller.buildResultData();
+    data['isSaveAndNew'] = false; // فلیگ: بند کرو
+    Navigator.pop(context, data);
+  }
+
+  // 2. محفوظ کرنا اور Purchase Page کو کہنا کہ نیا فارم بھی کھولو
+  void _saveAndNew() {
+    final data = controller.buildResultData();
+    data['isSaveAndNew'] = true; // فلیگ: ڈیٹا ایڈ کرو اور فارم دوبارہ کھولو
+    Navigator.pop(context, data);
   }
 
   @override
@@ -64,62 +70,36 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      // ماڈل، کلر اور وارنٹی والا وجٹ
                       ConditionSelectorWidget(
-                        selectedCondition: selectedCondition,
-                        onConditionChanged: (val) {
-                          setState(() {
-                            selectedCondition = val;
-                          });
-                        },
-                        nameController: nameController,
-                        imeiController: imeiController,
-                        colorController: colorController,
-                        selectedColor: selectedColor,
-                        onColorChanged: (val) {
-                          setState(() {
-                            selectedColor = val;
-                          });
-                        },
-                        selectedWarrantyMonths: selectedWarrantyMonths,
-                        onWarrantyChanged: (val) {
-                          setState(() {
-                            selectedWarrantyMonths = val ?? 0;
-                          });
-                        },
+                        selectedCondition: controller.selectedCondition,
+                        onConditionChanged: (val) => setState(() => controller.selectedCondition = val),
+                        nameController: controller.nameController,
+                        imeiController: controller.imeiController,
+                        colorController: controller.colorController,
+                        selectedColor: controller.selectedColor,
+                        onColorChanged: (val) => setState(() => controller.selectedColor = val),
+                        selectedWarrantyMonths: controller.selectedWarrantyMonths,
+                        onWarrantyChanged: (val) => setState(() => controller.selectedWarrantyMonths = val ?? 0),
                       ),
                       const SizedBox(height: 16),
-                      
-                      // قیمت خرید، مقدار، قیمت فروخت (بٹنوں کے ساتھ) اور سپلائر والا وجٹ
                       ManualBoxesWidget(
-                        purchasePriceController: purchasePriceController,
-                        quantityController: quantityController,
-                        salePriceController: salePriceController,
-                        supplierController: supplierController,
-                        isPercentageMode: isPercentageMode,
-                        onModeChanged: (val) {
-                          setState(() {
-                            isPercentageMode = val;
-                          });
-                        },
-                        onPriceAdjust: (newPrice) {
-                          setState(() {});
-                        },
+                        purchasePriceController: controller.purchasePriceController,
+                        quantityController: controller.quantityController,
+                        salePriceController: controller.salePriceController,
+                        adjustmentController: controller.adjustmentController,
+                        supplierController: controller.supplierController,
+                        isPercentageMode: controller.isPercentageMode,
+                        onModeChanged: (val) => setState(() => controller.isPercentageMode = val),
+                        onPriceAdjust: (_) => setState(() {}),
                       ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-              
-              // نیچے والے ایکشن بٹنز
               ActionButtonsWidget(
-                onSaveAndClose: () {
-                  Navigator.pop(context);
-                },
-                onSaveAndNew: () {
-                  debugPrint('محفوظ اور نئی آئٹم کا بٹن دبایا گیا');
-                },
+                onSaveAndClose: _saveAndClose,
+                onSaveAndNew: _saveAndNew, // <-- اب یہ الگ فنکشن کال کر رہا ہے
               ),
             ],
           ),

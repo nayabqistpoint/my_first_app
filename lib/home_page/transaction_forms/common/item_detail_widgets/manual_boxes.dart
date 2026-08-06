@@ -4,6 +4,7 @@ class ManualBoxesWidget extends StatefulWidget {
   final TextEditingController purchasePriceController;
   final TextEditingController quantityController;
   final TextEditingController salePriceController;
+  final TextEditingController adjustmentController;
   final TextEditingController supplierController;
   final bool isPercentageMode;
   final ValueChanged<bool> onModeChanged;
@@ -14,6 +15,7 @@ class ManualBoxesWidget extends StatefulWidget {
     required this.purchasePriceController,
     required this.quantityController,
     required this.salePriceController,
+    required this.adjustmentController,
     required this.supplierController,
     required this.isPercentageMode,
     required this.onModeChanged,
@@ -25,19 +27,74 @@ class ManualBoxesWidget extends StatefulWidget {
 }
 
 class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
-  void _adjustPrice(double amount) {
-    double currentSale = double.tryParse(widget.salePriceController.text) ?? 0.0;
-    double currentPurchase = double.tryParse(widget.purchasePriceController.text) ?? 0.0;
+  double _currentAmountAdd = 0.0;
+  int _currentPercentAdd = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // لسٹنر ایڈ کرنے سے پہلے سیفٹی چیک
+    widget.purchasePriceController.addListener(_onPurchasePriceChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _updateFieldsUI();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.purchasePriceController.removeListener(_onPurchasePriceChanged);
+    super.dispose();
+  }
+
+  void _onPurchasePriceChanged() {
+    if (!mounted) return;
+    double purchasePrice = double.tryParse(widget.purchasePriceController.text) ?? 0.0;
+    _currentAmountAdd = 0.0;
+    _currentPercentAdd = 0;
+    _recalculateAndSet(purchasePrice);
+  }
+
+  void _adjust(bool isIncrement) {
+    double purchasePrice = double.tryParse(widget.purchasePriceController.text) ?? 0.0;
 
     if (widget.isPercentageMode) {
-      double adjusted = currentSale + (currentPurchase * (amount / 100));
-      widget.salePriceController.text = adjusted.toStringAsFixed(2);
-      widget.onPriceAdjust(adjusted);
+      if (isIncrement) {
+        _currentPercentAdd += 1;
+      } else {
+        _currentPercentAdd -= 1;
+      }
     } else {
-      double adjusted = currentSale + amount;
-      if (adjusted < 0) adjusted = 0;
-      widget.salePriceController.text = adjusted.toStringAsFixed(2);
-      widget.onPriceAdjust(adjusted);
+      if (isIncrement) {
+        _currentAmountAdd += 500.0;
+      } else {
+        _currentAmountAdd -= 500.0;
+      }
+    }
+
+    _recalculateAndSet(purchasePrice);
+  }
+
+  void _recalculateAndSet(double purchasePrice) {
+    double finalSalePrice = purchasePrice;
+
+    if (widget.isPercentageMode) {
+      widget.adjustmentController.text = "${_currentPercentAdd > 0 ? '+' : ''}$_currentPercentAdd%";
+      double percentVal = (purchasePrice * _currentPercentAdd) / 100;
+      finalSalePrice = purchasePrice + percentVal;
+    } else {
+      widget.adjustmentController.text = "${_currentAmountAdd > 0 ? '+' : ''}${_currentAmountAdd.toStringAsFixed(0)}";
+      finalSalePrice = purchasePrice + _currentAmountAdd;
+    }
+
+    if (finalSalePrice < 0) finalSalePrice = 0;
+
+    widget.salePriceController.text = finalSalePrice.toStringAsFixed(0);
+    widget.onPriceAdjust(finalSalePrice);
+    
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -46,7 +103,6 @@ class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. پہلی لائن: قیمتِ خرید اور مقدار
         Row(
           children: [
             Expanded(
@@ -55,7 +111,7 @@ class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.right,
                 decoration: const InputDecoration(
-                  labelText: 'قیمتِ خرید (Purchase Price)',
+                  labelText: 'قیمتِ خرید (Purchase)',
                   border: OutlineInputBorder(),
                   isDense: true,
                   contentPadding: EdgeInsets.all(12),
@@ -79,68 +135,92 @@ class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
           ],
         ),
         const SizedBox(height: 12),
-
-        // 2. دوسری لائن: قیمتِ فروخت اور ساتھ میں روپے/پرسنٹ بڑھانے والے بٹنز
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+        Row(
           children: [
-            TextField(
-              controller: widget.salePriceController,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.right,
-              decoration: InputDecoration(
-                labelText: 'قیمتِ فروخت (Sale Price)',
-                border: const OutlineInputBorder(),
-                isDense: true,
-                contentPadding: const EdgeInsets.all(12),
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
-                      onPressed: () => _adjustPrice(widget.isPercentageMode ? -5.0 : -100.0),
-                      tooltip: 'کم کریں', // یہاں toolTip کو ٹھیک کر کے tooltip کر دیا گیا ہے
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline, color: Colors.green, size: 20),
-                      onPressed: () => _adjustPrice(widget.isPercentageMode ? 5.0 : 100.0),
-                      tooltip: 'بڑھائیں', // یہاں بھی ٹھیک کر دیا گیا ہے
-                    ),
-                  ],
+            Expanded(
+              flex: 4,
+              child: TextField(
+                controller: widget.adjustmentController,
+                readOnly: true,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                decoration: InputDecoration(
+                  labelText: widget.isPercentageMode ? 'اضافہ (%)' : 'اضافہ (Rs)',
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                 ),
               ),
             ),
-            const SizedBox(height: 4),
-            
-            // موڈ سلیکٹر (روپے بمقابلہ پرسنٹیج)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                const Text('موڈ: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                ChoiceChip(
-                  label: const Text('روپے (Rs)', style: TextStyle(fontSize: 10)),
-                  selected: !widget.isPercentageMode,
-                  selectedColor: Colors.red.shade100,
-                  onSelected: (selected) {
-                    if (selected) widget.onModeChanged(false);
-                  },
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 6,
+              child: TextField(
+                controller: widget.salePriceController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  labelText: 'قیمتِ فروخت (Sale Price)',
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.all(12),
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 22),
+                        onPressed: () => _adjust(false),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline, color: Colors.green, size: 22),
+                        onPressed: () => _adjust(true),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 6),
-                ChoiceChip(
-                  label: const Text('فیصد (%)', style: TextStyle(fontSize: 10)),
-                  selected: widget.isPercentageMode,
-                  selectedColor: Colors.red.shade100,
-                  onSelected: (selected) {
-                    if (selected) widget.onModeChanged(true);
-                  },
-                ),
-              ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            const Text('موڈ سلیکٹ کریں: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            const SizedBox(width: 4),
+            ChoiceChip(
+              label: const Text('Rs (+500)', style: TextStyle(fontSize: 10)),
+              selected: !widget.isPercentageMode,
+              selectedColor: Colors.blue.shade100,
+              onSelected: (selected) {
+                if (selected) {
+                  widget.onModeChanged(false);
+                  _currentPercentAdd = 0;
+                  double purchasePrice = double.tryParse(widget.purchasePriceController.text) ?? 0.0;
+                  _recalculateAndSet(purchasePrice);
+                }
+              },
+            ),
+            const SizedBox(width: 6),
+            ChoiceChip(
+              label: const Text('% (+1%)', style: TextStyle(fontSize: 10)),
+              selected: widget.isPercentageMode,
+              selectedColor: Colors.blue.shade100,
+              onSelected: (selected) {
+                if (selected) {
+                  widget.onModeChanged(true);
+                  _currentAmountAdd = 0.0;
+                  double purchasePrice = double.tryParse(widget.purchasePriceController.text) ?? 0.0;
+                  _recalculateAndSet(purchasePrice);
+                }
+              },
             ),
           ],
         ),
         const SizedBox(height: 12),
-
-        // 3. تیسری لائن: سپلائر کا نام
         TextField(
           controller: widget.supplierController,
           textAlign: TextAlign.right,
@@ -153,5 +233,10 @@ class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
         ),
       ],
     );
+  }
+
+  void _updateFieldsUI() {
+    double purchasePrice = double.tryParse(widget.purchasePriceController.text) ?? 0.0;
+    _recalculateAndSet(purchasePrice);
   }
 }

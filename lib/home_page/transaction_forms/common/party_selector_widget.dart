@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../../../features/add_party_dialog.dart'; // درست امپورٹ پاتھ
 
 class PartySelectorWidget extends StatefulWidget {
@@ -11,10 +12,34 @@ class PartySelectorWidget extends StatefulWidget {
 }
 
 class _PartySelectorWidgetState extends State<PartySelectorWidget> {
-  String? selectedParty;
-  
-  // عارضی ڈمی لسٹ (بعد میں ہائیو کسٹمر باکس سے لنک ہوگی)
-  final List<String> parties = ['علی ٹریڈرز', 'خان موبائل زون', 'مدینہ سنٹر', 'الرحمٰن کمیونیکیشن'];
+  String? selectedPartyPhone;
+  List<Map<String, String>> partiesList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPartiesFromHive();
+  }
+
+  // Hive کسٹمر باکس سے اصلی ڈیٹا لوڈ کرنا
+  void _loadPartiesFromHive() {
+    try {
+      if (Hive.isBoxOpen('customerBox')) {
+        final box = Hive.box('customerBox');
+        setState(() {
+          partiesList = box.values.map((item) {
+            final Map<String, dynamic> data = Map<String, dynamic>.from(item as Map);
+            return {
+              'name': data['customerName']?.toString() ?? 'نامعلوم',
+              'phone': data['customerPhone']?.toString() ?? '',
+            };
+          }).where((element) => element['phone']!.isNotEmpty).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint("Hive Data Loading Error: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,45 +54,49 @@ class _PartySelectorWidgetState extends State<PartySelectorWidget> {
         ),
         child: Row(
           children: [
-            // 1. پارٹی ڈراپ ڈاؤن / سلیکٹر
+            // 1. اصلی کسٹمرز کا ڈراپ ڈاؤن
             Expanded(
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
-                  value: selectedParty,
+                  value: selectedPartyPhone,
                   hint: const Text(
                     'پارٹی / سپلائر منتخب کریں',
                     style: TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   isExpanded: true,
                   icon: Icon(Icons.arrow_drop_down, color: Colors.red.shade700),
-                  items: parties.map((String party) {
+                  items: partiesList.map((party) {
                     return DropdownMenuItem<String>(
-                      value: party,
+                      value: party['phone'], // Unique ID (Phone)
                       child: Text(
-                        party,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                        '${party['name']} (${party['phone']})', // نام اور فون نمبر
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
                     );
                   }).toList(),
                   onChanged: (String? newValue) {
                     setState(() {
-                      selectedParty = newValue;
+                      selectedPartyPhone = newValue;
                     });
                     widget.onPartySelected(newValue);
                   },
                 ),
               ),
             ),
-            
+
             const SizedBox(width: 8),
 
-            // 2. نئی پارٹی ایڈ کرنے کا بٹن (جو سیدھا فیچرز فولڈر والا ڈائیلاگ کال کرے گا)
+            // 2. نئی پارٹی ایڈ کرنے کا بٹن
             IconButton(
               icon: Icon(Icons.person_add_alt_1, color: Colors.red.shade700, size: 22),
               tooltip: 'نئی پارٹی شامل کریں',
               onPressed: () {
-                // یہاں سے براہِ راست امپورٹ شدہ ڈائیلاگ کال ہو رہا ہے
                 showAddPartyDialog(context);
+                _loadPartiesFromHive();
               },
             ),
           ],
