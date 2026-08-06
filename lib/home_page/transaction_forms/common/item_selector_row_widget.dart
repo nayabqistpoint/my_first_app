@@ -41,32 +41,39 @@ class ItemSelectorRowWidget extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onRowPressed,
+          // رو پر کلک ہونے پر اینیمیشن مکمل ہونے کے بعد نیویگیٹ ہوگا
+          onTap: () async {
+            await Future.delayed(const Duration(milliseconds: 80));
+            onRowPressed();
+          },
           borderRadius: BorderRadius.circular(8.0),
+          // ✅ جدید فلٹر سٹینڈرڈ switch: withValues(alpha: ...)
+          highlightColor: Colors.black.withValues(alpha: 0.04),
+          splashColor: Colors.grey.withValues(alpha: 0.1),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10.0),
             child: Row(
               textDirection: TextDirection.rtl,
               children: [
-                // دائیں طرف نارمل اور ہمیشہ فعال بٹنز
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: const Icon(Icons.add_circle, color: Colors.green, size: 28),
+                // دائیں طرف ایکشن بٹنز
+                _buildActionButton(
+                  icon: Icons.add_circle,
+                  color: Colors.green,
+                  size: 28,
                   onPressed: onAddPressed,
                 ),
                 const SizedBox(width: 6),
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: const Icon(Icons.delete, color: Colors.red, size: 22),
+                _buildActionButton(
+                  icon: Icons.delete,
+                  color: Colors.red,
+                  size: 22,
                   onPressed: onDeletePressed,
                 ),
                 const SizedBox(width: 6),
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: Icon(Icons.edit, color: Colors.blue.shade700, size: 22),
+                _buildActionButton(
+                  icon: Icons.edit,
+                  color: Colors.blue.shade700,
+                  size: 22,
                   onPressed: onEditPressed,
                 ),
 
@@ -124,6 +131,23 @@ class ItemSelectorRowWidget extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // ایکشن بٹن ہیلپر
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required double size,
+    required VoidCallback onPressed,
+  }) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.all(2.0),
+        child: Icon(icon, color: color, size: size),
       ),
     );
   }

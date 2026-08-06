@@ -26,10 +26,12 @@ class _PurchasePageState extends State<PurchasePage> {
     super.dispose();
   }
 
-  // کنٹرولر کو کال کر کے سکرین ریفریش کرنے کا مختصر سا ہیلپر
+  // سکرین ریفریش کرنے کا سموتھ ہیلپر
   Future<void> _openItemDetails(int index, {bool isEdit = false}) async {
     await controller.handleItemDetailNavigation(context, index, isEdit: isEdit);
-    setState(() {}); // کنٹرولر میں ڈیٹا اپڈیٹ ہونے کے بعد UI کو ریفریش کرے گا
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -69,19 +71,19 @@ class _PurchasePageState extends State<PurchasePage> {
                               subTotal: item['subTotal'] ?? '0.00',
                               calculationText: item['calculationText'] ?? '1 × 0',
                               onAddPressed: () {
-                                setState(() {
-                                  bool isAdded = controller.addNewItemRow();
-                                  if (!isAdded) {
-                                    ScaffoldMessenger.of(context).clearSnackBars();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('برائے مہربانی پہلے آئٹم کا انتخاب کریں!'),
-                                        backgroundColor: Colors.red,
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                });
+                                bool isAdded = controller.addNewItemRow();
+                                if (!isAdded) {
+                                  ScaffoldMessenger.of(context).clearSnackBars();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('برائے مہربانی پہلے آئٹم کا انتخاب کریں!'),
+                                      backgroundColor: Colors.red,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                } else {
+                                  setState(() {});
+                                }
                               },
                               onDeletePressed: () {
                                 if (controller.itemsList.length > 1) {
