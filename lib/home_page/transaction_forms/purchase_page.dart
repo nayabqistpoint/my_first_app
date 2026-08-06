@@ -3,6 +3,8 @@ import 'purchase_page_controller.dart';
 import 'common/header_capsules.dart';
 import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
+import 'common/discount_widget.dart';
+import 'common/transaction_summary_widget.dart';
 
 class PurchasePage extends StatefulWidget {
   const PurchasePage({super.key});
@@ -14,6 +16,14 @@ class PurchasePage extends StatefulWidget {
 class _PurchasePageState extends State<PurchasePage> {
   late final PurchasePageController controller;
 
+  // ڈسکاؤنٹ کی اسٹیٹ
+  double _discountValue = 0.0;
+  bool _isDiscountPercentage = false;
+
+  // ٹرانزیکشن سمری کے لیے کنٹرولرز
+  final TextEditingController _receivedController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -22,8 +32,32 @@ class _PurchasePageState extends State<PurchasePage> {
 
   @override
   void dispose() {
+    _receivedController.dispose();
+    _descriptionController.dispose();
     controller.dispose();
     super.dispose();
+  }
+
+  // سب ٹوٹل اور ٹوٹل ڈسکاؤنٹ کا حساب
+  double get _subTotal {
+    double total = 0.0;
+    for (var item in controller.itemsList) {
+      final val = double.tryParse(item['subTotal'] ?? '0') ?? 0.0;
+      total += val;
+    }
+    return total;
+  }
+
+  double get _calculatedDiscountAmount {
+    if (_isDiscountPercentage) {
+      return (_subTotal * _discountValue) / 100;
+    }
+    return _discountValue;
+  }
+
+  double get _grandTotal {
+    final total = _subTotal - _calculatedDiscountAmount;
+    return total < 0 ? 0.0 : total;
   }
 
   // سکرین ریفریش کرنے کا سموتھ ہیلپر
@@ -52,12 +86,15 @@ class _PurchasePageState extends State<PurchasePage> {
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                     child: Column(
                       children: [
+                        // 1. پارٹی سلیکٹر
                         PartySelectorWidget(
                           onPartySelected: (String? selectedPhone) {
                             controller.selectedPartyPhone = selectedPhone;
                           },
                         ),
                         const SizedBox(height: 8),
+
+                        // 2. آئٹم روز کی لسٹ
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
@@ -97,12 +134,37 @@ class _PurchasePageState extends State<PurchasePage> {
                             );
                           },
                         ),
+
+                        const SizedBox(height: 10),
+
+                        // 3. ڈسکاؤنٹ وجٹ
+                        DiscountWidget(
+                          onDiscountChanged: (discountValue, isPercentage) {
+                            setState(() {
+                              _discountValue = discountValue;
+                              _isDiscountPercentage = isPercentage;
+                            });
+                          },
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // 4. ٹرانزیکشن سمری وجٹ (درست پیرامیٹرز کے ساتھ)
+                        TransactionSummaryWidget(
+                          subTotal: _subTotal,
+                          discountAmount: _calculatedDiscountAmount,
+                          grandTotal: _grandTotal,
+                          receivedController: _receivedController,
+                          descriptionController: _descriptionController,
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
+
+              // 5. محفوظ کرنے کا بٹن
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
