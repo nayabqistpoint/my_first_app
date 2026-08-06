@@ -114,7 +114,7 @@ class CustomerController extends ChangeNotifier {
     return total;
   }
 
-  // صرف نام اور فون کے ساتھ مینول پارٹی ایڈ کرنے کا آسان فنکشن (زیرو بیلنس)
+  // صرف نام اور فون کے ساتھ مینول پارٹی ایڈ کرنے کا محفوظ فنکشن
   void addManualCustomer({required String name, required String phone}) {
     if (name.trim().isEmpty) return;
 
@@ -122,67 +122,10 @@ class CustomerController extends ChangeNotifier {
       name: name.trim(),
       cast: '',
       phone: phone.trim().isNotEmpty ? phone.trim() : 'نامعلوم',
-      transactions: [], // زیرو بیلنس
+      transactions: [],
     );
 
     customerBox.add(newCustomer.toJson());
-    notifyListeners(); // اب یہ کنٹرولر کے اندر ہے اس لیے بالکل پرفیکٹ کام کرے گا
-  }
-
-  void addOrUpdateCustomer({
-    required String name,
-    String cast = '',
-    required String phone,
-    required double amount,
-    required String type,
-    required String description,
-  }) {
-    if (name.trim().isEmpty) return;
-
-    int existingKey = -1;
-    CustomerModel? existingCustomer;
-
-    for (var key in customerBox.keys) {
-      final rawData = customerBox.get(key);
-      if (rawData != null && rawData is Map) {
-        String dbName = rawData['name'] ?? '';
-        if (dbName.trim().toLowerCase() == name.trim().toLowerCase()) {
-          existingKey = key;
-          existingCustomer = CustomerModel.fromJson(rawData);
-          break;
-        }
-      }
-    }
-
-    String currentDate = DateTime.now().toString().split(' ')[0];
-    
-    CustomerTransaction newTx = CustomerTransaction(
-      date: currentDate,
-      amount: amount,
-      type: type,
-      description: description,
-    );
-
-    if (existingKey != -1 && existingCustomer != null) {
-      existingCustomer.name = name.trim();
-      if (cast.trim().isNotEmpty) existingCustomer.cast = cast.trim();
-      if (phone.trim().isNotEmpty && phone.trim() != 'نامعلوم') {
-        existingCustomer.phone = phone.trim();
-      }
-      if (amount > 0) {
-        existingCustomer.transactions.add(newTx);
-      }
-      customerBox.put(existingKey, existingCustomer.toJson());
-    } else {
-      CustomerModel newCustomer = CustomerModel(
-        name: name.trim(),
-        cast: cast.trim(),
-        phone: phone.trim().isNotEmpty ? phone.trim() : 'نامعلوم',
-        transactions: amount > 0 ? [newTx] : [],
-      );
-      customerBox.add(newCustomer.toJson());
-    }
-
     notifyListeners();
   }
 

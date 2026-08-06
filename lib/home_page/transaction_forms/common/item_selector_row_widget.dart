@@ -1,153 +1,98 @@
 import 'package:flutter/material.dart';
+import 'item_detail_widget.dart'; // فل پیج کو یہاں امپورٹ کر دیا گیا ہے
 
 class ItemSelectorRowWidget extends StatelessWidget {
-  final bool hasItems;
-  final String? itemName;
-  final int? totalQty;
-  final double? unitPrice;
-  final double? subTotal;
-  final String? description;
-  final VoidCallback? onTap;
-  final VoidCallback? onEditTap;
-  final VoidCallback? onDeleteTap;
-  final VoidCallback? onPlusTap;
+  final VoidCallback onAddAnotherItem; // نئی رو یا آئٹم ایڈ کرنے کا فنکشن
 
   const ItemSelectorRowWidget({
     super.key,
-    required this.hasItems,
-    this.itemName,
-    this.totalQty,
-    this.unitPrice,
-    this.subTotal,
-    this.description,
-    this.onTap,
-    this.onEditTap,
-    this.onDeleteTap,
-    this.onPlusTap,
+    required this.onAddAnotherItem,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (!hasItems) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+      child: InkWell(
+        // جب بھی اس رو پر کلک ہوگا، یہ فل پیج (ItemDetailWidget) کو کھول دے گا
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ItemDetailWidget()),
+          );
+        },
+        borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.red.shade700, width: 1.0), // ریڈ اینڈ وائٹ کمبینیشن
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.add_circle_outline, color: Color(0xFFE53935), size: 20),
-              SizedBox(width: 8),
-              Text(
-                'آئٹم شامل کریں (Item Add کریں)',
-                style: TextStyle(
-                  color: Color(0xFFE53935),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+            children: [
+              // 1. آئٹم کا نام / سلیکٹر (بائیں طرف)
+              const Expanded(
+                flex: 3,
+                child: Text(
+                  'آئٹم منتخب کریں...',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+
+              const VerticalDivider(color: Colors.grey, thickness: 0.5),
+
+              // 2. مقدار (Qty)
+              const SizedBox(
+                width: 40,
+                child: Text(
+                  '1',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+
+              // 3. قیمت (Price)
+              const SizedBox(
+                width: 60,
+                child: Text(
+                  '0.0',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                ),
+              ),
+
+              // 4. سب ٹوٹل (Subtotal)
+              const SizedBox(
+                width: 70,
+                child: Text(
+                  '0',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.red),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // 5. جگہ بچانے والا سمارٹ پلس (+) بٹن (نئی رو کے لیے)
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.add_circle, color: Colors.red, size: 24),
+                  tooltip: 'نئی آئٹم شامل کریں',
+                  onPressed: onAddAnotherItem,
                 ),
               ),
             ],
           ),
         ),
-      );
-    } else {
-      return Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade300),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade100,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    itemName ?? '',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    if (onEditTap != null)
-                      IconButton(
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        icon: const Icon(Icons.edit, size: 18, color: Colors.blue),
-                        onPressed: onEditTap,
-                      ),
-                    if (onDeleteTap != null)
-                      IconButton(
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                        onPressed: onDeleteTap,
-                      ),
-                  ],
-                ),
-              ],
-            ),
-            if (description != null && description!.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                description!,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
-            ],
-            const Divider(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'تعداد: $totalQty x قیمت: ${unitPrice?.toStringAsFixed(0) ?? '0'}',
-                  style: const TextStyle(fontSize: 13, color: Colors.black54),
-                ),
-                Row(
-                  children: [
-                    Text(
-                      'کل: ${subTotal?.toStringAsFixed(0) ?? '0'}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFE53935),
-                      ),
-                    ),
-                    if (onPlusTap != null) ...[
-                      const SizedBox(width: 8),
-                      IconButton(
-                        constraints: const BoxConstraints(),
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.add_circle, color: Color(0xFFE53935), size: 22),
-                        onPressed: onPlusTap,
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
+      ),
+    );
   }
 }

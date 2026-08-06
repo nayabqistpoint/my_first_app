@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 // یہ پاتھ درست ہے: ایک بار ../ سے sections سے باہر، اور دوسرا ../ سے home_page سے باہر lib فولڈر تک
 import '../../installment_calculater_page.dart';
-// خرید و فروخت فارم کا امپورٹ پاتھ
-import '../transaction_forms/sale_purchase.dart';
+// خریداری فارم کا نیا پاتھ
+import '../transaction_forms/purchase_page.dart';
 // آپ کی نئی بنائی گئی ڈیٹا بیس فائل کا درست پاتھ
 import '../../database_page.dart';
 
@@ -48,17 +48,17 @@ class BottomSection extends StatelessWidget {
           ),
           const SizedBox(width: 10),
 
-          // 3. دوسرا بڑا کیپسول بٹن (خرید و فروخت)
+          // 3. دوسرا بڑا کیپسول بٹن (خریداری)
           Expanded(
             flex: 4,
             child: _buildCapsuleButton(
               context, 
-              "خرید و فروخت", 
+              "خریداری", 
               Colors.green, 
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const SalePurchaseForm()),
+                  MaterialPageRoute(builder: (context) => const PurchasePage()),
                 );
               },
             ),
