@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'common/item_detail_widget.dart'; // آئٹم وزٹ امپورٹ کیا گیا ہے
+import 'common/item_detail_widget.dart';
 
 class PurchasePageController {
+  List<Map<String, dynamic>> itemsList = [
+    {
+      'itemName': '',
+      'imeiNo': '',
+      'subTotal': '0.00',
+      'calculationText': '1 × 0',
+    }
+  ];
+
   String? selectedPartyPhone;
   String? selectedPartyName;
 
@@ -13,27 +22,18 @@ class PurchasePageController {
   bool isDiscountPercentage = false;
   String descriptionText = '';
 
-  List<Map<String, dynamic>> itemsList = [
-    {
-      'itemName': '',
-      'imeiNo': '',
-      'subTotal': '0.00',
-      'calculationText': '1 × 0',
-    }
-  ];
-
   bool addNewItemRow() {
     final lastItem = itemsList.last;
-    if ((lastItem['itemName'] ?? '').isEmpty) {
-      return false;
+    if (lastItem['itemName'] != null && lastItem['itemName'].toString().isNotEmpty) {
+      itemsList.add({
+        'itemName': '',
+        'imeiNo': '',
+        'subTotal': '0.00',
+        'calculationText': '1 × 0',
+      });
+      return true;
     }
-    itemsList.add({
-      'itemName': '',
-      'imeiNo': '',
-      'subTotal': '0.00',
-      'calculationText': '1 × 0',
-    });
-    return true;
+    return false;
   }
 
   void removeItemRow(int index) {
@@ -42,9 +42,8 @@ class PurchasePageController {
     }
   }
 
-  // ✅ آئٹم رو پر کلک ہونے کی نیویگیشن مکمل طور پر بحال کر دی گئی ہے
-  Future<void> handleItemDetailNavigation(
-      BuildContext context, int index, {bool isEdit = false}) async {
+  // رو کلک کرنے پر آئٹم ڈیٹیل وزٹ کھولنے کی لاجک
+  Future<void> handleItemDetailNavigation(BuildContext context, int index, {bool isEdit = false}) async {
     int currentIndex = index;
     bool shouldContinue = true;
 
@@ -56,8 +55,7 @@ class PurchasePageController {
       final updatedData = await Navigator.push<Map<String, dynamic>>(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              ItemDetailWidget(initialData: initialData),
+          pageBuilder: (context, animation, secondaryAnimation) => ItemDetailWidget(initialData: initialData),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(
               opacity: animation,
@@ -84,26 +82,27 @@ class PurchasePageController {
     }
   }
 
+  // ✅ ٹرانزیکشن باکس اور سٹاک باکس دونوں میں محفوظ کرنے کا مکمل طریقہ
   Future<bool> savePurchase() async {
-    // اگر کوئی آئٹم منتخب نہیں ہوا تو سیو نہیں ہوگا
-    if (itemsList.isEmpty || (itemsList.first['itemName'] ?? '').isEmpty) {
+    if (itemsList.isEmpty || (itemsList.first['itemName'] ?? '').toString().isEmpty) {
       return false;
     }
 
     try {
-      final box = await Hive.openBox('transactionBox');
+      // 1. Boxes Open کریں
+      final transactionBox = await Hive.openBox('transactionBox');
+      final stockBox = await Hive.openBox('stockBox');
 
-      // 1. اگر selectedPartyName خالی ہو تو CustomerBox سے نام نکالنا
       String finalPartyName = selectedPartyName ?? '';
 
+      // کسٹمر کا نام نکالنا
       if (finalPartyName.isEmpty && selectedPartyPhone != null) {
         if (Hive.isBoxOpen('customerBox')) {
           final customerBox = Hive.box('customerBox');
           final matchedCustomer = customerBox.values.firstWhere(
             (element) {
               final data = Map<String, dynamic>.from(element as Map);
-              String phone = data['customerPhone']?.toString() ?? 
-                             data['phone']?.toString() ?? '';
+              String phone = data['customerPhone']?.toString() ?? data['phone']?.toString() ?? '';
               return phone == selectedPartyPhone;
             },
             orElse: () => null,
@@ -118,15 +117,35 @@ class PurchasePageController {
         }
       }
 
-      // IMEI لسٹ تیار کرنا
       List<String> imeiList = [];
+      
+      // ✅ 2. تمام آئٹمز کو stockBox میں محفوظ کرنا
       for (var item in itemsList) {
-        if (item['imeiNo'] != null && item['imeiNo'].toString().isNotEmpty) {
-          imeiList.add(item['imeiNo'].toString());
+        if (item['itemName'] != null && item['itemName'].toString().isNotEmpty) {
+          String imei = item['imeiNo']?.toString() ?? '';
+          if (imei.isNotEmpty) imeiList.add(imei);
+
+          final stockKey = "${DateTime.now().millisecondsSinceEpoch}_${item['itemName']}";
+          
+          final stockData = {
+            'itemName': item['itemName'],
+            'imeiNo': imei,
+            'purchasePrice': item['purchasePrice'] ?? '0',
+            'salePrice': item['salePrice'] ?? '0',
+            'quantity': item['quantity'] ?? '1',
+            'supplier': item['supplier'] ?? finalPartyName,
+            'condition': item['condition'] ?? 'new',
+            'warranty': item['warranty'] ?? 0,
+            'color': item['color'] ?? '',
+            'date': DateTime.now().toIso8601String(),
+            'status': 'available', // سٹاک میں موجود ہے
+          };
+
+          await stockBox.put(stockKey, stockData);
         }
       }
 
-      // 2. پورا میپ تیار کر کے سیو کرنا
+      // ✅ 3. ٹرانزیکشن باکس (transactionBox) میں تفصیلات محفوظ کرنا
       final key = DateTime.now().millisecondsSinceEpoch.toString();
       final transactionData = {
         'type': 'purchase',
@@ -139,6 +158,7 @@ class PurchasePageController {
         'description': descriptionText,
         'remarks': imeiList.join(','),
         'date': DateTime.now().toIso8601String(),
+        'items': itemsList, // آئٹمز کی لسٹ محفوظ کی
         'discount': {
           'value': discountValue,
           'isPercentage': isDiscountPercentage
@@ -151,7 +171,7 @@ class PurchasePageController {
         'isCreatedByAdmin': false,
       };
 
-      await box.put(key, transactionData);
+      await transactionBox.put(key, transactionData);
       return true;
     } catch (e) {
       debugPrint("Save Purchase Error: $e");

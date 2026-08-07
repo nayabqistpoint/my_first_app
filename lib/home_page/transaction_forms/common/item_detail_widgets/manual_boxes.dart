@@ -33,11 +33,11 @@ class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
   @override
   void initState() {
     super.initState();
-    // لسٹنر ایڈ کرنے سے پہلے سیفٹی چیک
-    widget.purchasePriceController.addListener(_onPurchasePriceChanged);
+    // لسٹنر لگانے اور ویلیو کیلکولیٹ کرنے کے لیے فریم کا انتظار
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _updateFieldsUI();
+        _initializeExistingAdjustment();
+        widget.purchasePriceController.addListener(_onPurchasePriceChanged);
       }
     });
   }
@@ -48,11 +48,29 @@ class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
     super.dispose();
   }
 
+  // محفوظ شدہ قیمت کو بغیر کریش کیے کیپچر کرنے کی لاجک
+  void _initializeExistingAdjustment() {
+    double purchasePrice = double.tryParse(widget.purchasePriceController.text) ?? 0.0;
+    double salePrice = double.tryParse(widget.salePriceController.text) ?? purchasePrice;
+
+    double diff = salePrice - purchasePrice;
+
+    if (widget.isPercentageMode) {
+      if (purchasePrice > 0) {
+        _currentPercentAdd = ((diff / purchasePrice) * 100).round();
+      } else {
+        _currentPercentAdd = 0;
+      }
+    } else {
+      _currentAmountAdd = diff;
+    }
+
+    _recalculateAndSet(purchasePrice, updateSalePriceText: false);
+  }
+
   void _onPurchasePriceChanged() {
     if (!mounted) return;
     double purchasePrice = double.tryParse(widget.purchasePriceController.text) ?? 0.0;
-    _currentAmountAdd = 0.0;
-    _currentPercentAdd = 0;
     _recalculateAndSet(purchasePrice);
   }
 
@@ -76,7 +94,7 @@ class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
     _recalculateAndSet(purchasePrice);
   }
 
-  void _recalculateAndSet(double purchasePrice) {
+  void _recalculateAndSet(double purchasePrice, {bool updateSalePriceText = true}) {
     double finalSalePrice = purchasePrice;
 
     if (widget.isPercentageMode) {
@@ -90,9 +108,12 @@ class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
 
     if (finalSalePrice < 0) finalSalePrice = 0;
 
-    widget.salePriceController.text = finalSalePrice.toStringAsFixed(0);
+    if (updateSalePriceText) {
+      widget.salePriceController.text = finalSalePrice.toStringAsFixed(0);
+    }
+
     widget.onPriceAdjust(finalSalePrice);
-    
+
     if (mounted) {
       setState(() {});
     }
@@ -198,8 +219,10 @@ class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
               onSelected: (selected) {
                 if (selected) {
                   widget.onModeChanged(false);
-                  _currentPercentAdd = 0;
                   double purchasePrice = double.tryParse(widget.purchasePriceController.text) ?? 0.0;
+                  double salePrice = double.tryParse(widget.salePriceController.text) ?? purchasePrice;
+                  _currentAmountAdd = salePrice - purchasePrice;
+                  _currentPercentAdd = 0;
                   _recalculateAndSet(purchasePrice);
                 }
               },
@@ -212,8 +235,11 @@ class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
               onSelected: (selected) {
                 if (selected) {
                   widget.onModeChanged(true);
-                  _currentAmountAdd = 0.0;
                   double purchasePrice = double.tryParse(widget.purchasePriceController.text) ?? 0.0;
+                  double salePrice = double.tryParse(widget.salePriceController.text) ?? purchasePrice;
+                  double diff = salePrice - purchasePrice;
+                  _currentPercentAdd = purchasePrice > 0 ? ((diff / purchasePrice) * 100).round() : 0;
+                  _currentAmountAdd = 0.0;
                   _recalculateAndSet(purchasePrice);
                 }
               },
@@ -233,10 +259,5 @@ class _ManualBoxesWidgetState extends State<ManualBoxesWidget> {
         ),
       ],
     );
-  }
-
-  void _updateFieldsUI() {
-    double purchasePrice = double.tryParse(widget.purchasePriceController.text) ?? 0.0;
-    _recalculateAndSet(purchasePrice);
   }
 }
