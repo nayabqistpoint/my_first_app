@@ -26,7 +26,6 @@ class CustomerLedgerController extends ChangeNotifier {
     loadCustomerTransactions();
   }
 
-  // 🛡️ کسٹمر کا موبائل نمبر جو ہائیو باکس کی یونیک آئی ڈی ہے
   String get customerPhone {
     String phone = '';
     if (customer != null) {
@@ -90,7 +89,34 @@ class CustomerLedgerController extends ChangeNotifier {
     return '';
   }
 
-  // 💰 ٹوٹل بیلنس (اگر ایڈمن ہے تو پینڈنگ انٹریز بیلنس میں شمار نہیں ہوں گی)
+  // 🗓️ ڈیٹ ہیلپر: دن، مہینہ اور سال کو الگ الگ ٹکڑوں میں لسٹ بنا کر دینا
+  static Map<String, String> getParsedUrduDate(dynamic rawDate, dynamic rawTimestamp) {
+    DateTime? dt;
+    
+    if (rawTimestamp != null && rawTimestamp.toString().isNotEmpty) {
+      dt = DateTime.tryParse(rawTimestamp.toString());
+    }
+    
+    if (dt == null && rawDate != null && rawDate.toString().isNotEmpty) {
+      dt = DateTime.tryParse(rawDate.toString());
+    }
+
+    if (dt != null) {
+      List<String> urduMonths = [
+        'جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون',
+        'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'
+      ];
+      return {
+        'day': dt.day.toString(),
+        'month': urduMonths[dt.month - 1],
+        'year': dt.year.toString(),
+      };
+    }
+
+    return {'day': '', 'month': rawDate?.toString() ?? '', 'year': ''};
+  }
+
+  // 💰 ٹوٹل بیلنس (Purchase کی صورت میں remainingBalance کی رقم کا استعمال)
   double get totalBalance {
     double total = 0.0;
     for (var t in transactions) {
@@ -100,35 +126,59 @@ class CustomerLedgerController extends ChangeNotifier {
       bool isPending = false;
 
       if (t is Map) {
-        amount = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
-        type = t['type']?.toString() ?? 'get';
+        type = t['type']?.toString().toLowerCase() ?? 'get';
+        if (type == 'purchase' && t['remainingBalance'] != null) {
+          amount = double.tryParse(t['remainingBalance']?.toString() ?? '0') ?? 0.0;
+        } else {
+          amount = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
+        }
+
         String status = t['status']?.toString() ?? '';
         if (status == 'pending' || t['isApproved'] == false) {
           isPending = true;
         }
       } else {
         try {
-          amount = double.tryParse(t.amount?.toString() ?? '0') ?? 0.0;
-          type = t.type?.toString() ?? 'get';
+          type = t.type?.toString().toLowerCase() ?? 'get';
+          if (type == 'purchase' && t.remainingBalance != null) {
+            amount = double.tryParse(t.remainingBalance?.toString() ?? '0') ?? 0.0;
+          } else {
+            amount = double.tryParse(t.amount?.toString() ?? '0') ?? 0.0;
+          }
           if (t.status == 'pending' || t.isApproved == false) {
             isPending = true;
           }
         } catch (_) {}
       }
 
-      // اگر ایڈمن ہے اور انٹری پینڈنگ ہے تو اسے ٹوٹل بیلنس سے نکال باہر رکھیں
       if (isAdmin && isPending) continue;
 
-      if (type == 'give' || type == 'given' || type == 'paid' || type == 'out') {
+      if (type == 'given' || type == 'give' || type == 'out' || type == 'purchase' || type == 'payment_out' || type == 'paid') {
         total += amount;
-      } else if (type == 'get' || type == 'received' || type == 'in') {
+      } else if (type == 'received' || type == 'get' || type == 'in' || type == 'payment_in') {
         total -= amount;
       }
     }
-    if (total.abs() < 0.01) {
-      return 0.0;
-    }
-    return total;
+    return total.abs() < 0.01 ? 0.0 : total;
+  }
+
+  DateTime _parseTxDate(dynamic tx) {
+    try {
+      if (tx is Map) {
+        if (tx['timestamp'] != null) return DateTime.parse(tx['timestamp'].toString());
+        if (tx['date'] != null) {
+          var parsed = DateTime.tryParse(tx['date'].toString());
+          if (parsed != null) return parsed;
+        }
+      } else {
+        if (tx.timestamp != null) return DateTime.parse(tx.timestamp.toString());
+        if (tx.date != null) {
+          var parsed = DateTime.tryParse(tx.date.toString());
+          if (parsed != null) return parsed;
+        }
+      }
+    } catch (_) {}
+    return DateTime(2000);
   }
 
   void loadCustomerTransactions() {
@@ -136,10 +186,7 @@ class CustomerLedgerController extends ChangeNotifier {
     try {
       if (customer != null) {
         dynamic rawTxs;
-        try {
-          rawTxs = customer.transactions;
-        } catch (_) {}
-
+        try { rawTxs = customer.transactions; } catch (_) {}
         if (rawTxs != null && rawTxs is List) {
           tempTransactions.addAll(List<dynamic>.from(rawTxs));
         }
@@ -157,10 +204,9 @@ class CustomerLedgerController extends ChangeNotifier {
         for (var key in box.keys) {
           var txValue = box.get(key);
           if (txValue != null && txValue is Map) {
-            String txPhone = (txValue['customerPhone'] ?? '').toString().trim();
+            String txPhone = (txValue['customerPhone'] ?? txValue['customerId'] ?? '').toString().trim();
             if (targetPhone.isNotEmpty && txPhone == targetPhone) {
               
-              // 🔍 اگر یہ ایڈمن ہے اور انٹری پینڈنگ ہے، تو اسے ایڈمن کے لیجر سے بالکل ہٹا دو
               bool isPendingTx = (txValue['status']?.toString() == 'pending' || txValue['isApproved'] == false);
               if (isAdmin && isPendingTx) {
                 continue; 
@@ -190,36 +236,10 @@ class CustomerLedgerController extends ChangeNotifier {
       }
     } catch (_) {}
 
-    transactions = tempTransactions.reversed.toList();
+    tempTransactions.sort((a, b) => _parseTxDate(b).compareTo(_parseTxDate(a)));
+    
+    transactions = tempTransactions;
     notifyListeners();
-  }
-
-  Future<void> saveTransaction({
-    required String type, 
-    required double amount,
-    required String description,
-    required String date,
-    bool hasAttachment = false,
-  }) async {
-    if (Hive.isBoxOpen('transactionBox')) {
-      var box = Hive.box('transactionBox');
-
-      Map<String, dynamic> newTx = {
-        'customerPhone': customerPhone,
-        'customerId': customerPhone,
-        'customerName': customerName,
-        'type': type,
-        'amount': amount,
-        'description': description,
-        'date': date,
-        'hasAttachment': hasAttachment,
-        'timestamp': DateTime.now().toString(),
-        'status': 'approved', // عام انٹریز فوری منظور شدہ ہوتی ہیں
-      };
-
-      await box.add(newTx);
-      loadCustomerTransactions();
-    }
   }
 
   List<dynamic> get filteredTransactions {

@@ -68,14 +68,17 @@ class PaymentInController {
     // موبائل نمبر کو مکمل صاف کرنا تاکہ یونیک کی میچنگ میں کوئی خامی نہ رہے
     String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
 
+    // 🎯 اصلاح شدہ تاریخ: اب یہاں ISO اسٹرنگ جائے گی جیسے Purchase والے فارم سے جا رہی ہے
+    final String nowIso = DateTime.now().toIso8601String();
+
     final Map<String, dynamic> transactionData = {
       'type': 'received', 
-      'customerPhone': cleanPhone, // 🔑 یہاں موبائل نمبر لازمی جوڑ دیا گیا ہے
+      'customerPhone': cleanPhone,
       'customerId': cleanPhone, 
       'amount': amount,
       'description': remarks,
       'remarks': remarks,
-      'date': '02 اگست 2026',
+      'date': nowIso, // 🔒 تاریخ کا فارمیٹ سیٹ کر دیا گیا ہے
       'discount': {
         'value': _discountValue,
         'isPercentage': _isPercentageDiscount,
@@ -83,7 +86,7 @@ class PaymentInController {
       'source': _selectedSource,
       'splitPayments': _splitPayments,
       'hasAttachment': false,
-      'timestamp': DateTime.now().toString(),
+      'timestamp': nowIso, // 🔒 ٹائم اسٹیمپ کا فارمیٹ یکساں رکھا گیا ہے
     };
 
     try {

@@ -147,6 +147,8 @@ class PurchasePageController {
 
       // ✅ 3. ٹرانزیکشن باکس (transactionBox) میں تفصیلات محفوظ کرنا
       final key = DateTime.now().millisecondsSinceEpoch.toString();
+      final nowIso = DateTime.now().toIso8601String();
+
       final transactionData = {
         'type': 'purchase',
         'customerPhone': selectedPartyPhone ?? '',
@@ -157,7 +159,7 @@ class PurchasePageController {
         'remainingBalance': remainingBalance,
         'description': descriptionText,
         'remarks': imeiList.join(','),
-        'date': DateTime.now().toIso8601String(),
+        'date': nowIso,
         'items': itemsList, // آئٹمز کی لسٹ محفوظ کی
         'discount': {
           'value': discountValue,
@@ -166,7 +168,7 @@ class PurchasePageController {
         'source': null,
         'splitPayments': [],
         'hasAttachment': false,
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': nowIso,
         'purchasedImeis': imeiList,
         'isCreatedByAdmin': false,
       };
