@@ -41,13 +41,9 @@ class ItemSelectorRowWidget extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          // رو پر کلک ہونے پر اینیمیشن مکمل ہونے کے بعد نیویگیٹ ہوگا
-          onTap: () async {
-            await Future.delayed(const Duration(milliseconds: 80));
-            onRowPressed();
-          },
+          // بلاک کرنے والا ڈیلیے ہٹا کر براہ راست کلک کال کر دیا گیا ہے
+          onTap: onRowPressed,
           borderRadius: BorderRadius.circular(8.0),
-          // ✅ جدید فلٹر سٹینڈرڈ switch: withValues(alpha: ...)
           highlightColor: Colors.black.withValues(alpha: 0.04),
           splashColor: Colors.grey.withValues(alpha: 0.1),
           child: Padding(
@@ -135,19 +131,22 @@ class ItemSelectorRowWidget extends StatelessWidget {
     );
   }
 
-  // ایکشن بٹن ہیلپر
+  // ایکشن بٹن ہیلپر (InkWell کے ساتھ تاکہ ٹچ الگ سے رجسٹر ہو)
   Widget _buildActionButton({
     required IconData icon,
     required Color color,
     required double size,
     required VoidCallback onPressed,
   }) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onPressed,
-      child: Padding(
-        padding: const EdgeInsets.all(2.0),
-        child: Icon(icon, color: color, size: size),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: Icon(icon, color: color, size: size),
+        ),
       ),
     );
   }

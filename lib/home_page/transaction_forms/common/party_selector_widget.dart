@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../../../../features/add_party_dialog.dart'; // درست امپورٹ پاتھ
+import '../../../../features/add_party_dialog.dart';
 
 class PartySelectorWidget extends StatefulWidget {
-  final Function(String?) onPartySelected;
+  final Function(String? phone, String? name) onPartySelected;
 
   const PartySelectorWidget({super.key, required this.onPartySelected});
 
@@ -21,7 +21,6 @@ class _PartySelectorWidgetState extends State<PartySelectorWidget> {
     _loadPartiesFromHive();
   }
 
-  // Hive کسٹمر باکس سے اصلی ڈیٹا لوڈ کرنا
   void _loadPartiesFromHive() {
     try {
       if (Hive.isBoxOpen('customerBox')) {
@@ -29,9 +28,20 @@ class _PartySelectorWidgetState extends State<PartySelectorWidget> {
         setState(() {
           partiesList = box.values.map((item) {
             final Map<String, dynamic> data = Map<String, dynamic>.from(item as Map);
+            
+            String extractedName = data['customerName']?.toString() ?? 
+                                   data['name']?.toString() ?? 
+                                   data['partyName']?.toString() ?? 
+                                   'نامعلوم';
+
+            String extractedPhone = data['customerPhone']?.toString() ?? 
+                                    data['phone']?.toString() ?? 
+                                    data['mobile']?.toString() ?? 
+                                    '';
+
             return {
-              'name': data['customerName']?.toString() ?? 'نامعلوم',
-              'phone': data['customerPhone']?.toString() ?? '',
+              'name': extractedName,
+              'phone': extractedPhone,
             };
           }).where((element) => element['phone']!.isNotEmpty).toList();
         });
@@ -54,7 +64,6 @@ class _PartySelectorWidgetState extends State<PartySelectorWidget> {
         ),
         child: Row(
           children: [
-            // 1. اصلی کسٹمرز کا ڈراپ ڈاؤن
             Expanded(
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -67,9 +76,9 @@ class _PartySelectorWidgetState extends State<PartySelectorWidget> {
                   icon: Icon(Icons.arrow_drop_down, color: Colors.red.shade700),
                   items: partiesList.map((party) {
                     return DropdownMenuItem<String>(
-                      value: party['phone'], // Unique ID (Phone)
+                      value: party['phone'],
                       child: Text(
-                        '${party['name']} (${party['phone']})', // نام اور فون نمبر
+                        party['name'] ?? 'نامعلوم',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -78,24 +87,32 @@ class _PartySelectorWidgetState extends State<PartySelectorWidget> {
                       ),
                     );
                   }).toList(),
-                  onChanged: (String? newValue) {
+                  onChanged: (String? newPhoneValue) {
                     setState(() {
-                      selectedPartyPhone = newValue;
+                      selectedPartyPhone = newPhoneValue;
                     });
-                    widget.onPartySelected(newValue);
+
+                    String? selectedName;
+                    if (newPhoneValue != null) {
+                      final matchedParty = partiesList.firstWhere(
+                        (element) => element['phone'] == newPhoneValue,
+                        orElse: () => {'name': '', 'phone': ''},
+                      );
+                      selectedName = matchedParty['name'];
+                    }
+
+                    // نام اور فون دونوں کنٹرولر کو منتقل کرنا
+                    widget.onPartySelected(newPhoneValue, selectedName);
                   },
                 ),
               ),
             ),
-
             const SizedBox(width: 8),
-
-            // 2. نئی پارٹی ایڈ کرنے کا بٹن
             IconButton(
               icon: Icon(Icons.person_add_alt_1, color: Colors.red.shade700, size: 22),
               tooltip: 'نئی پارٹی شامل کریں',
-              onPressed: () {
-                showAddPartyDialog(context);
+              onPressed: () async {
+                await showAddPartyDialog(context);
                 _loadPartiesFromHive();
               },
             ),

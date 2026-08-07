@@ -16,11 +16,9 @@ class PurchasePage extends StatefulWidget {
 class _PurchasePageState extends State<PurchasePage> {
   late final PurchasePageController controller;
 
-  // ڈسکاؤنٹ کی اسٹیٹ
   double _discountValue = 0.0;
   bool _isDiscountPercentage = false;
 
-  // ٹرانزیکشن سمری کے لیے کنٹرولرز
   final TextEditingController _receivedController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
@@ -38,11 +36,10 @@ class _PurchasePageState extends State<PurchasePage> {
     super.dispose();
   }
 
-  // سب ٹوٹل اور ٹوٹل ڈسکاؤنٹ کا حساب
   double get _subTotal {
     double total = 0.0;
     for (var item in controller.itemsList) {
-      final val = double.tryParse(item['subTotal'] ?? '0') ?? 0.0;
+      final val = double.tryParse(item['subTotal']?.toString() ?? '0') ?? 0.0;
       total += val;
     }
     return total;
@@ -60,11 +57,46 @@ class _PurchasePageState extends State<PurchasePage> {
     return total < 0 ? 0.0 : total;
   }
 
-  // سکرین ریفریش کرنے کا سموتھ ہیلپر
   Future<void> _openItemDetails(int index, {bool isEdit = false}) async {
     await controller.handleItemDetailNavigation(context, index, isEdit: isEdit);
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  Future<void> _onSavePressed() async {
+    double paid = double.tryParse(_receivedController.text.trim()) ?? 0.0;
+    double grand = _grandTotal;
+    double remaining = grand - paid;
+
+    controller.grandTotalAmount = grand;
+    controller.paidAmount = paid;
+    controller.remainingBalance = remaining;
+    controller.discountValue = _calculatedDiscountAmount;
+    controller.isDiscountPercentage = _isDiscountPercentage;
+    controller.descriptionText = _descriptionController.text.trim();
+
+    bool success = await controller.savePurchase();
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ڈیٹا کامیابی سے محفوظ ہو گیا ہے!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('برائے مہربانی پہلے آئٹم کا انتخاب کریں!'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -86,15 +118,16 @@ class _PurchasePageState extends State<PurchasePage> {
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                     child: Column(
                       children: [
-                        // 1. پارٹی سلیکٹر
+                        // Party Selector Widget
                         PartySelectorWidget(
-                          onPartySelected: (String? selectedPhone) {
-                            controller.selectedPartyPhone = selectedPhone;
+                          onPartySelected: (String? phone, String? name) {
+                            controller.selectedPartyPhone = phone;
+                            controller.selectedPartyName = name;
                           },
                         ),
                         const SizedBox(height: 8),
 
-                        // 2. آئٹم روز کی لسٹ
+                        // Item Rows List
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
@@ -137,7 +170,7 @@ class _PurchasePageState extends State<PurchasePage> {
 
                         const SizedBox(height: 10),
 
-                        // 3. ڈسکاؤنٹ وجٹ
+                        // Discount Widget
                         DiscountWidget(
                           onDiscountChanged: (discountValue, isPercentage) {
                             setState(() {
@@ -149,7 +182,7 @@ class _PurchasePageState extends State<PurchasePage> {
 
                         const SizedBox(height: 10),
 
-                        // 4. ٹرانزیکشن سمری وجٹ (درست پیرامیٹرز کے ساتھ)
+                        // Transaction Summary Widget
                         TransactionSummaryWidget(
                           subTotal: _subTotal,
                           discountAmount: _calculatedDiscountAmount,
@@ -164,11 +197,11 @@ class _PurchasePageState extends State<PurchasePage> {
               ),
               const SizedBox(height: 8),
 
-              // 5. محفوظ کرنے کا بٹن
+              // Save Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () => controller.savePurchase(),
+                  onPressed: _onSavePressed,
                   icon: const Icon(Icons.save),
                   label: const Text(
                     'محفوظ کریں',
