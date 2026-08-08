@@ -40,7 +40,7 @@ class LedgerMiddleWidget extends StatelessWidget {
 
         const Divider(color: Colors.black12, thickness: 1, height: 1),
 
-        // ۲۔ کلین لسٹ (بائیں طرف کی رقم کی میپنگ درست کی گئی ہے)
+        // ۲۔ کلین لسٹ
         Expanded(
           child: transactions.isEmpty
               ? const Center(
@@ -78,7 +78,7 @@ class LedgerMiddleWidget extends StatelessWidget {
                       } catch (_) {}
                     }
 
-                    // 🔒 رقم اور رنگ کی سخت میپنگ
+                    // 🔒 رقم اور ٹائپ
                     double displayAmt = CustomerLedgerController.getTransactionAmount(tx);
                     bool isGreen = CustomerLedgerController.isGreenTransaction(tx);
                     Color txnColor = isGreen ? Colors.green : Colors.red;
@@ -96,7 +96,7 @@ class LedgerMiddleWidget extends StatelessWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // 🟢/🔴 ۱۔ بائیں طرف رقم (Green/Red سٹرکچرڈ رنگ میں)
+                                // 🟢/🔴 ۱۔ بائیں طرف رقم
                                 Padding(
                                   padding: const EdgeInsets.only(top: 2),
                                   child: Text(
@@ -125,11 +125,29 @@ class LedgerMiddleWidget extends StatelessWidget {
                                             const SizedBox(width: 3),
                                           ],
                                           
-                                          // 🗓️ تاریخ
+                                          // 🗓️ 🎯 پکا حل: 8 اگست 2026 بالکل سیدھا دکھانے کے لیے
                                           if (dateMap['day']!.isNotEmpty) ...[
-                                            Text(
-                                              "${dateMap['day']} ${dateMap['month']} ${dateMap['year']}",
-                                              style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                // سال
+                                                Text(
+                                                  dateMap['year']!,
+                                                  style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                // مہینہ
+                                                Text(
+                                                  dateMap['month']!,
+                                                  style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                // دن (تاریخ)
+                                                Text(
+                                                  dateMap['day']!,
+                                                  style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                                                ),
+                                              ],
                                             ),
                                           ] else ...[
                                             Text(

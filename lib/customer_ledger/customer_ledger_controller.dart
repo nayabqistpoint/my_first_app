@@ -89,6 +89,7 @@ class CustomerLedgerController extends ChangeNotifier {
     return '';
   }
 
+  // 🎯 تاریخ کی درست اردو/انگلش فارمیٹنگ
   static Map<String, String> getParsedUrduDate(dynamic rawDate, dynamic rawTimestamp) {
     DateTime? dt;
     if (rawTimestamp != null && rawTimestamp.toString().isNotEmpty) {
@@ -113,7 +114,6 @@ class CustomerLedgerController extends ChangeNotifier {
     return {'day': '', 'month': rawDate?.toString() ?? '', 'year': ''};
   }
 
-  // 🎯 خام رقم نکالنا (Purchase کے لیے remainingBalance اور باقیوں کے لیے amount)
   static double getRawTransactionAmount(dynamic tx) {
     if (tx == null) return 0.0;
     double amt = 0.0;
@@ -141,7 +141,6 @@ class CustomerLedgerController extends ChangeNotifier {
     return getRawTransactionAmount(tx).abs();
   }
 
-  // 🎯 ٹرانزیکشن کی ایگزیکٹ سٹرنگ ٹائپ معلوم کرنا
   static String getTransactionType(dynamic tx) {
     if (tx == null) return '';
     String type = '';
@@ -155,33 +154,27 @@ class CustomerLedgerController extends ChangeNotifier {
     return type;
   }
 
-  // 🎯 🔒 فائنل سٹریکٹ گرین/ریڈ میپنگ
   static bool isGreenTransaction(dynamic tx) {
     String type = getTransactionType(tx);
 
-    // ۱۔ اگر پیمنٹ ان / وصولی ہے تو لازمی Green
     if (type == 'payment_in' || type == 'in' || type == 'received' || type == 'get') {
       return true;
     }
     
-    // ۲۔ اگر پیمنٹ آؤٹ / ادائیگی / خرچ ہے تو لازمی Red
     if (type == 'payment_out' || type == 'out' || type == 'paid' || type == 'give' || type == 'given') {
       return false;
     }
 
-    // ۳۔ اگر پرچیز ہے تو صرف Above Zero / Below Zero لاجک
     if (type == 'purchase') {
       double rawAmt = getRawTransactionAmount(tx);
       return rawAmt >= 0;
     }
 
-    // ڈیفالٹ فال بیک
     return true;
   }
 
   static bool isGreenColumn(dynamic tx) => isGreenTransaction(tx);
 
-  // 🎯 رننگ بیلنس کی لاجک
   double getRunningBalanceAtIndex(int index) {
     double runningBalance = 0.0;
 
