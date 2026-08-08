@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../dashboard/widgets/payment_source_card.dart';
 
 class PaymentInController {
   final TextEditingController amountController = TextEditingController();
@@ -12,11 +13,19 @@ class PaymentInController {
   
   final ValueNotifier<bool> isSaving = ValueNotifier<bool>(false);
 
+  // 🔥 PaymentSourceCard کے ساتھ رابطہ قائم کرنے والی GlobalKey 🔥
+  final GlobalKey<PaymentSourceCardState> paymentSourceCardKey = GlobalKey<PaymentSourceCardState>();
+
   double _discountValue = 0.0;
   bool _isPercentageDiscount = false;
   
-  String? _selectedSource;
-  List<Map<String, dynamic>> _splitPayments = [];
+  String? _selectedSource = 'Cash';
+
+  String? get selectedPaymentSource => _selectedSource;
+
+  void updateSelectedSource(String? newSource) {
+    _selectedSource = newSource;
+  }
 
   PaymentInController() {
     amountController.addListener(_onAmountChanged);
@@ -33,11 +42,6 @@ class PaymentInController {
   void updateDiscount(double value, bool isPercentage) {
     _discountValue = value;
     _isPercentageDiscount = isPercentage;
-  }
-
-  void updateSourceSplit(String? source, List<Map<String, dynamic>> splits) {
-    _selectedSource = source;
-    _splitPayments = splits;
   }
 
   void dispose() {
@@ -62,20 +66,22 @@ class PaymentInController {
 
     isSaving.value = true;
 
-    double amount = double.tryParse(amountText) ?? 0.0;
+    double totalAmount = double.tryParse(amountText) ?? 0.0;
     String remarks = remarksController.text.trim();
 
-    // موبائل نمبر کو مکمل صاف کرنا تاکہ یونیک کی میچنگ میں کوئی خامی نہ رہے
     String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
-
-    // ISO تاریخ کا یکساں فارمیٹ
     final String nowIso = DateTime.now().toIso8601String();
+
+    // 🔥 لائیو PaymentSourceCard سے ڈیٹا (سنگل یا اسپلٹ) حاصل کرنا 🔥
+    final cardState = paymentSourceCardKey.currentState;
+    bool isSplit = cardState?.isSplitMode ?? false;
+    List<Map<String, dynamic>> splitList = cardState?.getSplitPaymentsList() ?? [];
 
     final Map<String, dynamic> transactionData = {
       'type': 'received', 
       'customerPhone': cleanPhone,
       'customerId': cleanPhone, 
-      'amount': amount,
+      'amount': totalAmount,
       'description': remarks,
       'remarks': remarks,
       'date': nowIso,
@@ -84,26 +90,43 @@ class PaymentInController {
         'isPercentage': _isPercentageDiscount,
       },
       'source': _selectedSource ?? 'Cash',
-      'splitPayments': _splitPayments,
+      'splitPayments': isSplit ? splitList : [],
       'hasAttachment': false,
       'timestamp': nowIso,
     };
 
     try {
-      // 1. ٹرانزیکشن باکس میں اینٹری
+      // ۱. ٹرانزیکشن باکس میں اندراج
       var txnBox = Hive.box('transactionBox');
       await txnBox.add(transactionData);
 
-      // 2. کیش یا بینک کے بیلنس میں رقم کا اضافہ
+      // ۲. ڈائریکٹ ہائیو کے 'bankBox' میں لائیو اور ڈائنامک پلس کرنا
       var bankBox = Hive.box('bankBox');
-      String sourceKey = _selectedSource ?? 'Cash';
-      double currentBalance = (bankBox.get(sourceKey, defaultValue: 0.0) as num).toDouble();
-      await bankBox.put(sourceKey, currentBalance + amount);
+
+      if (isSplit && splitList.isNotEmpty) {
+        // اسپلٹ موڈ: تمام منتخب شدہ بینکس/کیش میں ان کی اپنی لائیو رقم جمع کرنا
+        for (var split in splitList) {
+          String srcKey = split['source'] ?? 'Cash';
+          double splitAmt = (split['amount'] is num)
+              ? (split['amount'] as num).toDouble()
+              : (double.tryParse(split['amount'].toString()) ?? 0.0);
+
+          if (splitAmt > 0) {
+            double currentBalance = (bankBox.get(srcKey, defaultValue: 0.0) as num).toDouble();
+            await bankBox.put(srcKey, currentBalance + splitAmt);
+          }
+        }
+      } else {
+        // سنگل موڈ: منتخب کردہ مخصوص بینک یا کیش میں پوری رقم جمع کرنا
+        String sourceKey = _selectedSource ?? 'Cash';
+        double currentBalance = (bankBox.get(sourceKey, defaultValue: 0.0) as num).toDouble();
+        await bankBox.put(sourceKey, currentBalance + totalAmount);
+      }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('کامیاب! پیمنٹ اِن محفوظ ہو گئی: Rs. $amount'),
+            content: Text('کامیاب! پیمنٹ اِن محفوظ ہو گئی: Rs. $totalAmount'),
             backgroundColor: Colors.green,
           ),
         );

@@ -21,6 +21,22 @@ class _DatabasePageState extends State<DatabasePage> {
     'bankBox': {'title': 'بینک باکس', 'color': Colors.amber},
   };
 
+  // ہائیو بینک باکس کا اٹومیٹک کلین اپ اور مرج فنکشن
+  void _cleanupBankBox(Box box) {
+    if (_selectedBoxName != 'bankBox') return;
+
+    if (box.containsKey('cashInHand')) {
+      final double oldCash = (box.get('cashInHand') ?? 0.0).toDouble();
+      final double currentCash = (box.get('Cash') ?? 0.0).toDouble();
+
+      // ۱. دونوں کیش رقم کو ایک ہی 'Cash' کی کے تحت مرج کرنا
+      box.put('Cash', currentCash + oldCash);
+
+      // ۲. پرانی 'cashInHand' کی کو ہمیشہ کے لیے ڈیلیٹ کرنا
+      box.delete('cashInHand');
+    }
+  }
+
   Widget _buildChip(String key) {
     final info = _boxesInfo[key]!;
     final isSelected = _selectedBoxName == key;
@@ -63,7 +79,6 @@ class _DatabasePageState extends State<DatabasePage> {
         ),
         body: Column(
           children: [
-            // 3 لائنوں میں چھوٹے اور پرانے سائز کے بٹنز
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               color: Colors.grey[100],
@@ -88,11 +103,13 @@ class _DatabasePageState extends State<DatabasePage> {
             ),
             const Divider(height: 1),
 
-            // منتخب شدہ باکس کا ڈیٹا
             Expanded(
               child: ValueListenableBuilder(
                 valueListenable: currentBox.listenable(),
                 builder: (context, Box box, _) {
+                  // خودکار صفائی کال کرنا
+                  _cleanupBankBox(box);
+
                   if (box.isEmpty) {
                     return Center(child: Text('${_boxesInfo[_selectedBoxName]!['title']} بالکل خالی ہے!', style: const TextStyle(color: Colors.grey)));
                   }
@@ -108,6 +125,12 @@ class _DatabasePageState extends State<DatabasePage> {
                         child: ListTile(
                           title: Text('Key: $key', style: TextStyle(fontWeight: FontWeight.bold, color: themeColor, fontSize: 13)),
                           subtitle: Text(rawData.toString(), style: const TextStyle(fontSize: 12)),
+                          trailing: _selectedBoxName == 'bankBox' && key != 'Cash'
+                              ? IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                  onPressed: () => box.delete(key),
+                                )
+                              : null,
                         ),
                       );
                     },

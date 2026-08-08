@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../dashboard/widgets/payment_source_card.dart';
 
 class PaymentOutController {
   final TextEditingController amountController = TextEditingController();
@@ -11,11 +12,19 @@ class PaymentOutController {
   final ValueNotifier<double> currentAmountNotifier = ValueNotifier<double>(0.0);
   final ValueNotifier<bool> isSaving = ValueNotifier<bool>(false);
 
+  // ڈائنامک سورس کارڈ کا کنٹرول کے لیے GlobalKey
+  final GlobalKey<PaymentSourceCardState> sourceCardKey = GlobalKey<PaymentSourceCardState>();
+
   double _discountValue = 0.0;
   bool _isPercentageDiscount = false;
   
-  String? _selectedSource;
-  List<Map<String, dynamic>> _splitPayments = [];
+  String? _selectedSource = 'Cash';
+
+  String? get selectedPaymentSource => _selectedSource;
+
+  void updateSelectedSource(String? newSource) {
+    _selectedSource = newSource;
+  }
 
   PaymentOutController() {
     amountController.addListener(_onAmountChanged);
@@ -34,11 +43,6 @@ class PaymentOutController {
     _isPercentageDiscount = isPercentage;
   }
 
-  void updateSourceSplit(String? source, List<Map<String, dynamic>> splits) {
-    _selectedSource = source;
-    _splitPayments = splits;
-  }
-
   void dispose() {
     amountController.dispose();
     remarksController.dispose();
@@ -48,6 +52,7 @@ class PaymentOutController {
     isSaving.dispose();
   }
 
+  // ہائیو باکس (bankBox) سے ڈائنامک رقم منہا (Deduct) کرنے کا اصلی فنکشن
   Future<void> savePaymentOut(BuildContext context, {String? customerId, bool isExpense = false}) async {
     if (isSaving.value) return;
 
@@ -64,10 +69,13 @@ class PaymentOutController {
     double amount = double.tryParse(amountText) ?? 0.0;
     String remarks = remarksController.text.trim();
 
-    // موبائل نمبر کو مکمل صاف کرنا تاکہ یونیک کی میچنگ میں کوئی خامی نہ رہے
-    String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    // PaymentSourceCard سے لائیو اسپلٹ لسٹ اٹھانا
+    List<Map<String, dynamic>> splitPayments = [];
+    if (sourceCardKey.currentState != null) {
+      splitPayments = sourceCardKey.currentState!.getSplitPaymentsList();
+    }
 
-    // ISO تاریخ کا یکساں فارمیٹ
+    String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
     final String nowIso = DateTime.now().toIso8601String();
 
     final Map<String, dynamic> transactionData = {
@@ -83,28 +91,45 @@ class PaymentOutController {
         'isPercentage': _isPercentageDiscount,
       },
       'source': _selectedSource ?? 'Cash',
-      'splitPayments': _splitPayments,
+      'splitPayments': splitPayments,
       'isExpense': isExpense,
       'hasAttachment': false,
       'timestamp': nowIso,
     };
 
     try {
-      // 1. ٹرانزیکشن باکس میں اینٹری
+      // ۱. ٹرانزیکشن باکس میں انٹری
       var txnBox = Hive.box('transactionBox');
       await txnBox.add(transactionData);
 
-      // 2. اگر یہ دکان کا خرچہ ہے تو اخراجات باکس میں بھی بھیجیں
+      // ۲. اگر یہ دکان کا خرچہ ہے تو اخراجات باکس میں بھی بھیجیں
       if (isExpense) {
         var expenseBox = Hive.box('expenseBox');
         await expenseBox.add(transactionData);
       }
 
-      // 3. کیش یا بینک کے بیلنس میں سے رقم کی کٹوتی (Minus)
+      // ۳. ڈائریکٹ ہائیو (bankBox) سے ڈائنامک رقم منہا (Deduct) کرنا
       var bankBox = Hive.box('bankBox');
-      String sourceKey = _selectedSource ?? 'Cash';
-      double currentBalance = (bankBox.get(sourceKey, defaultValue: 0.0) as num).toDouble();
-      await bankBox.put(sourceKey, currentBalance - amount);
+
+      if (splitPayments.isNotEmpty) {
+        // اسپلٹ موڈ: تمام منتخب سورسز سے الگ الگ کٹوتی
+        for (var split in splitPayments) {
+          String srcKey = split['source'] ?? 'Cash';
+          double splitAmt = (split['amount'] is num)
+              ? (split['amount'] as num).toDouble()
+              : (double.tryParse(split['amount'].toString()) ?? 0.0);
+
+          if (splitAmt > 0) {
+            double currentBalance = (bankBox.get(srcKey, defaultValue: 0.0) as num).toDouble();
+            await bankBox.put(srcKey, currentBalance - splitAmt);
+          }
+        }
+      } else {
+        // سنگل موڈ: منتخب کردہ بینک یا کیش سے کٹوتی
+        String sourceKey = _selectedSource ?? 'Cash';
+        double currentBalance = (bankBox.get(sourceKey, defaultValue: 0.0) as num).toDouble();
+        await bankBox.put(sourceKey, currentBalance - amount);
+      }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

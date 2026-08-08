@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'payment_out_controller.dart';
 import '../common/discount_widget.dart';
-import '../../../dashboard/widgets/source_selecter.dart';
+import '../../../dashboard/widgets/payment_source_card.dart';
 
 class PaymentOutBody extends StatelessWidget {
   final PaymentOutController controller;
@@ -26,9 +26,9 @@ class PaymentOutBody extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'تاریخ: 02 اگست 2026',
-                  style: TextStyle(
+                Text(
+                  'تاریخ: ${DateTime.now().day} اگست ${DateTime.now().year}',
+                  style: const TextStyle(
                     color: Colors.black87,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
@@ -39,8 +39,8 @@ class PaymentOutBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          
-          // رقم کا خانہ (آٹو فوکس اور نمیرک کی بورڈ کے ساتھ)
+
+          // رقم کا خانہ (Amount)
           TextField(
             controller: controller.amountController,
             focusNode: controller.amountFocusNode,
@@ -61,7 +61,7 @@ class PaymentOutBody extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // جب تک رقم درج نہ ہو، باقی چیزیں چھپی رہیں گی
+          // رقم درج ہونے پر باقی فارم ظاہر ہوگا
           ValueListenableBuilder<bool>(
             valueListenable: controller.hasAmountEntered,
             builder: (context, hasAmount, child) {
@@ -136,17 +136,14 @@ class PaymentOutBody extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
-                  // سورس سلیکٹر جو مین رقم کے ساتھ سنک ہے
-                  ValueListenableBuilder<double>(
-                    valueListenable: controller.currentAmountNotifier,
-                    builder: (context, currentAmount, child) {
-                      return SourceSelecter(
-                        defaultAmount: currentAmount,
-                        onSplitPaymentChanged: (String? source, double amount, double extra, List<Map<String, dynamic>> splits) {
-                          controller.updateSourceSplit(source, splits);
-                        },
-                      );
+
+                  // ڈائنامک PaymentSourceCard (Key کے ساتھ ڈائریکٹ لنک)
+                  PaymentSourceCard(
+                    key: controller.sourceCardKey,
+                    isAdmin: true,
+                    selectedSource: controller.selectedPaymentSource,
+                    onChanged: (String? newSource) {
+                      controller.updateSelectedSource(newSource);
                     },
                   ),
                 ],

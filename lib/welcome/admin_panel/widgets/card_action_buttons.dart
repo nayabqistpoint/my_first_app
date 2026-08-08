@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../home_page/transaction_forms/sale_page.dart';
+// ignore: unused_import
 
 class CardActionButtons extends StatelessWidget {
   final dynamic controller;
@@ -52,12 +52,7 @@ class CardActionButtons extends StatelessWidget {
               onPressed: () async {
                 if (keyToUse != null) {
                   // سیلز پیج پر جائیں
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SalePage(),
-                    ),
-                  );
+                  await Navigator.pushNamed(context, '/sale');
 
                   // جب سیلز پیج سے واپس آئیں تو ٹرانزیکشن کو مکمل کر دیں
                   await controller.assignUsernameAndComplete(keyToUse);

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'pay_now_body.dart';
 import 'pay_now_controller.dart';
-import '../../dashboard/widgets/source_selecter.dart';
+import '../../dashboard/widgets/payment_source_card.dart';
 
-class PayNowWidget extends StatelessWidget {
+class PayNowWidget extends StatefulWidget {
   final String customerMobileNumber;
 
   const PayNowWidget({
@@ -12,9 +12,18 @@ class PayNowWidget extends StatelessWidget {
   });
 
   @override
+  State<PayNowWidget> createState() => _PayNowWidgetState();
+}
+
+class _PayNowWidgetState extends State<PayNowWidget> {
+  // ۱۔ PaymentSourceCard کی حالت حاصل کرنے کے لیے GlobalKey
+  final GlobalKey<PaymentSourceCardState> _paymentCardKey = GlobalKey<PaymentSourceCardState>();
+
+  String selectedPaymentSource = 'Cash';
+
+  @override
   Widget build(BuildContext context) {
-    // یہاں ہم نے کسٹمر کا موبائل نمبر کنٹرولر کو پاس کر دیا ہے تاکہ ڈیٹا بیس میں سیو ہو سکے
-    payNowController.customerMobileNumber = customerMobileNumber;
+    payNowController.customerMobileNumber = widget.customerMobileNumber;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -44,7 +53,7 @@ class PayNowWidget extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. رقم والا خانہ (فکسڈ)
+                  // ۱۔ رقم درج کرنے کا خانہ
                   SizedBox(
                     height: 55,
                     child: TextField(
@@ -76,7 +85,7 @@ class PayNowWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // 2. رقم لکھنے پر ظاہر ہونے والے خانے
+                  // ۲۔ رقم درج کرنے پر کھلنے والا حصہ
                   ListenableBuilder(
                     listenable: payNowController,
                     builder: (context, child) {
@@ -92,10 +101,18 @@ class PayNowWidget extends StatelessWidget {
                             child: const PayNowBody(),
                           ),
                           const SizedBox(height: 12),
-                          SourceSelecter(
-                            defaultAmount: payNowController.enteredAmount,
-                            onSplitPaymentChanged: (primaryBankSource, totalCash, totalBank, detailedSplits) {
-                              // اسپلٹ پیمنٹ لاجک
+
+                          // پیمنٹ سورس کارڈ (GlobalKey کے ساتھ)
+                          PaymentSourceCard(
+                            key: _paymentCardKey,
+                            isAdmin: false,
+                            selectedSource: selectedPaymentSource,
+                            onChanged: (newValue) {
+                              if (newValue != null) {
+                                setState(() {
+                                  selectedPaymentSource = newValue;
+                                });
+                              }
                             },
                           ),
                         ],
@@ -106,8 +123,8 @@ class PayNowWidget extends StatelessWidget {
               ),
             ),
           ),
-          
-          // نیچے "محفوظ کریں" کا بٹن
+
+          // ۳۔ محفوظ کریں کا بٹن
           Container(
             padding: const EdgeInsets.all(15.0),
             decoration: BoxDecoration(
@@ -131,7 +148,19 @@ class PayNowWidget extends StatelessWidget {
                   shape: const StadiumBorder(),
                 ),
                 onPressed: () {
-                  payNowController.savePayment(context);
+                  // کارڈ کی حالت سے چیک کریں کہ آیا یوزر اسپلٹ موڈ میں ہے یا نہیں
+                  final cardState = _paymentCardKey.currentState;
+                  List<Map<String, dynamic>>? splitList;
+
+                  if (cardState != null && cardState.isSplitMode) {
+                    splitList = cardState.getSplitPaymentsList();
+                  }
+
+                  payNowController.savePayment(
+                    context,
+                    paymentSource: selectedPaymentSource,
+                    splitPaymentsList: splitList,
+                  );
                 },
                 child: const Text(
                   "محفوظ کریں",

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'payment_in_controller.dart';
 import '../common/discount_widget.dart';
-import '../../../dashboard/widgets/source_selecter.dart';
+import '../../../dashboard/widgets/payment_source_card.dart';
 
 class PaymentBody extends StatefulWidget {
   final PaymentInController controller;
@@ -28,7 +28,7 @@ class _PaymentBodyState extends State<PaymentBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ۱. تاریخ (Date) کی پٹی
+          // ۱. تاریخ کی پٹی
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -54,7 +54,7 @@ class _PaymentBodyState extends State<PaymentBody> {
           ),
           const SizedBox(height: 20),
 
-          // ۲. رقم (Amount) لکھنے کا خانہ
+          // ۲. رقم (Amount) درج کرنے کا خانہ
           TextField(
             controller: widget.controller.amountController,
             focusNode: widget.controller.amountFocusNode,
@@ -74,7 +74,7 @@ class _PaymentBodyState extends State<PaymentBody> {
           ),
           const SizedBox(height: 16),
 
-          // ۳. باقی تمام فیلڈز جو رقم درج کرنے کے بعد کھلیں گی
+          // ۳. تمام فیلڈز
           ValueListenableBuilder<bool>(
             valueListenable: widget.controller.hasAmountEntered,
             builder: (context, hasAmount, child) {
@@ -85,7 +85,7 @@ class _PaymentBodyState extends State<PaymentBody> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // الف) تفصیل (Remarks) کا باکس
+                  // تفصیل / ریمارکس
                   TextField(
                     controller: widget.controller.remarksController,
                     maxLines: 2,
@@ -119,7 +119,7 @@ class _PaymentBodyState extends State<PaymentBody> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ب) وائس نوٹ (Voice Note)
+                  // وائس نوٹ
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -149,24 +149,23 @@ class _PaymentBodyState extends State<PaymentBody> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ج) ڈسکاؤنٹ ویجیٹ
+                  // ڈسکاؤنٹ
                   DiscountWidget(
                     onDiscountChanged: (double discountValue, bool isPercentage) {
-                      // ڈسکاؤنٹ کی لاجک یہاں آئے گی
+                      widget.controller.updateDiscount(discountValue, isPercentage);
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // د) سورس سلیکٹر ویجیٹ
-                  ValueListenableBuilder<double>(
-                    valueListenable: widget.controller.currentAmountNotifier,
-                    builder: (context, currentAmount, child) {
-                      return SourceSelecter(
-                        defaultAmount: currentAmount,
-                        onSplitPaymentChanged: (String? source, double amount, double extra, List<Map<String, dynamic>> splits) {
-                          // سپلٹ پیمنٹ کا ڈیٹا یہاں آئے گا
-                        },
-                      );
+                  // 🔥 پیمنٹ سورس ویجیٹ (GlobalKey کے ساتھ کنیکٹڈ) 🔥
+                  PaymentSourceCard(
+                    key: widget.controller.paymentSourceCardKey, // 👈 یہ کی کنٹرولر کو لائیو اسٹیٹ فراہم کرے گی
+                    isAdmin: true,
+                    selectedSource: widget.controller.selectedPaymentSource,
+                    onChanged: (String? newSource) {
+                      setState(() {
+                        widget.controller.updateSelectedSource(newSource);
+                      });
                     },
                   ),
                 ],

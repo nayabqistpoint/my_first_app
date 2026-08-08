@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../controller.dart';
 
 class CashWidget extends StatelessWidget {
@@ -8,11 +9,32 @@ class CashWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final TextEditingController bankNameController = TextEditingController();
 
-    return ListenableBuilder(
-      listenable: dashboardController,
-      builder: (context, child) {
-        final bankEntries = dashboardController.bankBalances.entries.toList();
-        
+    // 🔥 ڈائریکٹ ہائیو کے 'bankBox' کو لائیو سننا 🔥
+    return ValueListenableBuilder<Box>(
+      valueListenable: Hive.box('bankBox').listenable(),
+      builder: (context, box, child) {
+        // ۱۔ کیش کی رقم پڑھنا (Cash اور پرانی cashInHand دونوں کو چیک کرنا)
+        double cashBalance = (box.get('Cash') ?? box.get('cashInHand') ?? 0.0).toDouble();
+
+        // ۲۔ تمام بینک بیلنسز کی میپنگ اور ٹوٹل کیلکولیشن
+        Map<String, double> bankBalances = {};
+        double totalBankBalance = 0.0;
+
+        for (var key in box.keys) {
+          String keyStr = key.toString();
+          // کیش والی کیز کے علاوہ باقی تمام بینکس اٹھانا
+          if (keyStr != 'cashInHand' && keyStr != 'Cash') {
+            String cleanName = keyStr.startsWith('bank_')
+                ? keyStr.replaceFirst('bank_', '')
+                : keyStr;
+            double amt = (box.get(key) ?? 0.0).toDouble();
+            bankBalances[cleanName] = amt;
+            totalBankBalance += amt;
+          }
+        }
+
+        final bankEntries = bankBalances.entries.toList();
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Column(
@@ -34,17 +56,22 @@ class CashWidget extends StatelessWidget {
                       child: Column(
                         children: [
                           Text(
-                            "Rs. ${dashboardController.totalBankBalance.toStringAsFixed(0)}",
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.green),
+                            "Rs. ${totalBankBalance.toStringAsFixed(0)}",
+                            style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green),
                           ),
                           const SizedBox(height: 2),
-                          const Text("Bank Balance", style: TextStyle(fontSize: 12, color: Colors.black54)),
+                          const Text("Bank Balance",
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.black54)),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  
+
                   // کیش ان ہینڈ بلاک (کلک کرنے پر پاپ اپ آئے گا)
                   Expanded(
                     child: InkWell(
@@ -62,11 +89,16 @@ class CashWidget extends StatelessWidget {
                         child: Column(
                           children: [
                             Text(
-                              "Rs. ${dashboardController.cashInHand.toStringAsFixed(0)}",
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue),
+                              "Rs. ${cashBalance.toStringAsFixed(0)}",
+                              style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue),
                             ),
                             const SizedBox(height: 2),
-                            const Text("Cash In Hand", style: TextStyle(fontSize: 12, color: Colors.black54)),
+                            const Text("Cash In Hand",
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.black54)),
                           ],
                         ),
                       ),
@@ -86,8 +118,10 @@ class CashWidget extends StatelessWidget {
                       PopupMenuButton<int>(
                         offset: const Offset(0, 30),
                         color: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        icon: const Icon(Icons.add_circle, color: Colors.blue, size: 26),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        icon: const Icon(Icons.add_circle,
+                            color: Colors.blue, size: 26),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                         itemBuilder: (context) => [
@@ -102,7 +136,10 @@ class CashWidget extends StatelessWidget {
                                   const Text(
                                     "Add Bank",
                                     textAlign: TextAlign.right,
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87),
                                   ),
                                   const SizedBox(height: 8),
                                   TextField(
@@ -111,24 +148,28 @@ class CashWidget extends StatelessWidget {
                                     decoration: const InputDecoration(
                                       hintText: "بینک کا نام لکھیں",
                                       border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                      contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 6),
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   ElevatedButton(
                                     onPressed: () {
                                       if (bankNameController.text.isNotEmpty) {
-                                        // نیا بینک صفر بیلنس یا ڈیفولت ویلیو کے ساتھ لسٹ میں محفوظ ہو جائے گا
-                                        dashboardController.updateBankBalance(bankNameController.text, 0.0);
+                                        dashboardController.updateBankBalance(
+                                            bankNameController.text.trim(), 0.0);
                                         bankNameController.clear();
                                         Navigator.pop(context);
                                       }
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.blue,
-                                      padding: const EdgeInsets.symmetric(vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 4),
                                     ),
-                                    child: const Text("Add", style: TextStyle(color: Colors.white, fontSize: 13)),
+                                    child: const Text("Add",
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 13)),
                                   ),
                                 ],
                               ),
@@ -138,21 +179,25 @@ class CashWidget extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        "Rs. ${dashboardController.totalBankBalance.toStringAsFixed(0)}",
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.blue),
+                        "Rs. ${totalBankBalance.toStringAsFixed(0)}",
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.blue),
                       ),
                     ],
                   ),
                   const Text(
                     "Banks List",
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
 
               const SizedBox(height: 4),
 
-              // ۳۔ بینک لسٹ بلاک (ہر بینک پر کلک کرنے سے رقم کم یا زیادہ کرنے کا پاپ اپ کھلے گا)
+              // ۳۔ بینک لسٹ بلاک
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
@@ -174,20 +219,26 @@ class CashWidget extends StatelessWidget {
                           children: [
                             InkWell(
                               onTap: () {
-                                _showBankAdjustmentDialog(context, bankName, bankAmount);
+                                _showBankAdjustmentDialog(
+                                    context, bankName, bankAmount);
                               },
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 12),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       "Rs. ${bankAmount.toStringAsFixed(0)}",
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14),
                                     ),
                                     Text(
                                       bankName,
-                                      style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                      style: const TextStyle(
+                                          fontSize: 13, color: Colors.black87),
                                     ),
                                   ],
                                 ),
@@ -216,7 +267,8 @@ class CashWidget extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("کیش ان ہینڈ اپ ڈیٹ کریں", textAlign: TextAlign.right, style: TextStyle(fontSize: 16)),
+        title: const Text("کیش ان ہینڈ اپ ڈیٹ کریں",
+            textAlign: TextAlign.right, style: TextStyle(fontSize: 16)),
         content: TextField(
           controller: amountController,
           keyboardType: TextInputType.number,
@@ -235,7 +287,8 @@ class CashWidget extends StatelessWidget {
               }
               Navigator.pop(context);
             },
-            child: const Text("رقم نکالیں (-)", style: TextStyle(color: Colors.red)),
+            child: const Text("رقم نکالیں (-)",
+                style: TextStyle(color: Colors.red)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -246,7 +299,8 @@ class CashWidget extends StatelessWidget {
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-            child: const Text("جمع کریں (+)", style: TextStyle(color: Colors.white)),
+            child: const Text("جمع کریں (+)",
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -254,18 +308,22 @@ class CashWidget extends StatelessWidget {
   }
 
   // بینک بیلنس اپ ڈیٹ کرنے کا پاپ اپ
-  void _showBankAdjustmentDialog(BuildContext context, String bankName, double currentAmount) {
+  void _showBankAdjustmentDialog(
+      BuildContext context, String bankName, double currentAmount) {
     final TextEditingController amountController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(bankName, textAlign: TextAlign.right, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        title: Text(bankName,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text("موجودہ بیلنس: Rs. ${currentAmount.toStringAsFixed(0)}", style: const TextStyle(color: Colors.black54)),
+            Text("موجودہ بیلنس: Rs. ${currentAmount.toStringAsFixed(0)}",
+                style: const TextStyle(color: Colors.black54)),
             const SizedBox(height: 10),
             TextField(
               controller: amountController,
@@ -287,7 +345,8 @@ class CashWidget extends StatelessWidget {
               }
               Navigator.pop(context);
             },
-            child: const Text("رقم نکالیں (-)", style: TextStyle(color: Colors.red)),
+            child: const Text("رقم نکالیں (-)",
+                style: TextStyle(color: Colors.red)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -298,7 +357,8 @@ class CashWidget extends StatelessWidget {
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text("جمع کریں (+)", style: TextStyle(color: Colors.white)),
+            child: const Text("جمع کریں (+)",
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
