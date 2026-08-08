@@ -9,7 +9,7 @@ import '../../features/add_party_dialog.dart';
 class CustomerTransaction {
   String date;
   double amount;
-  String type; 
+  String type;
   String description;
 
   CustomerTransaction({
@@ -40,7 +40,7 @@ class CustomerTransaction {
     return CustomerTransaction(
       date: json['date']?.toString() ?? '',
       amount: parsedAmount,
-      type: json['type']?.toString() ?? 'get',
+      type: json['type']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
     );
   }
@@ -52,7 +52,7 @@ class CustomerTransaction {
 class CustomerModel {
   dynamic hiveKey;
   String name;
-  String cast; 
+  String cast;
   String phone;
   List<CustomerTransaction> transactions;
 
@@ -68,11 +68,10 @@ class CustomerModel {
     return phone.replaceAll(RegExp(r'[^0-9]'), '');
   }
 
-  // 🎯 100% ایکوریٹ بیلنس نکالنے کا طریقہ (بالکل لیجر کنٹرولر کی نقل)
+  // 🔒 🎯 لیجر کے ساتھ 100% سنکرونائزڈ بیلنس کی لاجک
   double get calculateTotalBalance {
     List<Map<String, dynamic>> tempTransactions = [];
 
-    // 1. کسٹمر کی اپنی بنیادی لسٹ
     for (var tx in transactions) {
       tempTransactions.add({
         'date': tx.date,
@@ -82,7 +81,6 @@ class CustomerModel {
       });
     }
 
-    // 2. ٹرانزیکشن باکس سے میچنگ
     if (Hive.isBoxOpen('transactionBox')) {
       var box = Hive.box('transactionBox');
       String targetPhone = cleanPhone;
@@ -90,16 +88,16 @@ class CustomerModel {
       for (var key in box.keys) {
         var txValue = box.get(key);
         if (txValue != null && txValue is Map) {
-          String txPhone = (txValue['customerPhone'] ?? '').toString().replaceAll(RegExp(r'[^0-9]'), '');
-          
+          String txPhone = (txValue['customerPhone'] ?? txValue['customerId'] ?? '').toString().replaceAll(RegExp(r'[^0-9]'), '');
+
           if (targetPhone.isNotEmpty && txPhone == targetPhone) {
             bool alreadyExists = tempTransactions.any((existing) {
               if (existing['timestamp'] != null && txValue['timestamp'] != null) {
                 return existing['timestamp'] == txValue['timestamp'];
               }
-              return existing['date'] == txValue['date'] && 
-                     existing['amount'].toString() == txValue['amount'].toString() &&
-                     existing['description'] == txValue['description'];
+              return existing['date'] == txValue['date'] &&
+                  existing['amount'].toString() == txValue['amount'].toString() &&
+                  existing['description'] == txValue['description'];
             });
 
             if (!alreadyExists) {
@@ -110,27 +108,54 @@ class CustomerModel {
       }
     }
 
-    // 3. وہی لیجر والا جمع/تفریق کا حساب
-    double total = 0.0;
-    for (var t in tempTransactions) {
-      double amount = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
-      String type = (t['type'] ?? 'get').toString().toLowerCase();
+    // 🔒 تاریخ کے مطابق ترتیب (پرانی سے نئی)
+    tempTransactions.sort((a, b) {
+      DateTime dtA = DateTime.tryParse(a['timestamp']?.toString() ?? a['date']?.toString() ?? '') ?? DateTime(2000);
+      DateTime dtB = DateTime.tryParse(b['timestamp']?.toString() ?? b['date']?.toString() ?? '') ?? DateTime(2000);
+      return dtA.compareTo(dtB);
+    });
 
-      if (type == 'give' || type == 'given' || type == 'paid' || type == 'out') {
-        total += amount;
-      } else if (type == 'get' || type == 'received' || type == 'in') {
-        total -= amount;
+    double runningBalance = 0.0;
+
+    for (var t in tempTransactions) {
+      String type = t['type']?.toString().toLowerCase().trim() ?? '';
+      
+      // پرچیز کی اینٹری کے لیے remainingBalance اور باقی کے لیے amount
+      double amt = 0.0;
+      if (type == 'purchase' && t['remainingBalance'] != null) {
+        amt = double.tryParse(t['remainingBalance'].toString()) ?? 0.0;
+      } else {
+        amt = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
+      }
+
+      // 🔒 فائنل میپنگ
+      bool isGreen = false;
+      if (type == 'payment_in' || type == 'in' || type == 'received' || type == 'get') {
+        isGreen = true;
+      } else if (type == 'payment_out' || type == 'out' || type == 'paid' || type == 'give' || type == 'given') {
+        isGreen = false;
+      } else if (type == 'purchase') {
+        isGreen = amt >= 0;
+      } else {
+        isGreen = true;
+      }
+
+      amt = amt.abs();
+
+      if (isGreen) {
+        runningBalance += amt; // پلس
+      } else {
+        runningBalance -= amt; // مائنس
       }
     }
 
-    if (total.abs() < 0.01) return 0.0;
-    return total;
+    return runningBalance;
   }
 
   factory CustomerModel.fromJson(dynamic key, Map json) {
     var rawTxList = json['transactions'];
     List<CustomerTransaction> txList = [];
-    
+
     if (rawTxList is List) {
       txList = rawTxList
           .where((t) => t != null && t is Map)
@@ -143,7 +168,7 @@ class CustomerModel {
     String resolvedPhone = json['customerPhone']?.toString() ?? json['phone']?.toString() ?? '';
 
     return CustomerModel(
-      hiveKey: key, 
+      hiveKey: key,
       name: resolvedName,
       cast: resolvedCast,
       phone: resolvedPhone,
@@ -205,11 +230,11 @@ class CustomerController extends ChangeNotifier {
       'customerName': name.trim(),
       'customerCaste': '',
       'customerPhone': phone.trim().isNotEmpty ? phone.trim() : 'نامعلوم',
-      'transactions': [], 
+      'transactions': [],
     };
 
     customerBox.add(manualCustomerData);
-    notifyListeners(); 
+    notifyListeners();
   }
 
   void removeCustomer(int index) {
@@ -222,6 +247,7 @@ class CustomerController extends ChangeNotifier {
   }
 }
 
+// 🎯 گلوبل ابجیکٹ کی موجودگی لازمی ہے
 final CustomerController customerController = CustomerController();
 
 // ==========================================
@@ -232,142 +258,153 @@ class CustomersListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: customerController,
-      builder: (context, child) {
-        final customersList = customerController.customers;
+    return ValueListenableBuilder(
+      valueListenable: Hive.box('customerBox').listenable(),
+      builder: (context, Box customerBox, _) {
+        return ValueListenableBuilder(
+          valueListenable: Hive.isBoxOpen('transactionBox')
+              ? Hive.box('transactionBox').listenable()
+              : ValueNotifier(null),
+          builder: (context, _, child) {
+            final customersList = customerController.customers;
 
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: Row(
-                children: [
-                  SizedBox(
-                    height: 35,
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        items: ["سب", "باقی", "مکمل"].map((String value) {
-                          return DropdownMenuItem<String>(value: value, child: Text(value, style: const TextStyle(fontSize: 12)));
-                        }).toList(),
-                        onChanged: (_) {},
-                        hint: const Text("فلٹر", style: TextStyle(fontSize: 12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 1, 
-                    child: SizedBox(
-                      height: 35,
-                      child: TextField(
-                        textAlign: TextAlign.right,
-                        decoration: InputDecoration(
-                          hintText: "سرچ...",
-                          hintStyle: const TextStyle(fontSize: 12),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        height: 35,
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            items: ["سب", "باقی", "مکمل"].map((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value, style: const TextStyle(fontSize: 12)),
+                              );
+                            }).toList(),
+                            onChanged: (_) {},
+                            hint: const Text("فلٹر", style: TextStyle(fontSize: 12)),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      showAddPartyDialog(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      minimumSize: const Size(100, 35),
-                    ),
-                    child: const Text("ایڈ پارٹی", style: TextStyle(color: Colors.white, fontSize: 13)),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.more_vert),
-                    constraints: const BoxConstraints(),
-                    padding: EdgeInsets.zero,
-                  ),
-                ],
-              ),
-            ),
-            const Divider(color: Colors.black, thickness: 1.2, height: 1),
-            Expanded(
-              child: customersList.isEmpty
-                  ? const Center(
-                      child: Text(
-                        "کوئی کسٹمر موجود نہیں",
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 1,
+                        child: SizedBox(
+                          height: 35,
+                          child: TextField(
+                            textAlign: TextAlign.right,
+                            decoration: InputDecoration(
+                              hintText: "سرچ...",
+                              hintStyle: const TextStyle(fontSize: 12),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
+                            ),
+                          ),
+                        ),
                       ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: customersList.length,
-                      itemBuilder: (context, index) {
-                        final customer = customersList[index];
-                        
-                        double totalBalance = customer.calculateTotalBalance;
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          showAddPartyDialog(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black87,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          minimumSize: const Size(100, 35),
+                        ),
+                        child: const Text("ایڈ پارٹی", style: TextStyle(color: Colors.white, fontSize: 13)),
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.more_vert),
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(color: Colors.black, thickness: 1.2, height: 1),
+                Expanded(
+                  child: customersList.isEmpty
+                      ? const Center(
+                          child: Text(
+                            "کوئی کسٹمر موجود نہیں",
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.zero,
+                          itemCount: customersList.length,
+                          itemBuilder: (context, index) {
+                            final customer = customersList[index];
 
-                        Color amountColor = totalBalance == 0 ? Colors.black54 : (totalBalance > 0 ? Colors.red : Colors.green);
+                            double totalBalance = customer.calculateTotalBalance;
+                            Color amountColor = totalBalance == 0
+                                ? Colors.black54
+                                : (totalBalance >= 0 ? Colors.green : Colors.red);
 
-                        return InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CustomerLedgerPage(customer: customer),
-                              ),
-                            ).then((_) {
-                              customerController.refreshList();
-                            });
-                          },
-                          child: Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Rs ${totalBalance.abs().toStringAsFixed(0)}", 
-                                      style: TextStyle(
-                                        color: amountColor, 
-                                        fontWeight: FontWeight.bold, 
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
+                            return InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CustomerLedgerPage(customer: customer),
+                                  ),
+                                ).then((_) {
+                                  customerController.refreshList();
+                                });
+                              },
+                              child: Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                        Text(
+                                          "Rs ${totalBalance.abs().toStringAsFixed(0)}",
+                                          style: TextStyle(
+                                            color: amountColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.end,
                                           children: [
-                                            Text(
-                                              "${customer.name} ${customer.cast}".trim(), 
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                Text(
+                                                  "${customer.name} ${customer.cast}".trim(),
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(width: 10),
+                                            const CircleAvatar(
+                                              radius: 15,
+                                              backgroundColor: Colors.black12,
+                                              child: Icon(Icons.person, size: 18, color: Colors.black54),
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(width: 10),
-                                        const CircleAvatar(
-                                          radius: 15, 
-                                          backgroundColor: Colors.black12, 
-                                          child: Icon(Icons.person, size: 18, color: Colors.black54),
-                                        ),
                                       ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const Divider(color: Colors.black26, thickness: 0.5, height: 1),
+                                ],
                               ),
-                              const Divider(color: Colors.black26, thickness: 0.5, height: 1),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
