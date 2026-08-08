@@ -16,39 +16,31 @@ class LedgerMiddleWidget extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: SizedBox(
-            height: 35,
+            height: 38,
             child: TextField(
               onChanged: (value) => controller.setSearchQuery(value),
               textAlign: TextAlign.right,
               decoration: InputDecoration(
                 hintText: "تلاش کریں...",
-                hintStyle: const TextStyle(fontSize: 12),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
+                hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
+                prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.black12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.black12),
+                ),
               ),
             ),
           ),
         ),
 
-        // ۲۔ ہیڈنگ
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text("ملی", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.green)),
-              SizedBox(width: 25),
-              Text("دیے", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.red)),
-              Spacer(),
-              Text("تاریخ اور تفصیل", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black54)),
-              SizedBox(width: 20),
-              Text("بقایا / ٹوٹل", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            ],
-          ),
-        ),
-        const Divider(color: Colors.black, thickness: 1.2, height: 1),
+        const Divider(color: Colors.black12, thickness: 1, height: 1),
 
-        // ۳۔ ٹرانزیکشن لسٹ
+        // ۲۔ کلین لسٹ (بائیں طرف کی رقم کی میپنگ درست کی گئی ہے)
         Expanded(
           child: transactions.isEmpty
               ? const Center(
@@ -86,11 +78,13 @@ class LedgerMiddleWidget extends StatelessWidget {
                       } catch (_) {}
                     }
 
-                    // 🎯 ایگزیکٹ ڈسپلے ویلیوز
-                    double displayAmt = CustomerLedgerController.getTransactionAmount(tx).abs();
-                    bool isGreen = CustomerLedgerController.isGreenColumn(tx);
-                    double runningBal = controller.getRunningBalanceAtIndex(index);
+                    // 🔒 رقم اور رنگ کی سخت میپنگ
+                    double displayAmt = CustomerLedgerController.getTransactionAmount(tx);
+                    bool isGreen = CustomerLedgerController.isGreenTransaction(tx);
+                    Color txnColor = isGreen ? Colors.green : Colors.red;
 
+                    // 💰 رننگ بیلنس اور کیپسول کا رنگ
+                    double runningBal = controller.getRunningBalanceAtIndex(index);
                     Color balanceColor = runningBal >= 0 ? Colors.green : Colors.red;
 
                     return Opacity(
@@ -98,39 +92,28 @@ class LedgerMiddleWidget extends StatelessWidget {
                       child: Column(
                         children: [
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                             child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // 🟢/🔴 رقم کا کالم (ملی Green / دیے Red)
-                                SizedBox(
-                                  width: 110,
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Center(
-                                          child: Text(
-                                            isGreen ? displayAmt.toStringAsFixed(0) : "", 
-                                            style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
-                                          ),
-                                        ),
-                                      ),
-                                      Container(width: 1, height: 20, color: Colors.black26),
-                                      Expanded(
-                                        child: Center(
-                                          child: Text(
-                                            isGreen ? "" : displayAmt.toStringAsFixed(0), 
-                                            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                // 🟢/🔴 ۱۔ بائیں طرف رقم (Green/Red سٹرکچرڈ رنگ میں)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    displayAmt.toStringAsFixed(0),
+                                    style: TextStyle(
+                                      color: txnColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 17,
+                                    ),
                                   ),
                                 ),
+
                                 const Spacer(),
-                                
-                                // دائیں سائیڈ: بقایا بکس اور تاریخ
+
+                                // ۲۔ تفصیل، تاریخ اور دائیں طرف کا کیپسول
                                 Expanded(
-                                  flex: 2,
+                                  flex: 3,
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
@@ -138,40 +121,51 @@ class LedgerMiddleWidget extends StatelessWidget {
                                         mainAxisAlignment: MainAxisAlignment.end,
                                         children: [
                                           if (hasAttachment) ...[
-                                            const Icon(Icons.attach_file, size: 13, color: Colors.grey),
-                                            const SizedBox(width: 4),
+                                            const Icon(Icons.attach_file, size: 12, color: Colors.grey),
+                                            const SizedBox(width: 3),
                                           ],
                                           
-                                          // 🗓️ تاریخ ڈسپلے
+                                          // 🗓️ تاریخ
                                           if (dateMap['day']!.isNotEmpty) ...[
-                                            Text(dateMap['year']!, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500)),
-                                            const SizedBox(width: 3),
-                                            Text(dateMap['month']!, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500)),
-                                            const SizedBox(width: 3),
-                                            Text(dateMap['day']!, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                            Text(
+                                              "${dateMap['day']} ${dateMap['month']} ${dateMap['year']}",
+                                              style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                                            ),
                                           ] else ...[
-                                            Text(dateMap['month']!, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500)),
+                                            Text(
+                                              dateMap['month']!,
+                                              style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                                            ),
                                           ],
 
                                           const SizedBox(width: 8),
-                                          
-                                          // 💰 بولڈ بقایا بکس
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: balanceColor.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(4),
-                                              border: Border.all(color: balanceColor.withValues(alpha: 0.5), width: 0.8),
-                                            ),
-                                            child: Text(
-                                              "بقایا: ${runningBal.abs().toStringAsFixed(0)}",
-                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: balanceColor),
+
+                                          // 🎯 ۳۔ دائیں سائیڈ کا فکسڈ کیپسول
+                                          SizedBox(
+                                            width: 100,
+                                            height: 26,
+                                            child: Container(
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(15),
+                                                border: Border.all(color: balanceColor, width: 1.3),
+                                              ),
+                                              child: Text(
+                                                runningBal.abs().toStringAsFixed(0),
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: balanceColor,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 4),
                                       
+                                      const SizedBox(height: 6),
+
                                       // تفصیل
                                       Text(
                                         descStr.isNotEmpty 

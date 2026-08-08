@@ -113,45 +113,75 @@ class CustomerLedgerController extends ChangeNotifier {
     return {'day': '', 'month': rawDate?.toString() ?? '', 'year': ''};
   }
 
-  static double getTransactionAmount(dynamic tx) {
+  // 🎯 خام رقم نکالنا (Purchase کے لیے remainingBalance اور باقیوں کے لیے amount)
+  static double getRawTransactionAmount(dynamic tx) {
     if (tx == null) return 0.0;
     double amt = 0.0;
+    String type = getTransactionType(tx);
+
     if (tx is Map) {
-      if (tx['type']?.toString().toLowerCase() == 'purchase' && tx['remainingBalance'] != null) {
+      if (type == 'purchase' && tx['remainingBalance'] != null) {
         amt = double.tryParse(tx['remainingBalance'].toString()) ?? 0.0;
       } else {
         amt = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
       }
     } else {
       try {
-        if (tx.type?.toString().toLowerCase() == 'purchase' && tx.remainingBalance != null) {
+        if (type == 'purchase' && tx.remainingBalance != null) {
           amt = double.tryParse(tx.remainingBalance.toString()) ?? 0.0;
         } else {
           amt = double.tryParse(tx.amount?.toString() ?? '0') ?? 0.0;
         }
       } catch (_) {}
     }
-    return amt.abs();
+    return amt;
   }
 
-  static bool isGreenTransaction(dynamic tx) {
-    if (tx == null) return true;
+  static double getTransactionAmount(dynamic tx) {
+    return getRawTransactionAmount(tx).abs();
+  }
+
+  // 🎯 ٹرانزیکشن کی ایگزیکٹ سٹرنگ ٹائپ معلوم کرنا
+  static String getTransactionType(dynamic tx) {
+    if (tx == null) return '';
     String type = '';
     if (tx is Map) {
-      type = tx['type']?.toString().toLowerCase() ?? '';
+      type = tx['type']?.toString().toLowerCase().trim() ?? '';
     } else {
-      try { type = tx.type?.toString().toLowerCase() ?? ''; } catch (_) {}
+      try {
+        type = tx.type?.toString().toLowerCase().trim() ?? '';
+      } catch (_) {}
+    }
+    return type;
+  }
+
+  // 🎯 🔒 فائنل سٹریکٹ گرین/ریڈ میپنگ
+  static bool isGreenTransaction(dynamic tx) {
+    String type = getTransactionType(tx);
+
+    // ۱۔ اگر پیمنٹ ان / وصولی ہے تو لازمی Green
+    if (type == 'payment_in' || type == 'in' || type == 'received' || type == 'get') {
+      return true;
+    }
+    
+    // ۲۔ اگر پیمنٹ آؤٹ / ادائیگی / خرچ ہے تو لازمی Red
+    if (type == 'payment_out' || type == 'out' || type == 'paid' || type == 'give' || type == 'given') {
+      return false;
     }
 
-    if (type == 'payment_in' || type == 'received' || type == 'in' || type == 'get') {
-      return true; // ملی (Green)
+    // ۳۔ اگر پرچیز ہے تو صرف Above Zero / Below Zero لاجک
+    if (type == 'purchase') {
+      double rawAmt = getRawTransactionAmount(tx);
+      return rawAmt >= 0;
     }
-    return false; // دیے / پرچیز / ادائیگی (Red)
+
+    // ڈیفالٹ فال بیک
+    return true;
   }
 
   static bool isGreenColumn(dynamic tx) => isGreenTransaction(tx);
 
-  // 🎯 سیدھی اور صاف رننگ بیلنس لاجک (پرانی اینٹری سے نئی اینٹری کی طرف)
+  // 🎯 رننگ بیلنس کی لاجک
   double getRunningBalanceAtIndex(int index) {
     double runningBalance = 0.0;
 
@@ -178,16 +208,15 @@ class CustomerLedgerController extends ChangeNotifier {
       bool isGreen = isGreenTransaction(t);
 
       if (isGreen) {
-        runningBalance += amt; // ملی = پلس
+        runningBalance += amt;
       } else {
-        runningBalance -= amt; // دیے = مائنس
+        runningBalance -= amt;
       }
     }
 
     return runningBalance;
   }
 
-  // 🔒 اخری/نئی اینٹری کا بیلنس جو بالکل اوپر شو ہوگا
   double get totalBalance {
     if (transactions.isEmpty) return 0.0;
     return getRunningBalanceAtIndex(0);
