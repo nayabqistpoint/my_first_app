@@ -68,7 +68,7 @@ class PaymentInController {
     // موبائل نمبر کو مکمل صاف کرنا تاکہ یونیک کی میچنگ میں کوئی خامی نہ رہے
     String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
 
-    // 🎯 اصلاح شدہ تاریخ: اب یہاں ISO اسٹرنگ جائے گی جیسے Purchase والے فارم سے جا رہی ہے
+    // ISO تاریخ کا یکساں فارمیٹ
     final String nowIso = DateTime.now().toIso8601String();
 
     final Map<String, dynamic> transactionData = {
@@ -78,31 +78,44 @@ class PaymentInController {
       'amount': amount,
       'description': remarks,
       'remarks': remarks,
-      'date': nowIso, // 🔒 تاریخ کا فارمیٹ سیٹ کر دیا گیا ہے
+      'date': nowIso,
       'discount': {
         'value': _discountValue,
         'isPercentage': _isPercentageDiscount,
       },
-      'source': _selectedSource,
+      'source': _selectedSource ?? 'Cash',
       'splitPayments': _splitPayments,
       'hasAttachment': false,
-      'timestamp': nowIso, // 🔒 ٹائم اسٹیمپ کا فارمیٹ یکساں رکھا گیا ہے
+      'timestamp': nowIso,
     };
 
     try {
-      var box = Hive.box('transactionBox');
-      await box.add(transactionData);
+      // 1. ٹرانزیکشن باکس میں اینٹری
+      var txnBox = Hive.box('transactionBox');
+      await txnBox.add(transactionData);
+
+      // 2. کیش یا بینک کے بیلنس میں رقم کا اضافہ
+      var bankBox = Hive.box('bankBox');
+      String sourceKey = _selectedSource ?? 'Cash';
+      double currentBalance = (bankBox.get(sourceKey, defaultValue: 0.0) as num).toDouble();
+      await bankBox.put(sourceKey, currentBalance + amount);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('کامیاب! پیمنٹ اِن محفوظ ہو گئی: Rs. $amount')),
+          SnackBar(
+            content: Text('کامیاب! پیمنٹ اِن محفوظ ہو گئی: Rs. $amount'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خرابی پیش آئی: $e')),
+          SnackBar(
+            content: Text('خرابی پیش آئی: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {

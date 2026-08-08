@@ -89,14 +89,11 @@ class CustomerLedgerController extends ChangeNotifier {
     return '';
   }
 
-  // 🗓️ ڈیٹ ہیلپر: دن، مہینہ اور سال کو الگ الگ ٹکڑوں میں لسٹ بنا کر دینا
   static Map<String, String> getParsedUrduDate(dynamic rawDate, dynamic rawTimestamp) {
     DateTime? dt;
-    
     if (rawTimestamp != null && rawTimestamp.toString().isNotEmpty) {
       dt = DateTime.tryParse(rawTimestamp.toString());
     }
-    
     if (dt == null && rawDate != null && rawDate.toString().isNotEmpty) {
       dt = DateTime.tryParse(rawDate.toString());
     }
@@ -116,50 +113,84 @@ class CustomerLedgerController extends ChangeNotifier {
     return {'day': '', 'month': rawDate?.toString() ?? '', 'year': ''};
   }
 
-  // 💰 ٹوٹل بیلنس (Purchase کی صورت میں remainingBalance کی رقم کا استعمال)
-  double get totalBalance {
-    double total = 0.0;
-    for (var t in transactions) {
-      if (t == null) continue;
-      double amount = 0.0;
-      String type = 'get';
-      bool isPending = false;
-
-      if (t is Map) {
-        type = t['type']?.toString().toLowerCase() ?? 'get';
-        if (type == 'purchase' && t['remainingBalance'] != null) {
-          amount = double.tryParse(t['remainingBalance']?.toString() ?? '0') ?? 0.0;
+  static double getTransactionAmount(dynamic tx) {
+    if (tx == null) return 0.0;
+    double amt = 0.0;
+    if (tx is Map) {
+      if (tx['type']?.toString().toLowerCase() == 'purchase' && tx['remainingBalance'] != null) {
+        amt = double.tryParse(tx['remainingBalance'].toString()) ?? 0.0;
+      } else {
+        amt = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
+      }
+    } else {
+      try {
+        if (tx.type?.toString().toLowerCase() == 'purchase' && tx.remainingBalance != null) {
+          amt = double.tryParse(tx.remainingBalance.toString()) ?? 0.0;
         } else {
-          amount = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
+          amt = double.tryParse(tx.amount?.toString() ?? '0') ?? 0.0;
         }
+      } catch (_) {}
+    }
+    return amt.abs();
+  }
 
-        String status = t['status']?.toString() ?? '';
-        if (status == 'pending' || t['isApproved'] == false) {
+  static bool isGreenTransaction(dynamic tx) {
+    if (tx == null) return true;
+    String type = '';
+    if (tx is Map) {
+      type = tx['type']?.toString().toLowerCase() ?? '';
+    } else {
+      try { type = tx.type?.toString().toLowerCase() ?? ''; } catch (_) {}
+    }
+
+    if (type == 'payment_in' || type == 'received' || type == 'in' || type == 'get') {
+      return true; // ملی (Green)
+    }
+    return false; // دیے / پرچیز / ادائیگی (Red)
+  }
+
+  static bool isGreenColumn(dynamic tx) => isGreenTransaction(tx);
+
+  // 🎯 سیدھی اور صاف رننگ بیلنس لاجک (پرانی اینٹری سے نئی اینٹری کی طرف)
+  double getRunningBalanceAtIndex(int index) {
+    double runningBalance = 0.0;
+
+    for (int i = transactions.length - 1; i >= index; i--) {
+      var t = transactions[i];
+      if (t == null) continue;
+
+      bool isPending = false;
+      if (t is Map) {
+        if (t['status']?.toString() == 'pending' || t['isApproved'] == false) {
           isPending = true;
         }
       } else {
         try {
-          type = t.type?.toString().toLowerCase() ?? 'get';
-          if (type == 'purchase' && t.remainingBalance != null) {
-            amount = double.tryParse(t.remainingBalance?.toString() ?? '0') ?? 0.0;
-          } else {
-            amount = double.tryParse(t.amount?.toString() ?? '0') ?? 0.0;
-          }
           if (t.status == 'pending' || t.isApproved == false) {
             isPending = true;
           }
         } catch (_) {}
       }
 
-      if (isAdmin && isPending) continue;
+      if (isPending) continue;
 
-      if (type == 'given' || type == 'give' || type == 'out' || type == 'purchase' || type == 'payment_out' || type == 'paid') {
-        total += amount;
-      } else if (type == 'received' || type == 'get' || type == 'in' || type == 'payment_in') {
-        total -= amount;
+      double amt = getTransactionAmount(t);
+      bool isGreen = isGreenTransaction(t);
+
+      if (isGreen) {
+        runningBalance += amt; // ملی = پلس
+      } else {
+        runningBalance -= amt; // دیے = مائنس
       }
     }
-    return total.abs() < 0.01 ? 0.0 : total;
+
+    return runningBalance;
+  }
+
+  // 🔒 اخری/نئی اینٹری کا بیلنس جو بالکل اوپر شو ہوگا
+  double get totalBalance {
+    if (transactions.isEmpty) return 0.0;
+    return getRunningBalanceAtIndex(0);
   }
 
   DateTime _parseTxDate(dynamic tx) {
@@ -225,10 +256,7 @@ class CustomerLedgerController extends ChangeNotifier {
               });
 
               if (!alreadyExists) {
-                String amtCheck = txValue['amount']?.toString() ?? '';
-                if (amtCheck.isNotEmpty) {
-                  tempTransactions.add(Map<String, dynamic>.from(txValue));
-                }
+                tempTransactions.add(Map<String, dynamic>.from(txValue));
               }
             }
           }
@@ -237,7 +265,6 @@ class CustomerLedgerController extends ChangeNotifier {
     } catch (_) {}
 
     tempTransactions.sort((a, b) => _parseTxDate(b).compareTo(_parseTxDate(a)));
-    
     transactions = tempTransactions;
     notifyListeners();
   }
@@ -247,14 +274,12 @@ class CustomerLedgerController extends ChangeNotifier {
       return transactions.where((t) {
         if (t == null) return false;
         String desc = '';
-        String amt = '';
+        String amt = getTransactionAmount(t).toString();
         if (t is Map) {
           desc = (t['description'] ?? t['remarks'])?.toString().toLowerCase() ?? '';
-          amt = t['amount']?.toString() ?? '';
         } else {
           try {
             desc = t.description?.toString().toLowerCase() ?? '';
-            amt = t.amount?.toString() ?? '';
           } catch (_) {}
         }
         return desc.contains(searchQuery.toLowerCase()) || amt.contains(searchQuery);

@@ -63,111 +63,35 @@ class LedgerMiddleWidget extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final tx = transactions[index];
 
-                    String type = 'get';
-                    double rawAmount = 0.0;
                     Map<String, String> dateMap = {'day': '', 'month': '', 'year': ''};
                     String descStr = '';
                     bool hasAttachment = false;
                     bool isPending = false;
 
                     if (tx is Map) {
-                      type = tx['type']?.toString().toLowerCase() ?? 'get';
-
-                      if (type == 'purchase' && tx['remainingBalance'] != null) {
-                        rawAmount = double.tryParse(tx['remainingBalance']?.toString() ?? '0') ?? 0.0;
-                      } else {
-                        rawAmount = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
-                      }
-
                       dateMap = CustomerLedgerController.getParsedUrduDate(tx['date'], tx['timestamp']);
                       descStr = tx['description']?.toString().trim() ?? tx['remarks']?.toString().trim() ?? '';
                       hasAttachment = tx['hasAttachment'] ?? false;
-                      
-                      String status = tx['status']?.toString() ?? '';
-                      if (status == 'pending' || tx['isApproved'] == false) {
+                      if (tx['status']?.toString() == 'pending' || tx['isApproved'] == false) {
                         isPending = true;
                       }
                     } else {
                       try {
-                        type = tx.type?.toString().toLowerCase() ?? 'get';
-
-                        if (type == 'purchase' && tx.remainingBalance != null) {
-                          rawAmount = double.tryParse(tx.remainingBalance?.toString() ?? '0') ?? 0.0;
-                        } else {
-                          rawAmount = double.tryParse(tx.amount?.toString() ?? '0') ?? 0.0;
-                        }
-
                         dateMap = CustomerLedgerController.getParsedUrduDate(tx.date, tx.timestamp);
                         descStr = tx.description?.toString().trim() ?? '';
                         hasAttachment = tx.hasAttachment ?? false;
-                        
                         if (tx.status == 'pending' || tx.isApproved == false) {
                           isPending = true;
                         }
                       } catch (_) {}
                     }
 
-                    // 🎯 پرچیز اور عام ٹرانزیکشنز کے لیے ریڈ (دیے) اور گرین (ملی) کا حتمی فیصلہ
-                    bool isReceived = false;
-                    if (type == 'purchase') {
-                      // پرچیز میں اگر رقم پازیٹو ہے تو 'ملی' (Green)، اگر نیگیٹو ہے تو 'دیے' (Red)
-                      isReceived = rawAmount >= 0;
-                    } else {
-                      // عام پیمنٹ ان / آؤٹ اینٹریز کے لیے
-                      isReceived = (type == 'received' || type == 'get' || type == 'in' || type == 'payment_in');
-                    }
+                    // 🎯 ایگزیکٹ ڈسپلے ویلیوز
+                    double displayAmt = CustomerLedgerController.getTransactionAmount(tx).abs();
+                    bool isGreen = CustomerLedgerController.isGreenColumn(tx);
+                    double runningBal = controller.getRunningBalanceAtIndex(index);
 
-                    // 💰 رننگ بیلنس کی لاجک
-                    double currentRunningBalance = 0.0;
-                    for (int i = transactions.length - 1; i >= index; i--) {
-                      var t = transactions[i];
-                      if (t == null) continue;
-
-                      String tType = 'get';
-                      double tAmt = 0.0;
-                      bool tIsPending = false;
-
-                      if (t is Map) {
-                        tType = t['type']?.toString().toLowerCase() ?? 'get';
-
-                        if (tType == 'purchase' && t['remainingBalance'] != null) {
-                          tAmt = double.tryParse(t['remainingBalance']?.toString() ?? '0') ?? 0.0;
-                        } else {
-                          tAmt = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
-                        }
-
-                        if (t['status']?.toString() == 'pending' || t['isApproved'] == false) {
-                          tIsPending = true;
-                        }
-                      } else {
-                        try {
-                          tType = t.type?.toString().toLowerCase() ?? 'get';
-
-                          if (tType == 'purchase' && t.remainingBalance != null) {
-                            tAmt = double.tryParse(t.remainingBalance?.toString() ?? '0') ?? 0.0;
-                          } else {
-                            tAmt = double.tryParse(t.amount?.toString() ?? '0') ?? 0.0;
-                          }
-
-                          if (t.status == 'pending' || t.isApproved == false) {
-                            tIsPending = true;
-                          }
-                        } catch (_) {}
-                      }
-
-                      if (tIsPending) continue;
-
-                      if (tType == 'given' || tType == 'give' || tType == 'out' || tType == 'payment_out' || tType == 'paid') {
-                        currentRunningBalance += tAmt;
-                      } else if (tType == 'received' || tType == 'get' || tType == 'in' || tType == 'payment_in') {
-                        currentRunningBalance -= tAmt;
-                      } else if (tType == 'purchase') {
-                        // پرچیز رقم اپنے سائن کے حساب سے بیلنس میں جڑے گی
-                        currentRunningBalance += tAmt;
-                      }
-                    }
-
-                    Color balanceColor = currentRunningBalance >= 0 ? Colors.red : Colors.green;
+                    Color balanceColor = runningBal >= 0 ? Colors.green : Colors.red;
 
                     return Opacity(
                       opacity: isPending ? 0.45 : 1.0,
@@ -185,7 +109,7 @@ class LedgerMiddleWidget extends StatelessWidget {
                                       Expanded(
                                         child: Center(
                                           child: Text(
-                                            isReceived ? rawAmount.abs().toStringAsFixed(0) : "", 
+                                            isGreen ? displayAmt.toStringAsFixed(0) : "", 
                                             style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
                                           ),
                                         ),
@@ -194,7 +118,7 @@ class LedgerMiddleWidget extends StatelessWidget {
                                       Expanded(
                                         child: Center(
                                           child: Text(
-                                            isReceived ? "" : rawAmount.abs().toStringAsFixed(0), 
+                                            isGreen ? "" : displayAmt.toStringAsFixed(0), 
                                             style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
                                           ),
                                         ),
@@ -204,7 +128,7 @@ class LedgerMiddleWidget extends StatelessWidget {
                                 ),
                                 const Spacer(),
                                 
-                                // 🎯 دائیں سائیڈ: بولڈ بقایا بکس، پھر تاریخ [7] [اگست] [2026]
+                                // دائیں سائیڈ: بقایا بکس اور تاریخ
                                 Expanded(
                                   flex: 2,
                                   child: Column(
@@ -218,7 +142,7 @@ class LedgerMiddleWidget extends StatelessWidget {
                                             const SizedBox(width: 4),
                                           ],
                                           
-                                          // 🗓️ تاریخ ترتیبی ڈسپلے (7 اگست 2026)
+                                          // 🗓️ تاریخ ڈسپلے
                                           if (dateMap['day']!.isNotEmpty) ...[
                                             Text(dateMap['year']!, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500)),
                                             const SizedBox(width: 3),
@@ -231,7 +155,7 @@ class LedgerMiddleWidget extends StatelessWidget {
 
                                           const SizedBox(width: 8),
                                           
-                                          // 💰 دائیں اینڈ پر بولڈ بقایا بکس
+                                          // 💰 بولڈ بقایا بکس
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
@@ -240,7 +164,7 @@ class LedgerMiddleWidget extends StatelessWidget {
                                               border: Border.all(color: balanceColor.withValues(alpha: 0.5), width: 0.8),
                                             ),
                                             child: Text(
-                                              "بقایا: ${currentRunningBalance.abs().toStringAsFixed(0)}",
+                                              "بقایا: ${runningBal.abs().toStringAsFixed(0)}",
                                               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: balanceColor),
                                             ),
                                           ),
@@ -248,7 +172,7 @@ class LedgerMiddleWidget extends StatelessWidget {
                                       ),
                                       const SizedBox(height: 4),
                                       
-                                      // 2. نیچے تفصیل
+                                      // تفصیل
                                       Text(
                                         descStr.isNotEmpty 
                                             ? (isPending ? "$descStr (منظوری کا منتظر...)" : descStr)

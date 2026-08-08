@@ -10,37 +10,34 @@ class LedgerTopWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     bool isAdmin = controller.isAdmin;
     
-    // کل بیلنس حاصل کر رہے ہیں
+    // کل بیلنس
     double totalBalance = controller.totalBalance;
     
-    // اگر بیلنس پلس میں ہے تو ریڈ (ادھار)، اگر مائنس میں ہے تو گرین (advance/ملی ہوئی رقم)
-    bool isDebit = totalBalance >= 0;
-    Color balanceColor = isDebit ? Colors.red : Colors.green;
-    String balanceTypeLabel = isDebit ? "بقایا دینا ہے" : "بقایا لینا ہے / ایڈوانس";
+    // 🎯 حل: اگر بیلنس پازیٹو (>=0) ہے تو لازمی گرین (Green)، اگر نیگیٹو ہے تو ریڈ (Red)
+    bool isPositive = totalBalance >= 0;
+    Color balanceColor = isPositive ? Colors.green : Colors.red;
+    String balanceTypeLabel = isPositive ? "بقایا لینا ہے / ایڈوانس" : "بقایا دینا ہے";
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 🟢 ایپ بار / ہیڈر
+        // 🟢 ہیڈر
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           color: const Color(0xFFE53935),
           child: Row(
             children: [
-              // بیک بٹن
               IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
               ),
               const SizedBox(width: 8),
 
-              // سینٹرلائزڈ مواد (ایڈمن اور کسٹمر کے حساب سے)
               Expanded(
                 child: Center(
                   child: isAdmin
                     ? Text(
-                        // 1️⃣ ایڈمن ویو: صرف نام اور قوم، کوئی بریکٹ نہیں
                         "${controller.customerName} ${controller.customerCast}".trim(),
                         style: const TextStyle(
                           fontSize: 18,
@@ -50,7 +47,6 @@ class LedgerTopWidget extends StatelessWidget {
                         textAlign: TextAlign.center,
                       )
                     : Text(
-                        // 2️⃣ کسٹمر ویو: "نایاب قسط پوائنٹ" اور ساتھ چھوٹی گول بریکٹ میں نام
                         "نایاب قسط پوائنٹ (${controller.customerName})",
                         style: const TextStyle(
                           fontSize: 16,
@@ -64,7 +60,6 @@ class LedgerTopWidget extends StatelessWidget {
 
               const SizedBox(width: 8),
 
-              // تصویر اور ساتھ لاگ آؤٹ کا پاپ اپ مینو (تین ڈاٹس)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -85,15 +80,13 @@ class LedgerTopWidget extends StatelessWidget {
                     ),
                   ),
                   
-                  // کسٹمر ویو کے لیے لاگ آؤٹ کا پاپ اپ مینو (تین ڈاٹس)
                   if (!isAdmin)
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert, color: Colors.white),
                       onSelected: (value) {
                         if (value == 'logout') {
-                          // 🛡️ پرفیکٹ لاگ آؤٹ لاجک: تمام پچھلی اسکرینز ختم کر کے روٹ سکرین (پہلی سکرین) پر واپس لے جائے گا
                           Navigator.of(context).pushNamedAndRemoveUntil(
-                            '/', // یا آپ اپنی مین/لاگ ان روٹ کا نام یہاں دے سکتے ہیں
+                            '/',
                             (Route<dynamic> route) => false,
                           );
                         }
@@ -119,7 +112,7 @@ class LedgerTopWidget extends StatelessWidget {
 
         const SizedBox(height: 10),
 
-        // ۲۔ بیلنس باکس
+        // ۲۔ ٹوٹل بیلنس بکس (اب نیچے والی اینٹری کے ساتھ 100% میچ رہے گا)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
@@ -187,7 +180,6 @@ class LedgerTopWidget extends StatelessWidget {
     );
   }
 
-  // کیپسول ڈیزائن
   Widget _buildActionCapsule({
     required String text, 
     required VoidCallback onTap,

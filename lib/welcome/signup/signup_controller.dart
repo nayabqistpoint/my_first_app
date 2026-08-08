@@ -14,7 +14,6 @@ class SignUpController extends ChangeNotifier {
   bool _isTermsAccepted = false;
   bool get isTermsAccepted => _isTermsAccepted;
 
-  // لوڈنگ اسٹیٹ کے لیے ویری ایبل
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
@@ -32,20 +31,15 @@ class SignUpController extends ChangeNotifier {
     }
 
     if (formKey.currentState!.validate()) {
-      // 1. چھوٹے وجٹس سے ڈیٹا نکالنا
-      var customerData = customerKey.currentState?.getCustomerData() ?? {};
-      var guarantorData = guarantorKey.currentState?.getGuarantorData() ?? {};
-      var packageData = packageKey.currentState?.getPackageData() ?? {};
+      // 1. تینوں وجٹس سے ڈیٹا حاصل کرنا
+      final Map<String, dynamic> customerData = customerKey.currentState?.getCustomerData() ?? {};
+      final Map<String, dynamic> guarantorData = guarantorKey.currentState?.getGuarantorData() ?? {};
+      final Map<String, dynamic> packageData = packageKey.currentState?.getPackageData() ?? {};
 
       // کسٹمر کا موبائل نمبر درست طریقے سے حاصل کرنا
-      String phoneNumber = customerData['customerPhone'] ?? 
-                           customerData['phone'] ?? 
-                           customerData['mobile'] ?? 
-                           customerData['phoneNumber'] ?? 
-                           customerData['cell'] ?? '';
+      String rawPhone = customerData['customerPhone'] ?? '';
 
-      // اگر موبائل نمبر خالی ہو تو یہیں روک دیں
-      if (phoneNumber.isEmpty) {
+      if (rawPhone.trim().isEmpty) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -57,25 +51,19 @@ class SignUpController extends ChangeNotifier {
         return false;
       }
 
-      var customerBox = Hive.box('customerBox');
+      // موبائل نمبر سے صرف ہندسے نکالنا (یونیک کی کے لیے)
+      String cleanPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
 
-      // 2. لوڈنگ شروع (بٹن پر گول دائرہ گھمانے کے لیے)
       _isLoading = true;
       notifyListeners();
 
-      // نمبر کو بالکل صاف کرنا (صرف ہندسے رکھنا) تاکہ یہ یونیک کی (Unique Key) بن سکے
-      String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
-
       try {
-        // سختی سے صرف آخری 4 ہندسے بطور پاسورڈ نکالنا
+        // فائر بیس اتھنٹیکیشن
         String password = cleanPhone.length >= 4 
             ? cleanPhone.substring(cleanPhone.length - 4) 
             : cleanPhone;
-
-        // فائر بیس کے لیے فرضی ای میل بنانا
         String fakeEmail = '$cleanPhone@nayabqist.com';
 
-        // فائر بیس اتھنٹیکیشن میں یوزر بنانا
         await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: fakeEmail,
           password: password,
@@ -84,32 +72,61 @@ class SignUpController extends ChangeNotifier {
         debugPrint('Firebase Registration Error: $e');
       }
 
-      // ہلکا سا نقلی وقفہ
-      await Future.delayed(const Duration(milliseconds: 800));
+      final String currentTimestamp = DateTime.now().toString();
 
-      // یہاں packageData کے ساتھ آڈیو کا اسٹیٹس (hasAudioRecorded) اور پاتھ (audioPath)
-      // آپشنل کے طور پر خود بخود ہائیو میں سیو ہو جائے گا، چاہے آڈیو ریکارڈ ہو یا نہ ہو۔
-      Map<String, dynamic> requestData = {
+      // -------------------------------------------------------------
+      // 2. ہائیو باکسز میں لنکیج اور سیونگ لاجک (بغیر کسی ڈیٹا مسنگ کے)
+      // -------------------------------------------------------------
+
+      // (الف) کسٹمر باکس (customerBox)
+      final Box customerBox = Hive.box('customerBox');
+      final Map<String, dynamic> finalCustomerMap = {
         ...customerData,
-        ...guarantorData,
-        ...packageData, 
-        'customerPhone': cleanPhone, // موبائل نمبر کو پکا محفوظ کرنا
+        'customerPhone': cleanPhone,
         'isTermsAccepted': _isTermsAccepted,
         'status': 'Pending',
-        'timestamp': DateTime.now().toString(),
+        'timestamp': currentTimestamp,
       };
+      await customerBox.put(cleanPhone, finalCustomerMap);
 
-      // ہائیو باکس میں محفوظ کرنا (فون نمبر کی بنیاد پر)
-      await customerBox.put(cleanPhone, requestData);
+      // (ب) ضامن باکس (guarantorBox)
+      final Box guarantorBox = Hive.box('guarantorBox');
+      if (guarantorData['isGuarantorPresent'] == true) {
+        final Map<String, dynamic> finalGuarantorMap = {
+          'customerPhone': cleanPhone, // کسٹمر سے جوڑنے والی کڑی
+          ...guarantorData,
+          'timestamp': currentTimestamp,
+        };
+        await guarantorBox.put(cleanPhone, finalGuarantorMap);
+      } else {
+        // اگر ضامن موجود نہیں تو پہلے سے موجود کوئی پرانی اینٹری ڈیلیٹ کر دیں
+        await guarantorBox.delete(cleanPhone);
+      }
 
-      // 3. لوڈنگ ختم
+      // (ج) پیکج باکس (packageBox)
+      final Box packageBox = Hive.box('packageBox');
+      if (packageData['isPurchaseRequested'] == true) {
+        final Map<String, dynamic> finalPackageMap = {
+          'customerPhone': cleanPhone, // کسٹمر سے جوڑنے والی کڑی
+          ...packageData,
+          'status': 'Pending',
+          'timestamp': currentTimestamp,
+        };
+        await packageBox.put(cleanPhone, finalPackageMap);
+      } else {
+        // اگر پرچیز ریکویسٹ آن نہیں ہے تو اس باکس میں اینٹری نہ رکھیں
+        await packageBox.delete(cleanPhone);
+      }
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
       _isLoading = false;
       notifyListeners();
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('رجسٹریشن کامیابی سے محفوظ ہو گئی ہے'),
+            content: Text('تمام معلومات متعلقہ باکسز میں کامیابی سے محفوظ ہو گئی ہیں'),
             backgroundColor: Colors.green,
           ),
         );

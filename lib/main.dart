@@ -7,7 +7,7 @@ void main() async {
   // فلاتر اور پیکیجز کی بائنڈنگز کو یقینی بنانا
   WidgetsFlutterBinding.ensureInitialized();
 
-  // فائر بیس کو محفوظ طریقے سے انیشلائز کرنا (تاکہ براؤزر یا کسی بھی ڈیوائس پر ایپ رکے نہیں)
+  // فائر بیس کو محفوظ طریقے سے انیشلائز کرنا
   try {
     await Firebase.initializeApp();
   } catch (e) {
@@ -17,11 +17,14 @@ void main() async {
   // ہائیو ڈیٹا بیس کو انیشلائز کرنا
   await Hive.initFlutter();
 
-  // ملٹی باکسز کا نظام (اسٹاک، بینک، کسٹمر اور ٹرانزیکشنز کے لیے)
-  await Hive.openBox('stockBox');
-  await Hive.openBox('bankBox');
+  // ⚠️ تمام 7 باکسز کو انیشلائز کرنا تاکہ ڈیٹا بیس مانیٹر میں ریڈ اسکرین ایرر نہ آئے
   await Hive.openBox('customerBox');
+  await Hive.openBox('guarantorBox');
+  await Hive.openBox('packageBox');
+  await Hive.openBox('stockBox');
   await Hive.openBox('transactionBox');
+  await Hive.openBox('expenseBox');
+  await Hive.openBox('bankBox');
 
   runApp(const MyApp());
 }

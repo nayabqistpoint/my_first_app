@@ -42,7 +42,7 @@ class PurchasePageController {
     }
   }
 
-  // رو کلک کرنے پر آئٹم ڈیٹیل وزٹ کھولنے کی لاجک
+  // رو کلک کرنے پر آئٹم ڈیٹیل وجٹ کھولنے کی لاجک
   Future<void> handleItemDetailNavigation(BuildContext context, int index, {bool isEdit = false}) async {
     int currentIndex = index;
     bool shouldContinue = true;
@@ -82,50 +82,65 @@ class PurchasePageController {
     }
   }
 
-  // ✅ ٹرانزیکشن باکس اور سٹاک باکس دونوں میں محفوظ کرنے کا مکمل طریقہ
+  // ✅ ٹرانزیکشن باکس اور سٹاک باکس دونوں میں محفوظ کرنے کا مکمل اور محفوظ طریقہ
   Future<bool> savePurchase() async {
     if (itemsList.isEmpty || (itemsList.first['itemName'] ?? '').toString().isEmpty) {
       return false;
     }
 
     try {
-      // 1. Boxes Open کریں
-      final transactionBox = await Hive.openBox('transactionBox');
-      final stockBox = await Hive.openBox('stockBox');
+      // 1. باکسز کو محفوظ طریقے سے گیٹ (Get/Open) کرنا
+      final Box transactionBox = Hive.isBoxOpen('transactionBox') 
+          ? Hive.box('transactionBox') 
+          : await Hive.openBox('transactionBox');
+          
+      final Box stockBox = Hive.isBoxOpen('stockBox') 
+          ? Hive.box('stockBox') 
+          : await Hive.openBox('stockBox');
 
       String finalPartyName = selectedPartyName ?? '';
 
-      // کسٹمر کا نام نکالنا
-      if (finalPartyName.isEmpty && selectedPartyPhone != null) {
+      // کسٹمر/پارٹی کا نام نکالنا (اگر فون نمبر موجود ہو)
+      if (finalPartyName.isEmpty && selectedPartyPhone != null && selectedPartyPhone!.isNotEmpty) {
         if (Hive.isBoxOpen('customerBox')) {
           final customerBox = Hive.box('customerBox');
-          final matchedCustomer = customerBox.values.firstWhere(
-            (element) {
-              final data = Map<String, dynamic>.from(element as Map);
-              String phone = data['customerPhone']?.toString() ?? data['phone']?.toString() ?? '';
-              return phone == selectedPartyPhone;
-            },
-            orElse: () => null,
-          );
+          
+          // موبائل نمبر کی بنیاد پر کسٹمر تلاش کرنا
+          if (customerBox.containsKey(selectedPartyPhone)) {
+            final cData = Map<String, dynamic>.from(customerBox.get(selectedPartyPhone) as Map);
+            finalPartyName = cData['customerName']?.toString() ?? cData['name']?.toString() ?? '';
+          } else {
+            final matchedCustomer = customerBox.values.firstWhere(
+              (element) {
+                if (element is! Map) return false;
+                final data = Map<String, dynamic>.from(element);
+                String phone = data['customerPhone']?.toString() ?? data['phone']?.toString() ?? '';
+                return phone == selectedPartyPhone;
+              },
+              orElse: () => null,
+            );
 
-          if (matchedCustomer != null) {
-            final Map<String, dynamic> cData = Map<String, dynamic>.from(matchedCustomer as Map);
-            finalPartyName = cData['customerName']?.toString() ?? 
-                             cData['name']?.toString() ?? 
-                             cData['partyName']?.toString() ?? '';
+            if (matchedCustomer != null) {
+              final Map<String, dynamic> cData = Map<String, dynamic>.from(matchedCustomer as Map);
+              finalPartyName = cData['customerName']?.toString() ?? cData['name']?.toString() ?? '';
+            }
           }
         }
       }
 
       List<String> imeiList = [];
-      
-      // ✅ 2. تمام آئٹمز کو stockBox میں محفوظ کرنا
-      for (var item in itemsList) {
+      final String nowIso = DateTime.now().toIso8601String();
+      final int timeKey = DateTime.now().millisecondsSinceEpoch;
+
+      // ✅ 2. تمام آئٹمز کو سٹاک باکس (stockBox) میں محفوظ کرنا (بغیر کسی فیلڈ مسنگ کے)
+      for (int i = 0; i < itemsList.length; i++) {
+        var item = itemsList[i];
         if (item['itemName'] != null && item['itemName'].toString().isNotEmpty) {
           String imei = item['imeiNo']?.toString() ?? '';
           if (imei.isNotEmpty) imeiList.add(imei);
 
-          final stockKey = "${DateTime.now().millisecondsSinceEpoch}_${item['itemName']}";
+          // سٹاک کے لیے منفرد کی (Unique Key)
+          final stockKey = "${timeKey}_${i}_${item['itemName']}";
           
           final stockData = {
             'itemName': item['itemName'],
@@ -133,21 +148,24 @@ class PurchasePageController {
             'purchasePrice': item['purchasePrice'] ?? '0',
             'salePrice': item['salePrice'] ?? '0',
             'quantity': item['quantity'] ?? '1',
-            'supplier': item['supplier'] ?? finalPartyName,
+            'adjustment': item['adjustment'] ?? '', // ایڈجسٹمنٹ بھی محفوظ کی گئی
+            'supplier': (item['supplier'] != null && item['supplier'].toString().isNotEmpty) 
+                ? item['supplier'] 
+                : finalPartyName,
             'condition': item['condition'] ?? 'new',
             'warranty': item['warranty'] ?? 0,
-            'color': item['color'] ?? '',
-            'date': DateTime.now().toIso8601String(),
-            'status': 'available', // سٹاک میں موجود ہے
+            'color': item['color'] ?? item['selectedColor'] ?? '',
+            'date': nowIso,
+            'status': 'available', // سٹاک میں دستیاب ہے
+            'customerPhone': selectedPartyPhone ?? '', // ربط کے لیے
           };
 
           await stockBox.put(stockKey, stockData);
         }
       }
 
-      // ✅ 3. ٹرانزیکشن باکس (transactionBox) میں تفصیلات محفوظ کرنا
-      final key = DateTime.now().millisecondsSinceEpoch.toString();
-      final nowIso = DateTime.now().toIso8601String();
+      // ✅ 3. ٹرانزیکشن باکس (transactionBox) میں مکمل خرید کا ریکارڈ سیو کرنا
+      final transactionKey = timeKey.toString();
 
       final transactionData = {
         'type': 'purchase',
@@ -160,10 +178,10 @@ class PurchasePageController {
         'description': descriptionText,
         'remarks': imeiList.join(','),
         'date': nowIso,
-        'items': itemsList, // آئٹمز کی لسٹ محفوظ کی
+        'items': itemsList, // آئٹمز کی مکمل لسٹ
         'discount': {
           'value': discountValue,
-          'isPercentage': isDiscountPercentage
+          'isPercentage': isDiscountPercentage,
         },
         'source': null,
         'splitPayments': [],
@@ -173,7 +191,7 @@ class PurchasePageController {
         'isCreatedByAdmin': false,
       };
 
-      await transactionBox.put(key, transactionData);
+      await transactionBox.put(transactionKey, transactionData);
       return true;
     } catch (e) {
       debugPrint("Save Purchase Error: $e");

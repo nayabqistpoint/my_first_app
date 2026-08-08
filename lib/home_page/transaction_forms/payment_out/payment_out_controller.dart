@@ -48,7 +48,7 @@ class PaymentOutController {
     isSaving.dispose();
   }
 
-  Future<void> savePaymentOut(BuildContext context, {String? customerId}) async {
+  Future<void> savePaymentOut(BuildContext context, {String? customerId, bool isExpense = false}) async {
     if (isSaving.value) return;
 
     String amountText = amountController.text.trim();
@@ -67,7 +67,7 @@ class PaymentOutController {
     // موبائل نمبر کو مکمل صاف کرنا تاکہ یونیک کی میچنگ میں کوئی خامی نہ رہے
     String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
 
-    // 🎯 اصلاح شدہ تاریخ: ISO فارمیٹ جو باقی تمام فارمز کے ساتھ مکمل میچ ہے
+    // ISO تاریخ کا یکساں فارمیٹ
     final String nowIso = DateTime.now().toIso8601String();
 
     final Map<String, dynamic> transactionData = {
@@ -77,31 +77,51 @@ class PaymentOutController {
       'amount': amount,
       'description': remarks,
       'remarks': remarks,
-      'date': nowIso, // 🔒 تاریخ کا فارمیٹ سیٹ کر دیا گیا ہے
+      'date': nowIso,
       'discount': {
         'value': _discountValue,
         'isPercentage': _isPercentageDiscount,
       },
-      'source': _selectedSource,
+      'source': _selectedSource ?? 'Cash',
       'splitPayments': _splitPayments,
+      'isExpense': isExpense,
       'hasAttachment': false,
-      'timestamp': nowIso, // 🔒 ٹائم اسٹیمپ فارمیٹ یکساں کر دیا گیا ہے
+      'timestamp': nowIso,
     };
 
     try {
-      var box = Hive.box('transactionBox');
-      await box.add(transactionData);
+      // 1. ٹرانزیکشن باکس میں اینٹری
+      var txnBox = Hive.box('transactionBox');
+      await txnBox.add(transactionData);
+
+      // 2. اگر یہ دکان کا خرچہ ہے تو اخراجات باکس میں بھی بھیجیں
+      if (isExpense) {
+        var expenseBox = Hive.box('expenseBox');
+        await expenseBox.add(transactionData);
+      }
+
+      // 3. کیش یا بینک کے بیلنس میں سے رقم کی کٹوتی (Minus)
+      var bankBox = Hive.box('bankBox');
+      String sourceKey = _selectedSource ?? 'Cash';
+      double currentBalance = (bankBox.get(sourceKey, defaultValue: 0.0) as num).toDouble();
+      await bankBox.put(sourceKey, currentBalance - amount);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('کامیاب! پیمنٹ آؤٹ محفوظ ہو گئی: Rs. $amount')),
+          SnackBar(
+            content: Text('کامیاب! پیمنٹ آؤٹ محفوظ ہو گئی: Rs. $amount'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خرابی پیش آئی: $e')),
+          SnackBar(
+            content: Text('خرابی پیش آئی: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
