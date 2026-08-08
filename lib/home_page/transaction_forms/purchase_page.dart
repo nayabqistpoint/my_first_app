@@ -198,6 +198,7 @@ class _PurchasePageState extends State<PurchasePage> {
 
                         // Payment Source Card (ترتیب کے مطابق اینڈ پر رکھا گیا ہے)
                         PaymentSourceCard(
+                          key: controller.paymentCardKey, // <-- صرف یہ ایک لائن شامل کی گئی ہے تاکہ اسپلٹ پیمنٹ کام کر سکے
                           selectedSource: controller.selectedPaymentSource,
                           onChanged: (val) {
                             setState(() {

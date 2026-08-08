@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'common/item_detail_widget.dart';
 
+// پیمنٹ سورس کارڈ کی حالت (State) پڑھنے کے لیے امپورٹ
+import '../../dashboard/widgets/payment_source_card.dart';
+
 class PurchasePageController {
   List<Map<String, dynamic>> itemsList = [
     {
@@ -25,6 +28,9 @@ class PurchasePageController {
   // پیمنٹ سورس اور اسپلٹ پیمنٹس کے لیے ویری ایبلز
   String? selectedPaymentSource = 'Cash';
   List<Map<String, dynamic>> splitPaymentsList = [];
+
+  // ✅ UI سے لائیو اسپلٹ پیمنٹ ڈیٹا پڑھنے کے لیے گلوبل کی (GlobalKey)
+  final GlobalKey<PaymentSourceCardState> paymentCardKey = GlobalKey<PaymentSourceCardState>();
 
   bool addNewItemRow() {
     final lastItem = itemsList.last;
@@ -172,9 +178,19 @@ class PurchasePageController {
         }
       }
 
+      // ✅ UI سے لائیو اسپلٹ پیمنٹس اور سورس کی لسٹ حاصل کرنا
+      final cardState = paymentCardKey.currentState;
+      bool isSplit = cardState?.isSplitMode ?? false;
+
+      if (isSplit) {
+        splitPaymentsList = cardState?.getSplitPaymentsList() ?? [];
+      } else {
+        splitPaymentsList.clear();
+      }
+
       // ✅ 3. بینک باکس (bankBox) سے رقم منہا (Deduct) کرنا - (Single Source of Truth)
       if (paidAmount > 0) {
-        if (splitPaymentsList.isNotEmpty) {
+        if (isSplit && splitPaymentsList.isNotEmpty) {
           // اسپلٹ پیمنٹس موڈ: ہر ایک منتخب سورس سے علیحدہ رقم منہا کرنا
           for (var split in splitPaymentsList) {
             String source = split['source'] ?? 'Cash';
