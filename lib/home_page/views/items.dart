@@ -9,153 +9,116 @@ class ItemsPage extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF8F9FA),
         body: ListenableBuilder(
           listenable: itemController,
           builder: (context, child) {
             final displayList = itemController.filteredItems;
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
-              child: Column(
-                children: [
-                  // 1. سرچ بار اور فلٹر
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 5,
-                        child: SizedBox(
-                          height: 34,
-                          child: TextField(
-                            textAlign: TextAlign.right,
-                            style: const TextStyle(fontSize: 12),
-                            onChanged: (value) {
-                              itemController.updateSearchQuery(value);
-                            },
-                            decoration: InputDecoration(
-                              hintText: "تلاش کریں (${itemController.searchFilter})...",
-                              prefixIcon: const Icon(Icons.search, size: 16, color: Colors.black54),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(6),
-                                borderSide: const BorderSide(color: Colors.deepPurple, width: 1.5),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(6),
-                                borderSide: const BorderSide(color: Colors.black87, width: 1.3),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Container(
-                        height: 34,
-                        width: 32,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.black87, width: 1.3),
-                          borderRadius: BorderRadius.circular(6),
-                          color: Colors.white,
-                        ),
-                        child: PopupMenuButton<String>(
-                          initialValue: itemController.searchFilter,
-                          icon: const Icon(Icons.filter_list, size: 16, color: Colors.deepPurple),
-                          padding: EdgeInsets.zero,
-                          color: Colors.white,
-                          elevation: 3,
-                          onSelected: (String value) {
-                            itemController.updateFilter(value);
-                          },
-                          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                            const PopupMenuItem<String>(value: 'بذریعہ نام', child: Text('بذریعہ نام', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-                            const PopupMenuDivider(height: 1),
-                            const PopupMenuItem<String>(value: 'بذریعہ IMEI', child: Text('بذریعہ IMEI', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-                            const PopupMenuDivider(height: 1),
-                            const PopupMenuItem<String>(value: 'بذریعہ اسٹاک', child: Text('بذریعہ اسٹاک', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-                          ],
-                        ),
-                      ),
-                    ],
+            if (displayList.isEmpty) {
+              return const Center(
+                child: Text(
+                  "کوئی اسٹاک موجود نہیں ہے",
+                  style: TextStyle(
+                    fontSize: 14, 
+                    color: Colors.black54, 
+                    fontWeight: FontWeight.bold
                   ),
-                  const SizedBox(height: 8),
+                ),
+              );
+            }
 
-                  // 2. موبائل اسٹاک کی لسٹ
-                  Expanded(
-                    child: displayList.isEmpty
-                        ? const Center(
-                            child: Text(
-                              "کوئی اسٹاک موجود نہیں ہے\nبراہ کرم نیا اسٹاک شامل کریں",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.bold),
-                            ),
-                          )
-                        : ListView.builder(
-                            itemCount: displayList.length,
-                            itemBuilder: (context, index) {
-                              final item = displayList[index];
-                              return _buildStockItem(
-                                item.name,
-                                item.imei,
-                                item.quantity,
-                                item.purchasePrice,
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
+              itemCount: displayList.length,
+              itemBuilder: (context, index) {
+                final item = displayList[index];
+
+                return _StockRowItem(
+                  mobileName: item.name,
+                  imei: item.imei,
+                  purchasePrice: item.purchasePrice,
+                );
+              },
             );
           },
         ),
       ),
     );
   }
+}
 
-  // اسٹاک آئٹم کا نیا ڈیزائن (صرف قیمتِ خرید اور سب ٹوٹل کے ساتھ)
-  Widget _buildStockItem(String mobileName, String imei, int qty, double purchasePrice) {
-    double subTotal = qty * purchasePrice;
+class _StockRowItem extends StatelessWidget {
+  final String mobileName;
+  final String imei;
+  final double purchasePrice;
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 2.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // دائیں طرف: نام، پیس اور IMEI
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(mobileName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
-                      Text(" - $qty پیس", style: const TextStyle(fontSize: 12, color: Colors.deepPurple, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(imei, style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              // بائیں طرف: بڑا سب ٹوٹل اور نیچے چھوٹا مدھم فارمولا (مقدار × پرائس)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    "Rs ${subTotal.toInt()}", 
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    "$qty × ${purchasePrice.toInt()}", 
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey.shade600)
-                  ),
-                ],
-              ),
-            ],
+  const _StockRowItem({
+    required this.mobileName,
+    required this.imei,
+    required this.purchasePrice,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 12.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: Colors.grey.shade300, width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
-        ),
-        const Divider(height: 1, thickness: 0.4), 
-      ],
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // دائیں طرف: اوپر نام، نیچے IMEI نمبر
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  mobileName,
+                  style: const TextStyle(
+                    fontSize: 14, 
+                    fontWeight: FontWeight.bold, 
+                    color: Colors.black,
+                  ),
+                ),
+                if (imei.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    imei,
+                    style: const TextStyle(
+                      fontSize: 12, 
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // بائیں طرف: قیمتِ خرید
+          Text(
+            "Rs ${purchasePrice.toInt()}",
+            style: const TextStyle(
+              fontSize: 15, 
+              fontWeight: FontWeight.bold, 
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
