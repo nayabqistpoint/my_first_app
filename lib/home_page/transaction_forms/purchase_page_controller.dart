@@ -22,6 +22,10 @@ class PurchasePageController {
   bool isDiscountPercentage = false;
   String descriptionText = '';
 
+  // پیمنٹ سورس اور اسپلٹ پیمنٹس کے لیے ویری ایبلز
+  String? selectedPaymentSource = 'Cash';
+  List<Map<String, dynamic>> splitPaymentsList = [];
+
   bool addNewItemRow() {
     final lastItem = itemsList.last;
     if (lastItem['itemName'] != null && lastItem['itemName'].toString().isNotEmpty) {
@@ -82,7 +86,7 @@ class PurchasePageController {
     }
   }
 
-  // ✅ ٹرانزیکشن باکس اور سٹاک باکس دونوں میں محفوظ کرنے کا مکمل اور محفوظ طریقہ
+  // ✅ ٹرانزیکشن باکس، سٹاک باکس اور بینک باکس میں محفوظ کرنے کا مکمل اور محفوظ طریقہ
   Future<bool> savePurchase() async {
     if (itemsList.isEmpty || (itemsList.first['itemName'] ?? '').toString().isEmpty) {
       return false;
@@ -97,6 +101,10 @@ class PurchasePageController {
       final Box stockBox = Hive.isBoxOpen('stockBox') 
           ? Hive.box('stockBox') 
           : await Hive.openBox('stockBox');
+
+      final Box bankBox = Hive.isBoxOpen('bankBox')
+          ? Hive.box('bankBox')
+          : await Hive.openBox('bankBox');
 
       String finalPartyName = selectedPartyName ?? '';
 
@@ -132,7 +140,7 @@ class PurchasePageController {
       final String nowIso = DateTime.now().toIso8601String();
       final int timeKey = DateTime.now().millisecondsSinceEpoch;
 
-      // ✅ 2. تمام آئٹمز کو سٹاک باکس (stockBox) میں محفوظ کرنا (بغیر کسی فیلڈ مسنگ کے)
+      // ✅ 2. تمام آئٹمز کو سٹاک باکس (stockBox) میں محفوظ کرنا
       for (int i = 0; i < itemsList.length; i++) {
         var item = itemsList[i];
         if (item['itemName'] != null && item['itemName'].toString().isNotEmpty) {
@@ -148,7 +156,7 @@ class PurchasePageController {
             'purchasePrice': item['purchasePrice'] ?? '0',
             'salePrice': item['salePrice'] ?? '0',
             'quantity': item['quantity'] ?? '1',
-            'adjustment': item['adjustment'] ?? '', // ایڈجسٹمنٹ بھی محفوظ کی گئی
+            'adjustment': item['adjustment'] ?? '',
             'supplier': (item['supplier'] != null && item['supplier'].toString().isNotEmpty) 
                 ? item['supplier'] 
                 : finalPartyName,
@@ -156,15 +164,35 @@ class PurchasePageController {
             'warranty': item['warranty'] ?? 0,
             'color': item['color'] ?? item['selectedColor'] ?? '',
             'date': nowIso,
-            'status': 'available', // سٹاک میں دستیاب ہے
-            'customerPhone': selectedPartyPhone ?? '', // ربط کے لیے
+            'status': 'available',
+            'customerPhone': selectedPartyPhone ?? '',
           };
 
           await stockBox.put(stockKey, stockData);
         }
       }
 
-      // ✅ 3. ٹرانزیکشن باکس (transactionBox) میں مکمل خرید کا ریکارڈ سیو کرنا
+      // ✅ 3. بینک باکس (bankBox) سے رقم منہا (Deduct) کرنا - (Single Source of Truth)
+      if (paidAmount > 0) {
+        if (splitPaymentsList.isNotEmpty) {
+          // اسپلٹ پیمنٹس موڈ: ہر ایک منتخب سورس سے علیحدہ رقم منہا کرنا
+          for (var split in splitPaymentsList) {
+            String source = split['source'] ?? 'Cash';
+            double amt = (split['amount'] ?? 0.0).toDouble();
+            if (amt > 0) {
+              double currentBal = (bankBox.get(source) ?? 0.0).toDouble();
+              await bankBox.put(source, currentBal - amt);
+            }
+          }
+        } else {
+          // سنگل پیمنٹ موڈ: منتخب کردہ بینک یا کیش سے کل رقم منہا کرنا
+          String source = selectedPaymentSource ?? 'Cash';
+          double currentBal = (bankBox.get(source) ?? 0.0).toDouble();
+          await bankBox.put(source, currentBal - paidAmount);
+        }
+      }
+
+      // ✅ 4. ٹرانزیکشن باکس (transactionBox) میں مکمل خرید کا ریکارڈ سیو کرنا
       final transactionKey = timeKey.toString();
 
       final transactionData = {
@@ -178,17 +206,17 @@ class PurchasePageController {
         'description': descriptionText,
         'remarks': imeiList.join(','),
         'date': nowIso,
-        'items': itemsList, // آئٹمز کی مکمل لسٹ
+        'items': itemsList,
         'discount': {
           'value': discountValue,
           'isPercentage': isDiscountPercentage,
         },
-        'source': null,
-        'splitPayments': [],
+        'source': selectedPaymentSource,
+        'splitPayments': splitPaymentsList,
         'hasAttachment': false,
         'timestamp': nowIso,
         'purchasedImeis': imeiList,
-        'isCreatedByAdmin': false,
+        'isCreatedByAdmin': true,
       };
 
       await transactionBox.put(transactionKey, transactionData);

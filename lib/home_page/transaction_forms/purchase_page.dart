@@ -6,6 +6,9 @@ import 'common/item_selector_row_widget.dart';
 import 'common/discount_widget.dart';
 import 'common/transaction_summary_widget.dart';
 
+// بالکل درست پاتھ کے ساتھ نیا پیمنٹ سورس کارڈ امپورٹ
+import '../../dashboard/widgets/payment_source_card.dart';
+
 class PurchasePage extends StatefulWidget {
   const PurchasePage({super.key});
 
@@ -189,6 +192,19 @@ class _PurchasePageState extends State<PurchasePage> {
                           grandTotal: _grandTotal,
                           receivedController: _receivedController,
                           descriptionController: _descriptionController,
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // Payment Source Card (ترتیب کے مطابق اینڈ پر رکھا گیا ہے)
+                        PaymentSourceCard(
+                          selectedSource: controller.selectedPaymentSource,
+                          onChanged: (val) {
+                            setState(() {
+                              controller.selectedPaymentSource = val;
+                            });
+                          },
+                          isAdmin: true,
                         ),
                       ],
                     ),
