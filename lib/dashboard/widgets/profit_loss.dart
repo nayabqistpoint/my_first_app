@@ -17,7 +17,7 @@ class ProfitLossWidget extends StatelessWidget {
         return ListenableBuilder(
           listenable: Listenable.merge([sectionsController, financialController]),
           builder: (context, child) {
-            // 1. bankBox سے لائیو کیش + بینک
+            // 1. bankBox سے کیش + بینک
             double cashAndBank = 0.0;
             if (Hive.isBoxOpen('bankBox')) {
               var bankBox = Hive.box('bankBox');
@@ -29,7 +29,7 @@ class ProfitLossWidget extends StatelessWidget {
               }
             }
 
-            // 2. stockBox سے لائیو اسٹاک
+            // 2. stockBox سے اسٹاک
             double stockValue = 0.0;
             if (Hive.isBoxOpen('stockBox')) {
               var stockBox = Hive.box('stockBox');
@@ -43,22 +43,16 @@ class ProfitLossWidget extends StatelessWidget {
               }
             }
 
-            // 3. کل انویسٹمنٹ (Net Worth) کی لائیو ویلیو
-            double totalInvestment = financialController.calculateNetWorth(
+            // 3. فریزڈ انویسٹمنٹ (Locked Investment)
+            double baseInvestment = financialController.calculateBaseInvestment(
               cashAndBank: cashAndBank,
               stockValue: stockValue,
               totalRed: sectionsController.totalRedAmount,
               totalGreen: sectionsController.totalGreenAmount,
             );
 
-            // 4. پرافٹ/لاس کی درست لائیو ویلیو (اب یہ 0 شو کرے گی)
-            double netProfitLoss = financialController.calculateAutoProfitLoss(
-              currentNetWorth: totalInvestment,
-              cashAndBank: cashAndBank,
-              stockValue: stockValue,
-              totalRed: sectionsController.totalRedAmount,
-              totalGreen: sectionsController.totalGreenAmount,
-            );
+            // 4. لائیو پرافٹ / لاس (اخراجات/انکم کا ڈائریکٹ اثر)
+            double netProfitLoss = financialController.calculateDynamicProfitLoss();
 
             final bool isProfit = netProfitLoss >= 0;
             final Color profitColor = isProfit ? Colors.green.shade700 : Colors.red;
@@ -67,7 +61,7 @@ class ProfitLossWidget extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: Row(
                 children: [
-                  // Total Investment Card
+                  // Total Investment Card (فریز رہے گی)
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
@@ -84,7 +78,7 @@ class ProfitLossWidget extends StatelessWidget {
                             style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold, fontSize: 11),
                           ),
                           Text(
-                            "Rs. ${totalInvestment.toStringAsFixed(0)}",
+                            "Rs. ${baseInvestment.toStringAsFixed(0)}",
                             style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold, fontSize: 15),
                           ),
                         ],
@@ -93,11 +87,11 @@ class ProfitLossWidget extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
 
-                  // Profit/Loss Card
+                  // Profit/Loss Card (ہر لمحہ لائیو اپ ڈیٹ ہوگی)
                   Expanded(
                     child: InkWell(
                       onTap: () {
-                        _showProfitLossDetailsDialog(context, netProfitLoss, totalInvestment);
+                        _showProfitLossDetailsDialog(context, netProfitLoss, baseInvestment);
                       },
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
@@ -139,25 +133,24 @@ class ProfitLossWidget extends StatelessWidget {
     );
   }
 
-  // پاپ اپ ڈائیلاگ
   void _showProfitLossDetailsDialog(BuildContext context, double profitLoss, double investment) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Profit & Loss Details", textAlign: TextAlign.right, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text("پرافٹ اینڈ لاس کی تفصیلات", textAlign: TextAlign.right, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         content: SizedBox(
           width: 250,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text("کاروباری پوزیشن کی تفصیلات:", textAlign: TextAlign.right, style: TextStyle(fontSize: 12, color: Colors.black54)),
+              const Text("کاروباری پوزیشن:", textAlign: TextAlign.right, style: TextStyle(fontSize: 12, color: Colors.black54)),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text("Rs. ${investment.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const Text("Total Investment", style: TextStyle(fontSize: 13)),
+                  const Text("بنیادی انویسٹمنٹ (فریز)", style: TextStyle(fontSize: 12)),
                 ],
               ),
               const Divider(),
@@ -168,7 +161,7 @@ class ProfitLossWidget extends StatelessWidget {
                     "Rs. ${profitLoss.toStringAsFixed(0)}",
                     style: TextStyle(fontWeight: FontWeight.bold, color: profitLoss >= 0 ? Colors.green : Colors.red),
                   ),
-                  const Text("Net Profit / Loss", style: TextStyle(fontSize: 13)),
+                  const Text("خالص نفع / نقصان", style: TextStyle(fontSize: 12)),
                 ],
               ),
             ],
