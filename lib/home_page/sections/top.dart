@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../controllers/item_controller.dart';
+import 'sections_controller.dart';
 import '../../welcome/login_page.dart';
 
 class TopSection extends StatefulWidget {
@@ -10,14 +11,12 @@ class TopSection extends StatefulWidget {
 }
 
 class _TopSectionState extends State<TopSection> {
-  String selectedButton = "";
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: itemController,
+      listenable: Listenable.merge([itemController, sectionsController]),
       builder: (context, child) {
-        // تمام آئٹمز کے سب ٹوٹل کا گرینڈ ٹوٹل نکالنے کا حساب
+        // تمام آئٹمز کے سب ٹوٹل کا گرینڈ ٹوٹل
         double totalStockAmount = itemController.items.fold(
           0.0,
           (sum, item) => sum + (item.quantity * item.purchasePrice),
@@ -31,14 +30,17 @@ class _TopSectionState extends State<TopSection> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text("Rs. 0.00", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                  
+                  const Text(
+                    "Rs. 0.00",
+                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
                   Row(
                     children: [
-                      const Text("نایاب قسط پوائنٹ", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text(
+                        "نایاب قسط پوائنٹ",
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
                       const SizedBox(width: 10),
-                      
-                      // لاگ آؤٹ پاپ اپ مینو
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert, color: Colors.white),
                         onSelected: (value) {
@@ -75,7 +77,6 @@ class _TopSectionState extends State<TopSection> {
                   const SizedBox(width: 8),
                   _buildButton("You Will Give", "20,000", Colors.green, "give"),
                   const SizedBox(width: 8),
-                  // یہاں گرینڈ ٹوٹل پاس کر دیا گیا ہے
                   _buildButton("Stock", totalStockAmount.toInt().toString(), Colors.blue, "stock"),
                 ],
               ),
@@ -87,14 +88,12 @@ class _TopSectionState extends State<TopSection> {
   }
 
   Widget _buildButton(String title, String amount, Color color, String id) {
-    bool isSelected = selectedButton == id;
+    bool isSelected = sectionsController.selectedTopButton == id;
 
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          setState(() {
-            selectedButton = isSelected ? "" : id;
-          });
+          sectionsController.selectTopButton(id);
         },
         child: AnimatedScale(
           scale: isSelected ? 0.95 : 1.0,

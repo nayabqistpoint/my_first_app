@@ -6,29 +6,29 @@ class ItemsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
-        body: ListenableBuilder(
-          listenable: itemController,
-          builder: (context, child) {
-            final displayList = itemController.filteredItems;
+    return Container(
+      color: const Color(0xFFF8F9FA),
+      child: ListenableBuilder(
+        listenable: itemController,
+        builder: (context, child) {
+          final displayList = itemController.filteredItems;
 
-            if (displayList.isEmpty) {
-              return const Center(
-                child: Text(
-                  "کوئی اسٹاک موجود نہیں ہے",
-                  style: TextStyle(
-                    fontSize: 14, 
-                    color: Colors.black54, 
-                    fontWeight: FontWeight.bold
-                  ),
+          if (displayList.isEmpty) {
+            return const Center(
+              child: Text(
+                "کوئی اسٹاک موجود نہیں ہے",
+                style: TextStyle(
+                  fontSize: 14, 
+                  color: Colors.black54, 
+                  fontWeight: FontWeight.bold
                 ),
-              );
-            }
+              ),
+            );
+          }
 
-            return ListView.builder(
+          return Directionality(
+            textDirection: TextDirection.rtl,
+            child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
               itemCount: displayList.length,
               itemBuilder: (context, index) {
@@ -40,9 +40,9 @@ class ItemsPage extends StatelessWidget {
                   purchasePrice: item.purchasePrice,
                 );
               },
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -70,7 +70,7 @@ class _StockRowItem extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade300, width: 0.8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withAlpha(10),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -80,7 +80,6 @@ class _StockRowItem extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // دائیں طرف: اوپر نام، نیچے IMEI نمبر
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,8 +106,6 @@ class _StockRowItem extends StatelessWidget {
               ],
             ),
           ),
-
-          // بائیں طرف: قیمتِ خرید
           Text(
             "Rs ${purchasePrice.toInt()}",
             style: const TextStyle(
