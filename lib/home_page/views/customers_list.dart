@@ -88,9 +88,18 @@ class CustomerModel {
       for (var key in box.keys) {
         var txValue = box.get(key);
         if (txValue != null && txValue is Map) {
-          String txPhone = (txValue['customerPhone'] ?? txValue['customerId'] ?? '').toString().replaceAll(RegExp(r'[^0-9]'), '');
+          String txPhone = (txValue['customerPhone'] ?? txValue['customerId'] ?? '')
+              .toString()
+              .replaceAll(RegExp(r'[^0-9]'), '');
 
-          if (targetPhone.isNotEmpty && txPhone == targetPhone) {
+          // 🎯 منظوری کی فیلڈز چیک کرنا (Approval Status Checks)
+          bool isApproved = txValue['isApproved'] == true;
+          String status = txValue['status']?.toString().toLowerCase().trim() ?? '';
+
+          // 🔒 شرط: فون نمبر میچ کرے اور صرف وہی ٹرانزیکشنز لیں جو منظور شدہ ہوں
+          bool isValidAndApproved = isApproved || status == 'approved';
+
+          if (targetPhone.isNotEmpty && txPhone == targetPhone && isValidAndApproved) {
             bool alreadyExists = tempTransactions.any((existing) {
               if (existing['timestamp'] != null && txValue['timestamp'] != null) {
                 return existing['timestamp'] == txValue['timestamp'];
@@ -289,7 +298,7 @@ class CustomersListView extends StatelessWidget {
                   } else if (sectionsController.customerSortMode == "GREEN_FIRST") {
                     // گرین پہلے (bal > 0)، پھر ریڈ (bal < 0)، پھر زیرو (bal == 0)
                     int rankA = balA > 0 ? 0 : (balA < 0 ? 1 : 2);
-                    int rankB = balB > 0 ? 0 : (balB < 0 ? 1 : 2);
+                    int rankB = balB < 0 ? 0 : (balB < 0 ? 1 : 2);
                     if (rankA != rankB) return rankA.compareTo(rankB);
                     return balB.abs().compareTo(balA.abs());
                   } else {
