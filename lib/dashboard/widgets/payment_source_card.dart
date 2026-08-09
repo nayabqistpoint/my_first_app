@@ -226,12 +226,13 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
             const SizedBox(height: 16),
             const Divider(color: Colors.black12, height: 1),
             const SizedBox(height: 12),
+            // ڈسکرپشن اور کیمرہ باکس جن کی ہائٹ بالکل برابر (60px) کر دی گئی ہے
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: SizedBox(
-                    height: 65,
+                    height: 60,
                     child: TextField(
                       controller: noteController,
                       maxLines: 2,
@@ -254,8 +255,8 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
                   onTap: () {},
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    width: 65,
-                    height: 65,
+                    width: 60,
+                    height: 60,
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.black26),
                       borderRadius: BorderRadius.circular(8),
@@ -264,10 +265,10 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
                       alignment: Alignment.center,
                       children: [
                         Icon(Icons.image_outlined,
-                            color: Colors.black38, size: 32),
+                            color: Colors.black38, size: 28),
                         Positioned(
-                          top: 8,
-                          right: 8,
+                          top: 6,
+                          right: 6,
                           child: Icon(Icons.add_circle,
                               color: Colors.blue, size: 16),
                         ),
