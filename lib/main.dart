@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // ہائیو فلٹر کا پیکیج
-import 'package:firebase_core/firebase_core.dart'; // فائر بیس کور کا پیکیج
-import 'welcome/login_page.dart'; // لاگ ان پیج کا امپورٹ راستہ
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'welcome/login_page.dart';
 
 void main() async {
   // فلاتر اور پیکیجز کی بائنڈنگز کو یقینی بنانا
   WidgetsFlutterBinding.ensureInitialized();
 
-  // فائر بیس کو محفوظ طریقے سے انیشلائز کرنا
+  // فائر بیس کو انیشلائز کرنا
   try {
     await Firebase.initializeApp();
   } catch (e) {
@@ -17,14 +17,17 @@ void main() async {
   // ہائیو ڈیٹا بیس کو انیشلائز کرنا
   await Hive.initFlutter();
 
-  // ⚠️ تمام 7 باکسز کو انیشلائز کرنا تاکہ ڈیٹا بیس مانیٹر میں ریڈ اسکرین ایرر نہ آئے
-  await Hive.openBox('customerBox');
-  await Hive.openBox('guarantorBox');
-  await Hive.openBox('packageBox');
-  await Hive.openBox('stockBox');
-  await Hive.openBox('transactionBox');
-  await Hive.openBox('expenseBox');
-  await Hive.openBox('bankBox');
+  // 🎯 تمام باکسز کو ایک ساتھ (Parallel) کھولنا تاکہ ایپ تیز سٹارٹ ہو
+  await Future.wait([
+    Hive.openBox('customerBox'),
+    Hive.openBox('guarantorBox'),
+    Hive.openBox('packageBox'),
+    Hive.openBox('stockBox'),
+    Hive.openBox('transactionBox'),
+    Hive.openBox('expenseBox'),
+    Hive.openBox('bankBox'),
+    Hive.openBox('financialSummaryBox'),
+  ]);
 
   runApp(const MyApp());
 }
@@ -39,7 +42,12 @@ class MyApp extends StatelessWidget {
       title: 'نایاب قسط پوائنٹ',
       theme: ThemeData(
         primaryColor: Colors.red[800],
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.red[800]!,
+          primary: Colors.red[800],
+        ),
         scaffoldBackgroundColor: Colors.white,
+        useMaterial3: true,
       ),
       home: const LoginPage(),
     );

@@ -1,95 +1,146 @@
 import 'package:flutter/material.dart';
-import '../controller.dart'; // پاتھ کو آپ کے پروجیکٹ کے مطابق سیٹ کر دیا گیا ہے
+import 'package:hive_flutter/hive_flutter.dart';
+
+import '../../home_page/sections/sections_controller.dart';
+import 'financial_controller.dart';
 
 class ProfitLossWidget extends StatelessWidget {
   const ProfitLossWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: dashboardController,
-      builder: (context, child) {
-        // پرافٹ مائنس میں ہو تو ریڈ کلر، پلس میں ہو تو گرین کلر شو کرنے کی لاجک
-        final bool isProfit = dashboardController.netProfit >= 0;
-        final Color profitColor = isProfit ? Colors.green.shade700 : Colors.red;
+    return ValueListenableBuilder(
+      valueListenable: Hive.isBoxOpen('financialSummaryBox')
+          ? Hive.box('financialSummaryBox').listenable()
+          : ValueNotifier(null),
+      builder: (context, _, child) {
+        return ListenableBuilder(
+          listenable: Listenable.merge([sectionsController, financialController]),
+          builder: (context, child) {
+            // 1. bankBox سے لائیو کیش + بینک
+            double cashAndBank = 0.0;
+            if (Hive.isBoxOpen('bankBox')) {
+              var bankBox = Hive.box('bankBox');
+              for (var key in bankBox.keys) {
+                var value = bankBox.get(key);
+                if (value != null) {
+                  cashAndBank += double.tryParse(value.toString()) ?? 0.0;
+                }
+              }
+            }
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: Row(
-            children: [
-              // 1. Total Investment Card (پہلے Other Income تھا، اب ٹوٹل انویسٹمنٹ ہے)
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.green.shade400, width: 1.2),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Total Investment: ",
-                        style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold, fontSize: 13),
+            // 2. stockBox سے لائیو اسٹاک
+            double stockValue = 0.0;
+            if (Hive.isBoxOpen('stockBox')) {
+              var stockBox = Hive.box('stockBox');
+              for (var key in stockBox.keys) {
+                var item = stockBox.get(key);
+                if (item is Map) {
+                  double qty = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+                  double price = double.tryParse(item['purchasePrice']?.toString() ?? '0') ?? 0.0;
+                  stockValue += (qty * price);
+                }
+              }
+            }
+
+            // 3. کل انویسٹمنٹ (Net Worth) کی لائیو ویلیو
+            double totalInvestment = financialController.calculateNetWorth(
+              cashAndBank: cashAndBank,
+              stockValue: stockValue,
+              totalRed: sectionsController.totalRedAmount,
+              totalGreen: sectionsController.totalGreenAmount,
+            );
+
+            // 4. پرافٹ/لاس کی درست لائیو ویلیو (اب یہ 0 شو کرے گی)
+            double netProfitLoss = financialController.calculateAutoProfitLoss(
+              currentNetWorth: totalInvestment,
+              cashAndBank: cashAndBank,
+              stockValue: stockValue,
+              totalRed: sectionsController.totalRedAmount,
+              totalGreen: sectionsController.totalGreenAmount,
+            );
+
+            final bool isProfit = netProfitLoss >= 0;
+            final Color profitColor = isProfit ? Colors.green.shade700 : Colors.red;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Row(
+                children: [
+                  // Total Investment Card
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.green.shade400, width: 1.2),
                       ),
-                      Text(
-                        "Rs. ${dashboardController.otherIncome.toStringAsFixed(0)}",
-                        style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              
-              // 2. Profit/Loss Card (اب یہ کلیکیبل ہے تاکہ پاپ اپ کھل سکے)
-              Expanded(
-                child: InkWell(
-                  onTap: () {
-                    _showProfitLossDetailsDialog(context);
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: isProfit ? Colors.green.shade400 : Colors.red.shade400, width: 1.2), 
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Profit/Loss اسمارٹ ٹیکسٹ
-                        RichText(
-                          text: TextSpan(
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                            children: [
-                              TextSpan(text: "Profit", style: TextStyle(color: Colors.green.shade700)),
-                              const TextSpan(text: "/", style: TextStyle(color: Colors.black87)),
-                              const TextSpan(text: "Loss: ", style: TextStyle(color: Colors.red)),
-                            ],
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Total Investment: ",
+                            style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold, fontSize: 11),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          "Rs. ${dashboardController.netProfit.toStringAsFixed(0)}",
-                          style: TextStyle(color: profitColor, fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                      ],
+                          Text(
+                            "Rs. ${totalInvestment.toStringAsFixed(0)}",
+                            style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+
+                  // Profit/Loss Card
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        _showProfitLossDetailsDialog(context, netProfitLoss, totalInvestment);
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: isProfit ? Colors.green.shade400 : Colors.red.shade400, width: 1.2),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            RichText(
+                              text: TextSpan(
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                                children: [
+                                  TextSpan(text: "Profit", style: TextStyle(color: Colors.green.shade700)),
+                                  const TextSpan(text: "/", style: TextStyle(color: Colors.black87)),
+                                  const TextSpan(text: "Loss: ", style: TextStyle(color: Colors.red)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              "Rs. ${netProfitLoss.toStringAsFixed(0)}",
+                              style: TextStyle(color: profitColor, fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  // پرافٹ اور لاس کی تفصیلات دیکھنے کے لیے پاپ اپ ڈائیلاگ
-  void _showProfitLossDetailsDialog(BuildContext context) {
+  // پاپ اپ ڈائیلاگ
+  void _showProfitLossDetailsDialog(BuildContext context, double profitLoss, double investment) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -100,21 +151,23 @@ class ProfitLossWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text("ٹرانزیکشنز اور ڈسکاؤنٹس کی تفصیلات:", textAlign: TextAlign.right, style: TextStyle(fontSize: 12, color: Colors.black54)),
+              const Text("کاروباری پوزیشن کی تفصیلات:", textAlign: TextAlign.right, style: TextStyle(fontSize: 12, color: Colors.black54)),
               const SizedBox(height: 12),
-              // یہاں ہم نے بنیادی لسٹ یا رو کا ڈھانچہ رکھ دیا ہے
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text("Rs. 0", style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text("Total Discounts", style: TextStyle(fontSize: 13)),
+                children: [
+                  Text("Rs. ${investment.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const Text("Total Investment", style: TextStyle(fontSize: 13)),
                 ],
               ),
               const Divider(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Rs. ${dashboardController.netProfit.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                  Text(
+                    "Rs. ${profitLoss.toStringAsFixed(0)}",
+                    style: TextStyle(fontWeight: FontWeight.bold, color: profitLoss >= 0 ? Colors.green : Colors.red),
+                  ),
                   const Text("Net Profit / Loss", style: TextStyle(fontSize: 13)),
                 ],
               ),
@@ -123,9 +176,7 @@ class ProfitLossWidget extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             child: const Text("بند کریں"),
           ),
         ],

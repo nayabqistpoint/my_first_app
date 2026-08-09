@@ -3,18 +3,31 @@ import 'package:flutter/material.dart';
 class SectionsController extends ChangeNotifier {
   final PageController pageController = PageController();
 
-  // 0 = Parties / Customers (مرکزی پیج)
-  // 1 = Transactions
-  // 2 = Stock
   int currentPageIndex = 0;
-  String selectedTopButton = "";
+  String selectedTopButton = ""; // "get", "give", "stock" یا ""
+  
+  // کسٹمر سارٹنگ اسٹیٹ: "NONE", "RED_FIRST", "GREEN_FIRST"
+  String customerSortMode = "NONE";
+
+  // کسٹمرز لسٹ سے آنے والا لائیو ٹوٹل
+  double totalRedAmount = 0.0;
+  double totalGreenAmount = 0.0;
+
+  void updateTotals({required double redTotal, required double greenTotal}) {
+    if (totalRedAmount != redTotal || totalGreenAmount != greenTotal) {
+      totalRedAmount = redTotal;
+      totalGreenAmount = greenTotal;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
+    }
+  }
 
   void changePage(int index) {
     currentPageIndex = index;
     _updateTopButtonState(index);
 
     if (pageController.hasClients) {
-      // jumpToPage استعمال کیا ہے تاکہ بغیر کسی اینیمیشن یا لگ کے پیج فوراً 1 ملی سیکنڈ میں کھلے
       pageController.jumpToPage(index);
     }
 
@@ -35,22 +48,29 @@ class SectionsController extends ChangeNotifier {
     } else if (index == 0) {
       if (selectedTopButton != "get" && selectedTopButton != "give") {
         selectedTopButton = "";
+        customerSortMode = "NONE";
       }
     } else {
       selectedTopButton = "";
+      customerSortMode = "NONE";
     }
   }
 
   void selectTopButton(String buttonId) {
     if (selectedTopButton == buttonId) {
       selectedTopButton = "";
-      changePage(0); // ان-سلیکٹ ہونے پر براہ راست Parties (0) پر جمپ لگے گی
+      customerSortMode = "NONE";
+      changePage(0);
     } else {
       selectedTopButton = buttonId;
 
       if (buttonId == "stock") {
         changePage(2);
-      } else if (buttonId == "get" || buttonId == "give") {
+      } else if (buttonId == "get") {
+        customerSortMode = "RED_FIRST"; // پہلے Red، پھر Green، پھر 0
+        changePage(0);
+      } else if (buttonId == "give") {
+        customerSortMode = "GREEN_FIRST"; // پہلے Green، پھر Red، پھر 0
         changePage(0);
       } else {
         notifyListeners();

@@ -19,6 +19,8 @@ class _DatabasePageState extends State<DatabasePage> {
     'transactionBox': {'title': 'ٹرانزیکشن باکس', 'color': Colors.green},
     'expenseBox': {'title': 'اخراجات باکس', 'color': Colors.deepOrange},
     'bankBox': {'title': 'بینک باکس', 'color': Colors.amber},
+    // 🎯 نیا نفع نقصان باکس شامل کر دیا گیا ہے
+    'financialSummaryBox': {'title': 'نفع نقصان باکس', 'color': Colors.indigo},
   };
 
   // ہائیو بینک باکس کا اٹومیٹک کلین اپ اور مرج فنکشن
@@ -94,9 +96,10 @@ class _DatabasePageState extends State<DatabasePage> {
                     children: ['stockBox', 'transactionBox', 'expenseBox'].map(_buildChip).toList(),
                   ),
                   const SizedBox(height: 4),
+                  // 🎯 بینک باکس اور نفع نقصان باکس کو ایک ہی رو (Row) میں ایڈجسٹ کر دیا گیا ہے
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [_buildChip('bankBox')],
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: ['bankBox', 'financialSummaryBox'].map(_buildChip).toList(),
                   ),
                 ],
               ),
@@ -111,7 +114,12 @@ class _DatabasePageState extends State<DatabasePage> {
                   _cleanupBankBox(box);
 
                   if (box.isEmpty) {
-                    return Center(child: Text('${_boxesInfo[_selectedBoxName]!['title']} بالکل خالی ہے!', style: const TextStyle(color: Colors.grey)));
+                    return Center(
+                      child: Text(
+                        '${_boxesInfo[_selectedBoxName]!['title']} بالکل خالی ہے!',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    );
                   }
                   return ListView.builder(
                     padding: const EdgeInsets.all(8),
@@ -123,7 +131,10 @@ class _DatabasePageState extends State<DatabasePage> {
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 4),
                         child: ListTile(
-                          title: Text('Key: $key', style: TextStyle(fontWeight: FontWeight.bold, color: themeColor, fontSize: 13)),
+                          title: Text(
+                            'Key: $key',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: themeColor, fontSize: 13),
+                          ),
                           subtitle: Text(rawData.toString(), style: const TextStyle(fontSize: 12)),
                           trailing: _selectedBoxName == 'bankBox' && key != 'Cash'
                               ? IconButton(

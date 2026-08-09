@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_first_app/customer_ledger_page.dart';
 import '../../features/add_party_dialog.dart';
+import '../sections/sections_controller.dart';
 
 // ==========================================
 // 1. CUSTOMER TRANSACTION MODEL
@@ -68,7 +69,6 @@ class CustomerModel {
     return phone.replaceAll(RegExp(r'[^0-9]'), '');
   }
 
-  // 🔒 🎯 لیجر کے ساتھ 100% سنکرونائزڈ بیلنس کی لاجک
   double get calculateTotalBalance {
     List<Map<String, dynamic>> tempTransactions = [];
 
@@ -108,7 +108,6 @@ class CustomerModel {
       }
     }
 
-    // 🔒 تاریخ کے مطابق ترتیب (پرانی سے نئی)
     tempTransactions.sort((a, b) {
       DateTime dtA = DateTime.tryParse(a['timestamp']?.toString() ?? a['date']?.toString() ?? '') ?? DateTime(2000);
       DateTime dtB = DateTime.tryParse(b['timestamp']?.toString() ?? b['date']?.toString() ?? '') ?? DateTime(2000);
@@ -120,7 +119,6 @@ class CustomerModel {
     for (var t in tempTransactions) {
       String type = t['type']?.toString().toLowerCase().trim() ?? '';
       
-      // پرچیز کی اینٹری کے لیے remainingBalance اور باقی کے لیے amount
       double amt = 0.0;
       if (type == 'purchase' && t['remainingBalance'] != null) {
         amt = double.tryParse(t['remainingBalance'].toString()) ?? 0.0;
@@ -128,7 +126,6 @@ class CustomerModel {
         amt = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
       }
 
-      // 🔒 فائنل میپنگ
       bool isGreen = false;
       if (type == 'payment_in' || type == 'in' || type == 'received' || type == 'get') {
         isGreen = true;
@@ -143,9 +140,9 @@ class CustomerModel {
       amt = amt.abs();
 
       if (isGreen) {
-        runningBalance += amt; // پلس
+        runningBalance += amt;
       } else {
-        runningBalance -= amt; // مائنس
+        runningBalance -= amt;
       }
     }
 
@@ -204,19 +201,6 @@ class CustomerController extends ChangeNotifier {
         }
       }
 
-      list.sort((a, b) {
-        double balanceA = a.calculateTotalBalance;
-        double balanceB = b.calculateTotalBalance;
-
-        if (balanceA == 0 && balanceB == 0) {
-          return a.name.compareTo(b.name);
-        }
-        if (balanceA == 0) return 1;
-        if (balanceB == 0) return -1;
-
-        return balanceB.abs().compareTo(balanceA.abs());
-      });
-
       return list;
     } catch (e) {
       return [];
@@ -247,7 +231,6 @@ class CustomerController extends ChangeNotifier {
   }
 }
 
-// 🎯 گلوبل ابجیکٹ کی موجودگی لازمی ہے
 final CustomerController customerController = CustomerController();
 
 // ==========================================
@@ -266,143 +249,195 @@ class CustomersListView extends StatelessWidget {
               ? Hive.box('transactionBox').listenable()
               : ValueNotifier(null),
           builder: (context, _, child) {
-            final customersList = customerController.customers;
+            return ListenableBuilder(
+              listenable: sectionsController,
+              builder: (context, _) {
+                final allCustomers = customerController.customers;
 
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        height: 35,
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            items: ["سب", "باقی", "مکمل"].map((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value, style: const TextStyle(fontSize: 12)),
-                              );
-                            }).toList(),
-                            onChanged: (_) {},
-                            hint: const Text("فلٹر", style: TextStyle(fontSize: 12)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 1,
-                        child: SizedBox(
-                          height: 35,
-                          child: TextField(
-                            textAlign: TextAlign.right,
-                            decoration: InputDecoration(
-                              hintText: "سرچ...",
-                              hintStyle: const TextStyle(fontSize: 12),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
+                // 🎯 1. کل رقم کا لائیو مجموعہ
+                double totalRed = 0.0;   // آپ نے لینے ہیں (Negative Balance)
+                double totalGreen = 0.0; // آپ نے دینے ہیں (Positive Balance)
+
+                for (var c in allCustomers) {
+                  double bal = c.calculateTotalBalance;
+                  if (bal < 0) {
+                    totalRed += bal.abs();
+                  } else if (bal > 0) {
+                    totalGreen += bal;
+                  }
+                }
+
+                // 🎯 2. اوپر والے بٹنز میں ٹوٹل رقم بھیجنا
+                sectionsController.updateTotals(
+                  redTotal: totalRed,
+                  greenTotal: totalGreen,
+                );
+
+                // 🎯 3. بٹن سلیکشن کے مطابق کسٹمرز کی ترتیب (Sorting)
+                List<CustomerModel> displayedCustomers = List.from(allCustomers);
+
+                displayedCustomers.sort((a, b) {
+                  double balA = a.calculateTotalBalance;
+                  double balB = b.calculateTotalBalance;
+
+                  if (sectionsController.customerSortMode == "RED_FIRST") {
+                    // ریڈ پہلے (bal < 0)، پھر گرین (bal > 0)، پھر زیرو (bal == 0)
+                    int rankA = balA < 0 ? 0 : (balA > 0 ? 1 : 2);
+                    int rankB = balB < 0 ? 0 : (balB > 0 ? 1 : 2);
+                    if (rankA != rankB) return rankA.compareTo(rankB);
+                    return balB.abs().compareTo(balA.abs());
+                  } else if (sectionsController.customerSortMode == "GREEN_FIRST") {
+                    // گرین پہلے (bal > 0)، پھر ریڈ (bal < 0)، پھر زیرو (bal == 0)
+                    int rankA = balA > 0 ? 0 : (balA < 0 ? 1 : 2);
+                    int rankB = balB > 0 ? 0 : (balB < 0 ? 1 : 2);
+                    if (rankA != rankB) return rankA.compareTo(rankB);
+                    return balB.abs().compareTo(balA.abs());
+                  } else {
+                    // نارمل ترتیب (ترتیبِ نو)
+                    if (balA == 0 && balB == 0) return a.name.compareTo(b.name);
+                    if (balA == 0) return 1;
+                    if (balB == 0) return -1;
+                    return balB.abs().compareTo(balA.abs());
+                  }
+                });
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            height: 35,
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                items: ["سب", "باقی", "مکمل"].map((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value, style: const TextStyle(fontSize: 12)),
+                                  );
+                                }).toList(),
+                                onChanged: (_) {},
+                                hint: const Text("فلٹر", style: TextStyle(fontSize: 12)),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          showAddPartyDialog(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black87,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          minimumSize: const Size(100, 35),
-                        ),
-                        child: const Text("ایڈ پارٹی", style: TextStyle(color: Colors.white, fontSize: 13)),
-                      ),
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.more_vert),
-                        constraints: const BoxConstraints(),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(color: Colors.black, thickness: 1.2, height: 1),
-                Expanded(
-                  child: customersList.isEmpty
-                      ? const Center(
-                          child: Text(
-                            "کوئی کسٹمر موجود نہیں",
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 1,
+                            child: SizedBox(
+                              height: 35,
+                              child: TextField(
+                                textAlign: TextAlign.right,
+                                decoration: InputDecoration(
+                                  hintText: "سرچ...",
+                                  hintStyle: const TextStyle(fontSize: 12),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
+                                ),
+                              ),
+                            ),
                           ),
-                        )
-                      : ListView.builder(
-                          padding: EdgeInsets.zero,
-                          itemCount: customersList.length,
-                          itemBuilder: (context, index) {
-                            final customer = customersList[index];
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              showAddPartyDialog(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black87,
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              minimumSize: const Size(100, 35),
+                            ),
+                            child: const Text("ایڈ پارٹی", style: TextStyle(color: Colors.white, fontSize: 13)),
+                          ),
+                          IconButton(
+                            onPressed: () {},
+                            icon: const Icon(Icons.more_vert),
+                            constraints: const BoxConstraints(),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(color: Colors.black, thickness: 1.2, height: 1),
+                    Expanded(
+                      child: displayedCustomers.isEmpty
+                          ? const Center(
+                              child: Text(
+                                "کوئی کسٹمر موجود نہیں",
+                                style: TextStyle(color: Colors.grey, fontSize: 14),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: EdgeInsets.zero,
+                              itemCount: displayedCustomers.length,
+                              itemBuilder: (context, index) {
+                                final customer = displayedCustomers[index];
 
-                            double totalBalance = customer.calculateTotalBalance;
-                            Color amountColor = totalBalance == 0
-                                ? Colors.black54
-                                : (totalBalance >= 0 ? Colors.green : Colors.red);
+                                double totalBalance = customer.calculateTotalBalance;
+                                Color amountColor = totalBalance == 0
+                                    ? Colors.black54
+                                    : (totalBalance > 0 ? Colors.green : Colors.red);
 
-                            return InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CustomerLedgerPage(customer: customer),
-                                  ),
-                                ).then((_) {
-                                  customerController.refreshList();
-                                });
-                              },
-                              child: Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "Rs ${totalBalance.abs().toStringAsFixed(0)}",
-                                          style: TextStyle(
-                                            color: amountColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.end,
+                                return InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => CustomerLedgerPage(customer: customer),
+                                      ),
+                                    ).then((_) {
+                                      customerController.refreshList();
+                                    });
+                                  },
+                                  child: Column(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                            Text(
+                                              "Rs ${totalBalance.abs().toStringAsFixed(0)}",
+                                              style: TextStyle(
+                                                color: amountColor,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.end,
                                               children: [
-                                                Text(
-                                                  "${customer.name} ${customer.cast}".trim(),
-                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                                  children: [
+                                                    Text(
+                                                      "${customer.name} ${customer.cast}".trim(),
+                                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(width: 10),
+                                                const CircleAvatar(
+                                                  radius: 15,
+                                                  backgroundColor: Colors.black12,
+                                                  child: Icon(Icons.person, size: 18, color: Colors.black54),
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(width: 10),
-                                            const CircleAvatar(
-                                              radius: 15,
-                                              backgroundColor: Colors.black12,
-                                              child: Icon(Icons.person, size: 18, color: Colors.black54),
-                                            ),
                                           ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      const Divider(color: Colors.black26, thickness: 0.5, height: 1),
+                                    ],
                                   ),
-                                  const Divider(color: Colors.black26, thickness: 0.5, height: 1),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
             );
           },
         );
