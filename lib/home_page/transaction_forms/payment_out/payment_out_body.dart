@@ -130,14 +130,16 @@ class PaymentOutBody extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // 🔥 3 پیرامیٹرز (categoryName، discountValue، isPercentage) پاس کر کے ٹھیک کر دیا گیا ہے 🔥
                   DiscountWidget(
-                    onDiscountChanged: (double discountValue, bool isPercentage) {
-                      controller.updateDiscount(discountValue, isPercentage);
+                    onDiscountChanged: (String categoryName, double discountValue, bool isPercentage) {
+                      controller.updateDiscount(categoryName, discountValue, isPercentage);
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // ڈائنامک PaymentSourceCard (Key کے ساتھ ڈائریکٹ لنک)
+                  // ڈائنامک PaymentSourceCard
                   PaymentSourceCard(
                     key: controller.sourceCardKey,
                     isAdmin: true,

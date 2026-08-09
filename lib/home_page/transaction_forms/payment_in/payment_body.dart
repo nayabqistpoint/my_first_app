@@ -28,7 +28,7 @@ class _PaymentBodyState extends State<PaymentBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ۱. تاریخ کی پٹی
+          // ۱۔ تاریخ کی پٹی
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -54,7 +54,7 @@ class _PaymentBodyState extends State<PaymentBody> {
           ),
           const SizedBox(height: 20),
 
-          // ۲. رقم (Amount) درج کرنے کا خانہ
+          // ۲۔ رقم (Amount) درج کرنے کا خانہ
           TextField(
             controller: widget.controller.amountController,
             focusNode: widget.controller.amountFocusNode,
@@ -74,7 +74,7 @@ class _PaymentBodyState extends State<PaymentBody> {
           ),
           const SizedBox(height: 16),
 
-          // ۳. تمام فیلڈز
+          // ۳۔ تمام فیلڈز
           ValueListenableBuilder<bool>(
             valueListenable: widget.controller.hasAmountEntered,
             builder: (context, hasAmount, child) {
@@ -149,17 +149,17 @@ class _PaymentBodyState extends State<PaymentBody> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ڈسکاؤنٹ
+                  // 🔥 3 پیرامیٹرز پاس کر کے ایرر ٹھیک کر دیا گیا ہے 🔥
                   DiscountWidget(
-                    onDiscountChanged: (double discountValue, bool isPercentage) {
-                      widget.controller.updateDiscount(discountValue, isPercentage);
+                    onDiscountChanged: (String categoryName, double discountValue, bool isPercentage) {
+                      widget.controller.updateDiscount(categoryName, discountValue, isPercentage);
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // 🔥 پیمنٹ سورس ویجیٹ (GlobalKey کے ساتھ کنیکٹڈ) 🔥
+                  // پیمنٹ سورس ویجیٹ
                   PaymentSourceCard(
-                    key: widget.controller.paymentSourceCardKey, // 👈 یہ کی کنٹرولر کو لائیو اسٹیٹ فراہم کرے گی
+                    key: widget.controller.paymentSourceCardKey,
                     isAdmin: true,
                     selectedSource: widget.controller.selectedPaymentSource,
                     onChanged: (String? newSource) {

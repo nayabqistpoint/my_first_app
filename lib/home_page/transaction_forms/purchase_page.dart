@@ -21,6 +21,7 @@ class _PurchasePageState extends State<PurchasePage> {
 
   double _discountValue = 0.0;
   bool _isDiscountPercentage = false;
+  String _selectedDiscountCategory = 'Discounts'; // 🔥 ڈراپ ڈاؤن سے منتخب کیٹیگری
 
   final TextEditingController _receivedController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -84,6 +85,14 @@ class _PurchasePageState extends State<PurchasePage> {
     if (!mounted) return;
 
     if (success) {
+      // 🔥 ٹرانزیکشن کامیابی سے سیو ہونے پر ڈسکاؤنٹ کو ہائیو باکس کی منتخب کردہ کیٹیگری میں بھیجنا 🔥
+      if (_calculatedDiscountAmount > 0) {
+        DiscountWidget.recordDiscountInHive(
+          categoryName: _selectedDiscountCategory,
+          amount: _calculatedDiscountAmount,
+        );
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('ڈیٹا کامیابی سے محفوظ ہو گیا ہے!'),
@@ -173,10 +182,11 @@ class _PurchasePageState extends State<PurchasePage> {
 
                         const SizedBox(height: 10),
 
-                        // Discount Widget
+                        // 🔥 3 پیرامیٹرز والے اپ ڈیٹ شدہ DiscountWidget کی ہینڈلنگ 🔥
                         DiscountWidget(
-                          onDiscountChanged: (discountValue, isPercentage) {
+                          onDiscountChanged: (String categoryName, double discountValue, bool isPercentage) {
                             setState(() {
+                              _selectedDiscountCategory = categoryName;
                               _discountValue = discountValue;
                               _isDiscountPercentage = isPercentage;
                             });
@@ -196,9 +206,9 @@ class _PurchasePageState extends State<PurchasePage> {
 
                         const SizedBox(height: 10),
 
-                        // Payment Source Card (ترتیب کے مطابق اینڈ پر رکھا گیا ہے)
+                        // Payment Source Card
                         PaymentSourceCard(
-                          key: controller.paymentCardKey, // <-- صرف یہ ایک لائن شامل کی گئی ہے تاکہ اسپلٹ پیمنٹ کام کر سکے
+                          key: controller.paymentCardKey,
                           selectedSource: controller.selectedPaymentSource,
                           onChanged: (val) {
                             setState(() {

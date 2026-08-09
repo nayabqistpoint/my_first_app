@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../dashboard/widgets/payment_source_card.dart';
+import '../common/discount_widget.dart'; // 🔥 DiscountWidget امپورٹ
 
 class PaymentInController {
   final TextEditingController amountController = TextEditingController();
@@ -18,6 +19,7 @@ class PaymentInController {
 
   double _discountValue = 0.0;
   bool _isPercentageDiscount = false;
+  String _selectedDiscountCategory = 'Discounts'; // 🔥 منتخب کردہ ڈسکاؤنٹ/انکم کیٹیگری
   
   String? _selectedSource = 'Cash';
 
@@ -39,7 +41,9 @@ class PaymentInController {
     hasAmountEntered.value = text.isNotEmpty;
   }
 
-  void updateDiscount(double value, bool isPercentage) {
+  // 🔥 3 پیرامیٹرز (کیٹیگری نام، رقم، اور فیصد) کے ساتھ اپ ڈیٹ شدہ ڈسکاؤنٹ فنکشن 🔥
+  void updateDiscount(String categoryName, double value, bool isPercentage) {
+    _selectedDiscountCategory = categoryName;
     _discountValue = value;
     _isPercentageDiscount = isPercentage;
   }
@@ -69,6 +73,18 @@ class PaymentInController {
     double totalAmount = double.tryParse(amountText) ?? 0.0;
     String remarks = remarksController.text.trim();
 
+    // 🔥 ۱۔ ڈسکاؤنٹ کی رقم کا حساب لگانا 🔥
+    double calculatedDiscountAmount = 0.0;
+    if (_isPercentageDiscount) {
+      calculatedDiscountAmount = (totalAmount * _discountValue) / 100;
+    } else {
+      calculatedDiscountAmount = _discountValue;
+    }
+
+    // 🔥 ۲۔ کیش یا بینک میں جمع ہونے والی اصل بقایا رقم 🔥
+    double netAmountToReceive = totalAmount - calculatedDiscountAmount;
+    if (netAmountToReceive < 0) netAmountToReceive = 0.0;
+
     String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
     final String nowIso = DateTime.now().toIso8601String();
 
@@ -82,11 +98,14 @@ class PaymentInController {
       'customerPhone': cleanPhone,
       'customerId': cleanPhone, 
       'amount': totalAmount,
+      'netAmount': netAmountToReceive,
       'description': remarks,
       'remarks': remarks,
       'date': nowIso,
       'discount': {
+        'category': _selectedDiscountCategory,
         'value': _discountValue,
+        'amount': calculatedDiscountAmount,
         'isPercentage': _isPercentageDiscount,
       },
       'source': _selectedSource ?? 'Cash',
@@ -96,11 +115,11 @@ class PaymentInController {
     };
 
     try {
-      // ۱. ٹرانزیکشن باکس میں اندراج
+      // ۱۔ ٹرانزیکشن باکس میں اندراج
       var txnBox = Hive.box('transactionBox');
       await txnBox.add(transactionData);
 
-      // ۲. ڈائریکٹ ہائیو کے 'bankBox' میں لائیو اور ڈائنامک پلس کرنا
+      // ۲۔ ڈائریکٹ ہائیو کے 'bankBox' میں مائنس ڈسکاؤنٹ شدہ رقم (Net Amount) جمع کرنا
       var bankBox = Hive.box('bankBox');
 
       if (isSplit && splitList.isNotEmpty) {
@@ -117,16 +136,24 @@ class PaymentInController {
           }
         }
       } else {
-        // سنگل موڈ: منتخب کردہ مخصوص بینک یا کیش میں پوری رقم جمع کرنا
+        // سنگل موڈ: منتخب کردہ مخصوص بینک یا کیش میں مائنس ڈسکاؤنٹ رقم جمع کرنا
         String sourceKey = _selectedSource ?? 'Cash';
         double currentBalance = (bankBox.get(sourceKey, defaultValue: 0.0) as num).toDouble();
-        await bankBox.put(sourceKey, currentBalance + totalAmount);
+        await bankBox.put(sourceKey, currentBalance + netAmountToReceive);
+      }
+
+      // 🔥 ۳۔ ڈسکاؤنٹ کی رقم کو 'expenseBox' کی منتخب کردہ کیٹیگری میں ریکارڈ کرنا 🔥
+      if (calculatedDiscountAmount > 0) {
+        DiscountWidget.recordDiscountInHive(
+          categoryName: _selectedDiscountCategory,
+          amount: calculatedDiscountAmount,
+        );
       }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('کامیاب! پیمنٹ اِن محفوظ ہو گئی: Rs. $totalAmount'),
+            content: Text('کامیاب! پیمنٹ اِن محفوظ ہو گئی: Rs. ${netAmountToReceive.toStringAsFixed(0)}'),
             backgroundColor: Colors.green,
           ),
         );
