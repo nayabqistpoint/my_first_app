@@ -2,47 +2,42 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class StockItem {
-  String name;
-  String imei;
-  int quantity;
-  double purchasePrice;
-  double salePrice;
-  String supplierName;
-  String category;
-  String color;
+  final String name;
+  final String imei;
+  final double purchasePrice;
+  final int quantity;
+  final String status;
 
   StockItem({
     required this.name,
     required this.imei,
-    required this.quantity,
     required this.purchasePrice,
-    required this.salePrice,
-    required this.supplierName,
-    required this.category,
-    required this.color,
+    required this.quantity,
+    required this.status,
   });
 
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'imei': imei,
-        'quantity': quantity,
-        'purchasePrice': purchasePrice,
-        'salePrice': salePrice,
-        'supplierName': supplierName,
-        'category': category,
-        'color': color,
-      };
-
+  // Hive Box کے ڈیٹا کو محفوظ طریقے سے پارس کرنے کی لاجک
   factory StockItem.fromJson(Map<dynamic, dynamic> json) {
+    // String یا double دونوں صورتوں کو ہینڈل کرنا
+    double parseDouble(dynamic val) {
+      if (val == null) return 0.0;
+      if (val is num) return val.toDouble();
+      return double.tryParse(val.toString()) ?? 0.0;
+    }
+
+    // String یا int دونوں صورتوں کو ہینڈل کرنا
+    int parseInt(dynamic val) {
+      if (val == null) return 0;
+      if (val is num) return val.toInt();
+      return int.tryParse(val.toString()) ?? 0;
+    }
+
     return StockItem(
-      name: json['name'] ?? '',
-      imei: json['imei'] ?? '',
-      quantity: json['quantity'] ?? 0,
-      purchasePrice: (json['purchasePrice'] ?? 0).toDouble(),
-      salePrice: (json['salePrice'] ?? 0).toDouble(),
-      supplierName: json['supplierName'] ?? 'نامعلوم سپلائر',
-      category: json['category'] ?? 'موبائل فون',
-      color: json['color'] ?? 'کوئی رنگ نہیں',
+      name: (json['itemName'] ?? json['name'] ?? '').toString(),
+      imei: (json['imeiNo'] ?? json['imei'] ?? '').toString(),
+      purchasePrice: parseDouble(json['purchasePrice']),
+      quantity: parseInt(json['quantity']),
+      status: (json['status'] ?? 'available').toString(),
     );
   }
 }
@@ -57,156 +52,29 @@ class ItemController extends ChangeNotifier {
     return Hive.box(_boxName);
   }
 
+  // UI اور پچھلی ڈیپینڈینسی کے لیے items اور filteredItems دونوں موجود ہیں
   List<StockItem> get items {
     try {
       final rawData = stockBox.values.toList();
+
       return rawData
-          .map((e) => StockItem.fromJson(e as Map<dynamic, dynamic>))
-          .where((item) => item.quantity > 0)
+          .whereType<Map>() // صرف وہی ریکارڈز جو Map شکل میں ہیں
+          .map((e) => StockItem.fromJson(e))
+          .where((item) {
+            final bool hasQty = item.quantity > 0;
+            final String st = item.status.toLowerCase().trim();
+            final bool isActive = st == 'available' || st == 'active' || st == 'in' || st.isEmpty;
+            
+            return hasQty && isActive;
+          })
           .toList();
     } catch (e) {
+      debugPrint("Stock Error: $e");
       return [];
     }
   }
 
-  String searchQuery = "";
-  String searchFilter = "بذریعہ نام";
-
-  // یہ فنکشن اسٹاک میں مال بڑھانے (खरीद / Purchase) کے لیے ہے
-  void addItem({
-    required String name,
-    required String imei,
-    required int quantity,
-    required double purchasePrice,
-    required double salePrice,
-    String supplierName = "نامعلوم سپلائر",
-    String category = "موبائل فون",
-    String color = "کوئی رنگ نہیں",
-  }) {
-    final cleanCategory = (category.trim().isEmpty || category.contains('हिंदी') || category.contains('ह')) 
-        ? 'موبائل فون' 
-        : category;
-
-    final cleanColor = (color.trim().isEmpty || color.contains('हिंदी') || color.contains('ह')) 
-        ? 'کوئی رنگ نہیں' 
-        : color;
-        
-    final cleanSupplier = (supplierName.trim().isEmpty) ? 'نامعلوم سپلائر' : supplierName;
-
-    int existingKey = -1;
-
-    for (var key in stockBox.keys) {
-      final rawData = stockBox.get(key);
-      if (rawData != null && rawData is Map) {
-        String existingName = rawData['name'] ?? '';
-        String existingImei = rawData['imei'] ?? '';
-
-        if (existingName.trim().toLowerCase() == name.trim().toLowerCase() &&
-            existingImei.trim().toLowerCase() == imei.trim().toLowerCase()) {
-          existingKey = key;
-          break;
-        }
-      }
-    }
-
-    if (existingKey != -1) {
-      final existingData = stockBox.get(existingKey) as Map;
-      int oldQty = existingData['quantity'] ?? 0;
-
-      StockItem updatedItem = StockItem(
-        name: name,
-        imei: imei,
-        quantity: oldQty + quantity, // خرید پر اسٹاک پلس ہونا بالکل ٹھیک ہے
-        purchasePrice: purchasePrice,
-        salePrice: salePrice,
-        supplierName: cleanSupplier != "نامعلوم سپلائر" ? cleanSupplier : (existingData['supplierName'] ?? 'نامعلوم سپلائر'),
-        category: cleanCategory != "موبائل فون" ? cleanCategory : (existingData['category'] ?? 'موبائل فون'),
-        color: cleanColor != "کوئی رنگ نہیں" ? cleanColor : (existingData['color'] ?? 'کوئی رنگ نہیں'),
-      );
-
-      stockBox.put(existingKey, updatedItem.toJson());
-    } else {
-      StockItem newItem = StockItem(
-        name: name,
-        imei: imei,
-        quantity: quantity,
-        purchasePrice: purchasePrice,
-        salePrice: salePrice,
-        supplierName: cleanSupplier,
-        category: cleanCategory,
-        color: cleanColor,
-      );
-      stockBox.add(newItem.toJson());
-    }
-
-    notifyListeners();
-  }
-
-  void removeItem(int index) {
-    stockBox.deleteAt(index);
-    notifyListeners();
-  }
-
-  // یہ فنکشن صرف اور صرف اسٹاک کم کرنے (فروخت / Sale) کے لیے ہے
-  void reduceItemStock({
-    required String name,
-    required String imei,
-    required int quantityToSubtract,
-  }) {
-    int remainingToSubtract = quantityToSubtract;
-
-    for (var key in stockBox.keys) {
-      final rawData = stockBox.get(key);
-      if (rawData != null && rawData is Map) {
-        StockItem item = StockItem.fromJson(rawData);
-        
-        bool isMatch = false;
-        if (item.name.trim().toLowerCase() == name.trim().toLowerCase() &&
-            item.imei.trim().toLowerCase() == imei.trim().toLowerCase()) {
-          isMatch = true;
-        }
-
-        if (isMatch && item.quantity > 0) {
-          if (item.quantity >= remainingToSubtract) {
-            item.quantity -= remainingToSubtract; // یہاں سختی سے مائنس ہو رہا ہے
-            remainingToSubtract = 0;
-          } else {
-            remainingToSubtract -= item.quantity;
-            item.quantity = 0;
-          }
-          stockBox.put(key, item.toJson());
-          if (remainingToSubtract <= 0) break;
-        }
-      }
-    }
-
-    notifyListeners();
-  }
-
-  void updateSearchQuery(String query) {
-    searchQuery = query;
-    notifyListeners();
-  }
-
-  void updateFilter(String filter) {
-    searchFilter = filter;
-    notifyListeners();
-  }
-
-  List<StockItem> get filteredItems {
-    if (searchQuery.isEmpty) {
-      return items;
-    }
-    return items.where((item) {
-      if (searchFilter == 'بذریعہ IMEI') {
-        return item.imei.toLowerCase().contains(searchQuery.toLowerCase());
-      } else if (searchFilter == 'بذریعہ اسٹاک') {
-        return item.quantity.toString().contains(searchQuery);
-      } else {
-        return item.name.toLowerCase().contains(searchQuery.toLowerCase());
-      }
-    }).toList();
-  }
+  List<StockItem> get filteredItems => items;
 }
 
 final ItemController itemController = ItemController();

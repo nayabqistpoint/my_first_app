@@ -1,18 +1,18 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'dashboard_page.dart';
-import 'admin_panel_page.dart'; // نیا ایڈمن پینل امپورٹ کر لیا گیا ہے
+import 'admin_panel_page.dart';
 
-// آپ کے پروجیکٹ کے بالکل سیدھے اور محفوظ امپورٹ راستے
+// سیکشنز اور ویوز کی امپورٹس
 import 'home_page/sections/top.dart';
 import 'home_page/sections/middle.dart';
 import 'home_page/sections/bottom.dart';
+import 'home_page/sections/sections_controller.dart';
 
 import 'home_page/views/customers_list.dart';
 import 'home_page/views/items.dart';
 import 'home_page/views/transactions.dart';
 
-// ماؤس اور ٹچ دونوں سے سلائیڈنگ کو ممکن بنانے کے لیے کسٹم بیہیویئر
 class AppScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
@@ -29,96 +29,80 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // مڈل سیکشن کے کیپسول بٹنز کے لیے انڈیکس اسٹیٹ
-  int _currentHomeTab = 0;
-
-  // مڈل پیجز کی سوائپنگ کے لیے اندرونی پیج کنٹرولر
-  final PageController _homePageController = PageController(initialPage: 0);
-
-  // صفحات کی لسٹ (پارٹیز پیج سفید بیک گراؤنڈ کے ساتھ بحال ہے)
   late final List<Widget> _homeViews;
+  late final PageController _masterSwipeController;
 
   @override
   void initState() {
     super.initState();
+    // ماسٹر سوائپ کنٹرولر کو یہاں ایک ہی بار انیشلائز کیا ہے
+    _masterSwipeController = PageController(initialPage: 1);
+
     _homeViews = [
       Container(
         color: Colors.white,
-        child: const CustomersListView(),
+        child: const CustomersListView(), // Index 0 (Parties)
       ),
-      const TransactionsPage(),
-      const ItemsPage(),
+      const TransactionsPage(),             // Index 1 (Transactions)
+      const ItemsPage(),                    // Index 2 (Stock)
     ];
   }
 
   @override
   void dispose() {
-    _homePageController.dispose();
+    _masterSwipeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext buildContext) {
-    // masterSwipeController: ایپ ہمیشہ ہوم پیج (Index 1) پر کھلے گی
-    // index 0 پر ڈیش بورڈ (بائیں طرف) اور index 2 پر ایڈمن پینل (دائیں طرف) ہوگا
-    final PageController masterSwipeController = PageController(initialPage: 1);
-
     return Scaffold(
       body: ScrollConfiguration(
         behavior: AppScrollBehavior(),
         child: PageView(
-          controller: masterSwipeController,
+          controller: _masterSwipeController,
           physics: const BouncingScrollPhysics(),
           children: [
-            // 1. بالکل بائیں طرف آپ کا فنانشل بورڈ (ڈیش بورڈ) پیج (Index 0)
+            // 1. فنانشل بورڈ (Dashboard)
             const DashboardPage(),
 
-            // 2. درمیان میں آپ کا مین ہوم پیج اپنے تمام سیکشنز کے ساتھ (Index 1 - ڈیفالٹ)
+            // 2. ہوم پیج
             SafeArea(
               child: Container(
                 color: Colors.white,
-                child: Column(
-                  children: [
-                    // ٹاپ فروزن ایریا
-                    const TopSection(), 
-                    
-                    // مڈل سیکشن (بٹنز اور سلائیڈنگ کنیکٹڈ ہیں)
-                    MiddleSection(
-                      selectedIndex: _currentHomeTab,
-                      onTabSelected: (index) {
-                        setState(() {
-                          _currentHomeTab = index;
-                        });
-                        _homePageController.animateToPage(
-                          index,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      },
-                    ),
-                    
-                    // متحرک ایریا (پارٹیز، ٹرانزیکشن، اسٹاک کی سوائپنگ)
-                    Expanded(
-                      child: PageView(
-                        controller: _homePageController,
-                        physics: const BouncingScrollPhysics(),
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentHomeTab = index;
-                          });
-                        },
-                        children: _homeViews,
-                      ),
-                    ),
-                    
-                    // باٹم فروزن ایریا
-                    const BottomSection(), 
-                  ],
+                child: ListenableBuilder(
+                  listenable: sectionsController,
+                  builder: (context, child) {
+                    return Column(
+                      children: [
+                        // ٹاپ سیکشن (ٹاپ بٹنز)
+                        const TopSection(),
+
+                        // مڈل سیکشن (کیپسول بٹنز)
+                        const MiddleSection(),
+
+                        // متحرک ویوز (Customers, Transactions, Items)
+                        Expanded(
+                          child: PageView(
+                            controller: sectionsController.pageController,
+                            physics: const BouncingScrollPhysics(),
+                            onPageChanged: (index) {
+                              sectionsController.onPageSwiped(index);
+                            },
+                            children: _homeViews,
+                          ),
+                        ),
+
+                        // باٹم سیکشن
+                        const BottomSection(),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
 
-            // 3. دائیں طرف سے سوائپ کرنے پر نیا ایڈمن پینل (Index 2)
+            // 3. ایڈمن پینل
             const AdminPanelPage(),
           ],
         ),

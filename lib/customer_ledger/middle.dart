@@ -16,39 +16,31 @@ class LedgerMiddleWidget extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: SizedBox(
-            height: 35,
+            height: 38,
             child: TextField(
               onChanged: (value) => controller.setSearchQuery(value),
               textAlign: TextAlign.right,
               decoration: InputDecoration(
                 hintText: "تلاش کریں...",
-                hintStyle: const TextStyle(fontSize: 12),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
+                hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
+                prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.black12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.black12),
+                ),
               ),
             ),
           ),
         ),
 
-        // ۲۔ ہیڈنگ
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text("ملی", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.green)),
-              SizedBox(width: 25),
-              Text("دیے", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.red)),
-              Spacer(),
-              Text("بقایا / ٹوٹل", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black54)),
-              SizedBox(width: 15),
-              Text("تفصیل اور تاریخ", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            ],
-          ),
-        ),
-        const Divider(color: Colors.black, thickness: 1.2, height: 1),
+        const Divider(color: Colors.black12, thickness: 1, height: 1),
 
-        // ۳۔ ٹرانزیکشن لسٹ
+        // ۲۔ کلین لسٹ
         Expanded(
           child: transactions.isEmpty
               ? const Center(
@@ -63,135 +55,145 @@ class LedgerMiddleWidget extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final tx = transactions[index];
 
-                    String type = 'get';
-                    double amount = 0.0;
-                    String dateStr = '';
-                    String descStr = 'تفصیل...';
+                    Map<String, String> dateMap = {'day': '', 'month': '', 'year': ''};
+                    String descStr = '';
                     bool hasAttachment = false;
-                    bool isPending = false; // پینڈنگ سٹیٹس چیک
+                    bool isPending = false;
 
                     if (tx is Map) {
-                      type = tx['type']?.toString() ?? 'get';
-                      amount = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
-                      dateStr = tx['date']?.toString() ?? '';
-                      descStr = tx['description']?.toString() ?? 'تفصیل...';
+                      dateMap = CustomerLedgerController.getParsedUrduDate(tx['date'], tx['timestamp']);
+                      descStr = tx['description']?.toString().trim() ?? tx['remarks']?.toString().trim() ?? '';
                       hasAttachment = tx['hasAttachment'] ?? false;
-                      
-                      // چیک کریں آیا انٹری پینڈنگ ہے
-                      String status = tx['status']?.toString() ?? '';
-                      if (status == 'pending' || tx['isApproved'] == false) {
+                      if (tx['status']?.toString() == 'pending' || tx['isApproved'] == false) {
                         isPending = true;
                       }
                     } else {
                       try {
-                        type = tx.type?.toString() ?? 'get';
-                        amount = double.tryParse(tx.amount?.toString() ?? '0') ?? 0.0;
-                        dateStr = tx.date?.toString() ?? '';
-                        descStr = tx.description?.toString() ?? 'تفصیل...';
+                        dateMap = CustomerLedgerController.getParsedUrduDate(tx.date, tx.timestamp);
+                        descStr = tx.description?.toString().trim() ?? '';
                         hasAttachment = tx.hasAttachment ?? false;
-                        
                         if (tx.status == 'pending' || tx.isApproved == false) {
                           isPending = true;
                         }
                       } catch (_) {}
                     }
 
-                    bool isReceived = (type == 'received' || type == 'get' || type == 'paid');
+                    // 🔒 رقم اور ٹائپ
+                    double displayAmt = CustomerLedgerController.getTransactionAmount(tx);
+                    bool isGreen = CustomerLedgerController.isGreenTransaction(tx);
+                    Color txnColor = isGreen ? Colors.green : Colors.red;
 
-                    // رننگ بیلنس کا حساب لگاتے ہوئے پینڈنگ انٹریز کو اگنور کرنا
-                    double currentRunningBalance = 0.0;
-                    for (int i = transactions.length - 1; i >= index; i--) {
-                      var t = transactions[i];
-                      if (t == null) continue;
+                    // 💰 رننگ بیلنس اور کیپسول کا رنگ
+                    double runningBal = controller.getRunningBalanceAtIndex(index);
+                    Color balanceColor = runningBal >= 0 ? Colors.green : Colors.red;
 
-                      String tType = 'get';
-                      double tAmt = 0.0;
-                      bool tIsPending = false;
-
-                      if (t is Map) {
-                        tType = t['type']?.toString() ?? 'get';
-                        tAmt = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
-                        if (t['status']?.toString() == 'pending' || t['isApproved'] == false) {
-                          tIsPending = true;
-                        }
-                      } else {
-                        try {
-                          tType = t.type?.toString() ?? 'get';
-                          tAmt = double.tryParse(t.amount?.toString() ?? '0') ?? 0.0;
-                          if (t.status == 'pending' || t.isApproved == false) {
-                            tIsPending = true;
-                          }
-                        } catch (_) {}
-                      }
-
-                      // پینڈنگ انٹریز کو رننگ بیلنس میں شامل نہیں کرنا
-                      if (tIsPending) continue;
-
-                      if (tType == 'given' || tType == 'give' || tType == 'paid' || tType == 'out') {
-                        currentRunningBalance += tAmt;
-                      } else if (tType == 'received' || tType == 'get') {
-                        currentRunningBalance -= tAmt;
-                      }
-                    }
-
-                    Color balanceColor = currentRunningBalance >= 0 ? Colors.red : Colors.green;
-
-                    // 🌟 اگر انٹری پینڈنگ ہے تو اس کی ظاہری شکل کو مدھم (Opacity 0.4) کر دیں گے
                     return Opacity(
                       opacity: isPending ? 0.45 : 1.0,
                       child: Column(
                         children: [
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                             child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                SizedBox(
-                                  width: 110,
-                                  child: Row(
-                                    children: [
-                                      Expanded(child: Center(child: Text(isReceived ? amount.toStringAsFixed(0) : "", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)))),
-                                      Container(width: 1, height: 20, color: Colors.black26),
-                                      Expanded(child: Center(child: Text(isReceived ? "" : amount.toStringAsFixed(0), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)))),
-                                    ],
+                                // 🟢/🔴 ۱۔ بائیں طرف رقم
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    displayAmt.toStringAsFixed(0),
+                                    style: TextStyle(
+                                      color: txnColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 17,
+                                    ),
                                   ),
                                 ),
+
                                 const Spacer(),
-                                
+
+                                // ۲۔ تفصیل، تاریخ اور دائیں طرف کا کیپسول
                                 Expanded(
-                                  flex: 2,
+                                  flex: 3,
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.end,
                                         children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: balanceColor.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(4),
-                                              border: Border.all(color: balanceColor.withValues(alpha: 0.5), width: 0.8),
+                                          if (hasAttachment) ...[
+                                            const Icon(Icons.attach_file, size: 12, color: Colors.grey),
+                                            const SizedBox(width: 3),
+                                          ],
+                                          
+                                          // 🗓️ 🎯 پکا حل: 8 اگست 2026 بالکل سیدھا دکھانے کے لیے
+                                          if (dateMap['day']!.isNotEmpty) ...[
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                // سال
+                                                Text(
+                                                  dateMap['year']!,
+                                                  style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                // مہینہ
+                                                Text(
+                                                  dateMap['month']!,
+                                                  style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                // دن (تاریخ)
+                                                Text(
+                                                  dateMap['day']!,
+                                                  style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                                                ),
+                                              ],
                                             ),
-                                            child: Text(
-                                              "بقایا: ${currentRunningBalance.abs().toStringAsFixed(0)}",
-                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: balanceColor),
+                                          ] else ...[
+                                            Text(
+                                              dateMap['month']!,
+                                              style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                                            ),
+                                          ],
+
+                                          const SizedBox(width: 8),
+
+                                          // 🎯 ۳۔ دائیں سائیڈ کا فکسڈ کیپسول
+                                          SizedBox(
+                                            width: 100,
+                                            height: 26,
+                                            child: Container(
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(15),
+                                                border: Border.all(color: balanceColor, width: 1.3),
+                                              ),
+                                              child: Text(
+                                                runningBal.abs().toStringAsFixed(0),
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: balanceColor,
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
-                                          if (hasAttachment) ...[
-                                            const Icon(Icons.attach_file, size: 13, color: Colors.grey),
-                                            const SizedBox(width: 4),
-                                          ],
-                                          Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                                         ],
                                       ),
-                                      const SizedBox(height: 2),
-                                      // اگر پینڈنگ ہے تو تفصیل کے ساتھ واضح ٹیکسٹ شو ہو گا
+                                      
+                                      const SizedBox(height: 6),
+
+                                      // تفصیل
                                       Text(
-                                        isPending ? "$descStr (منظوری کا منتظر...)" : descStr, 
+                                        descStr.isNotEmpty 
+                                            ? (isPending ? "$descStr (منظوری کا منتظر...)" : descStr)
+                                            : (isPending ? "تفصیل... (منظوری کا منتظر...)" : "تفصیل..."), 
                                         style: TextStyle(
                                           fontSize: 12, 
-                                          color: isPending ? Colors.orange[800] : Colors.black87,
+                                          color: descStr.isNotEmpty 
+                                              ? (isPending ? Colors.orange[800] : Colors.black87)
+                                              : Colors.black38,
                                           fontWeight: isPending ? FontWeight.bold : FontWeight.normal,
                                         ),
                                         textAlign: TextAlign.right,

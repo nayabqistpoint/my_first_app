@@ -30,7 +30,9 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
   @override
   Widget build(BuildContext context) {
     final paidAmount = double.tryParse(widget.receivedController.text) ?? 0.0;
-    final balance = (widget.grandTotal - paidAmount).clamp(0.0, double.infinity);
+    
+    // 🛡️ فکس: کلیمپ (clamp) ہٹا دیا تاکہ اگر ادائیگی زیادہ ہو تو نیگیٹو (Negative) ویلیو صحیح طریقے سے آئے
+    final balance = widget.grandTotal - paidAmount;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -79,12 +81,11 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
           ),
           const SizedBox(height: 10),
 
-          // 3. وصول / ادا شدہ رقم اور بائیں طرف فلو کے مطابق "فل پیڈ" باکس
+          // 3. وصول / ادا شدہ رقم اور فل پیڈ باکس
           Row(
             children: [
               const Text('وصول / ادا شدہ:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
               const Spacer(),
-              // فُل پیڈ چیک باکس (اب بالکل بائیں/درمیان میں فلو کے ساتھ ہے)
               InkWell(
                 onTap: () {
                   setState(() {
@@ -117,7 +118,6 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
                 ),
               ),
               const SizedBox(width: 8),
-              // ان پٹ فیلڈ (بالکل دائیں طرف کارنر پر)
               SizedBox(
                 width: 95,
                 height: 34,
@@ -150,12 +150,19 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
           ),
           const SizedBox(height: 8),
 
-          // 4. بقایا بیلنس (سیدھے فلو کے اندر)
+          // 4. بقایا بیلنس (نیگیٹو ہونے پر ریڈ اور پوزیٹو ہونے پر گرین کلر)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('بقیہ رقم (Balance):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-              Text('Rs ${balance.toStringAsFixed(0)}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: balance > 0 ? Colors.blue : Colors.black87)),
+              Text(
+                'Rs ${balance.abs().toStringAsFixed(0)} ${balance < 0 ? "(ایڈوانس / اضافی)" : ""}',
+                style: TextStyle(
+                  fontSize: 11, 
+                  fontWeight: FontWeight.bold, 
+                  color: balance < 0 ? Colors.red : (balance > 0 ? Colors.green : Colors.black87),
+                ),
+              ),
             ],
           ),
           const Divider(height: 12),

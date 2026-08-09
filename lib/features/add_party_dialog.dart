@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../home_page/views/customers_list.dart';
 
-void showAddPartyDialog(BuildContext context) {
+// void کے بجائے Future<void> لگایا ہے تاکہ await کام کرے
+Future<void> showAddPartyDialog(BuildContext context) async {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
 
-  showDialog(
+  // showDialog سے پہلے await کا اضافہ کیا گیا ہے
+  await showDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
@@ -48,9 +50,9 @@ void showAddPartyDialog(BuildContext context) {
               if (name.isNotEmpty) {
                 // کنٹرولر کے ذریعے زیرو بیلنس پارٹی سیو کی جا رہی ہے
                 customerController.addManualCustomer(name: name, phone: phone);
-                
+
                 Navigator.pop(context);
-                
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('پارٹی کامیابی سے شامل ہو گئی')),
                 );

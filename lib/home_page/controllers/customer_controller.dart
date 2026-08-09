@@ -4,7 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 class CustomerTransaction {
   String date;
   double amount;
-  String type; // 'give' (دینا ہے) یا 'get' (لینا ہے)
+  String type;
   String description;
 
   CustomerTransaction({
@@ -21,45 +21,149 @@ class CustomerTransaction {
         'description': description,
       };
 
-  factory CustomerTransaction.fromJson(Map<dynamic, dynamic> json) {
+  factory CustomerTransaction.fromJson(Map json) {
+    var rawAmount = json['amount'];
+    double parsedAmount = 0.0;
+    if (rawAmount is int) {
+      parsedAmount = rawAmount.toDouble();
+    } else if (rawAmount is double) {
+      parsedAmount = rawAmount;
+    } else if (rawAmount is String) {
+      parsedAmount = double.tryParse(rawAmount) ?? 0.0;
+    }
+
     return CustomerTransaction(
-      date: json['date'] ?? '',
-      amount: (json['amount'] ?? 0).toDouble(),
-      type: json['type'] ?? 'get',
-      description: json['description'] ?? '',
+      date: json['date']?.toString() ?? '',
+      amount: parsedAmount,
+      type: json['type']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
     );
   }
 }
 
 class CustomerModel {
+  dynamic hiveKey;
   String name;
-  String cast; // قوم یا ولدیت
+  String cast;
   String phone;
   List<CustomerTransaction> transactions;
 
   CustomerModel({
+    this.hiveKey,
     required this.name,
     required this.cast,
     required this.phone,
     required this.transactions,
   });
 
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'cast': cast,
-        'phone': phone,
-        'transactions': transactions.map((t) => t.toJson()).toList(),
-      };
+  String get cleanPhone {
+    return phone.replaceAll(RegExp(r'[^0-9]'), '');
+  }
 
-  factory CustomerModel.fromJson(Map<dynamic, dynamic> json) {
-    var rawTxList = json['transactions'] as List? ?? [];
-    List<CustomerTransaction> txList =
-        rawTxList.map((t) => CustomerTransaction.fromJson(t as Map<dynamic, dynamic>)).toList();
+  // 🔒 🎯 لیجر کے ساتھ 100% سنکرونائزڈ بیلنس کی لاجک
+  double get calculateTotalBalance {
+    List<Map<String, dynamic>> tempTransactions = [];
+
+    for (var tx in transactions) {
+      tempTransactions.add({
+        'date': tx.date,
+        'amount': tx.amount,
+        'type': tx.type,
+        'description': tx.description,
+      });
+    }
+
+    if (Hive.isBoxOpen('transactionBox')) {
+      var box = Hive.box('transactionBox');
+      String targetPhone = cleanPhone;
+
+      for (var key in box.keys) {
+        var txValue = box.get(key);
+        if (txValue != null && txValue is Map) {
+          String txPhone = (txValue['customerPhone'] ?? txValue['customerId'] ?? '').toString().replaceAll(RegExp(r'[^0-9]'), '');
+
+          if (targetPhone.isNotEmpty && txPhone == targetPhone) {
+            bool alreadyExists = tempTransactions.any((existing) {
+              if (existing['timestamp'] != null && txValue['timestamp'] != null) {
+                return existing['timestamp'] == txValue['timestamp'];
+              }
+              return existing['date'] == txValue['date'] &&
+                  existing['amount'].toString() == txValue['amount'].toString() &&
+                  existing['description'] == txValue['description'];
+            });
+
+            if (!alreadyExists) {
+              tempTransactions.add(Map<String, dynamic>.from(txValue));
+            }
+          }
+        }
+      }
+    }
+
+    // 🔒 تاریخ کے مطابق ترتیب (پرانی سے نئی)
+    tempTransactions.sort((a, b) {
+      DateTime dtA = DateTime.tryParse(a['timestamp']?.toString() ?? a['date']?.toString() ?? '') ?? DateTime(2000);
+      DateTime dtB = DateTime.tryParse(b['timestamp']?.toString() ?? b['date']?.toString() ?? '') ?? DateTime(2000);
+      return dtA.compareTo(dtB);
+    });
+
+    double runningBalance = 0.0;
+
+    for (var t in tempTransactions) {
+      String type = t['type']?.toString().toLowerCase().trim() ?? '';
+      
+      // پرچیز کی اینٹری کے لیے remainingBalance اور باقی کے لیے amount
+      double amt = 0.0;
+      if (type == 'purchase' && t['remainingBalance'] != null) {
+        amt = double.tryParse(t['remainingBalance'].toString()) ?? 0.0;
+      } else {
+        amt = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
+      }
+
+      // 🔒 فائنل میپنگ
+      bool isGreen = false;
+      if (type == 'payment_in' || type == 'in' || type == 'received' || type == 'get') {
+        isGreen = true;
+      } else if (type == 'payment_out' || type == 'out' || type == 'paid' || type == 'give' || type == 'given') {
+        isGreen = false;
+      } else if (type == 'purchase') {
+        isGreen = amt >= 0;
+      } else {
+        isGreen = true;
+      }
+
+      amt = amt.abs();
+
+      if (isGreen) {
+        runningBalance += amt; // پلس
+      } else {
+        runningBalance -= amt; // مائنس
+      }
+    }
+
+    return runningBalance;
+  }
+
+  factory CustomerModel.fromJson(dynamic key, Map json) {
+    var rawTxList = json['transactions'];
+    List<CustomerTransaction> txList = [];
+
+    if (rawTxList is List) {
+      txList = rawTxList
+          .where((t) => t != null && t is Map)
+          .map((t) => CustomerTransaction.fromJson(t))
+          .toList();
+    }
+
+    String resolvedName = json['customerName']?.toString() ?? json['name']?.toString() ?? 'نامعلوم';
+    String resolvedCast = json['customerCaste']?.toString() ?? json['cast']?.toString() ?? json['caste']?.toString() ?? '';
+    String resolvedPhone = json['customerPhone']?.toString() ?? json['phone']?.toString() ?? '';
 
     return CustomerModel(
-      name: json['name'] ?? '',
-      cast: json['cast'] ?? '', 
-      phone: json['phone'] ?? '',
+      hiveKey: key,
+      name: resolvedName,
+      cast: resolvedCast,
+      phone: resolvedPhone,
       transactions: txList,
     );
   }
@@ -75,17 +179,23 @@ class CustomerController extends ChangeNotifier {
     return Hive.box(_boxName);
   }
 
-  // کسٹمرز کی لسٹ حاصل کرنا اور ساتھ ہی زیرو بیلنس والوں کو نیچے سارٹ کرنا
   List<CustomerModel> get customers {
     try {
-      final rawData = customerBox.values.toList();
-      List<CustomerModel> list = rawData
-          .map((e) => CustomerModel.fromJson(e as Map<dynamic, dynamic>))
-          .toList();
+      final box = customerBox;
+      List<CustomerModel> list = [];
+
+      for (var key in box.keys) {
+        final e = box.get(key);
+        if (e != null && e is Map) {
+          try {
+            list.add(CustomerModel.fromJson(key, e));
+          } catch (_) {}
+        }
+      }
 
       list.sort((a, b) {
-        double balanceA = _calculateBalance(a);
-        double balanceB = _calculateBalance(b);
+        double balanceA = a.calculateTotalBalance;
+        double balanceB = b.calculateTotalBalance;
 
         if (balanceA == 0 && balanceB == 0) {
           return a.name.compareTo(b.name);
@@ -102,92 +212,26 @@ class CustomerController extends ChangeNotifier {
     }
   }
 
-  double _calculateBalance(CustomerModel customer) {
-    double total = 0.0;
-    for (var tx in customer.transactions) {
-      if (tx.type == 'get') {
-        total += tx.amount;
-      } else if (tx.type == 'give') {
-        total -= tx.amount;
-      }
-    }
-    return total;
-  }
-
-  // صرف نام اور فون کے ساتھ مینول پارٹی ایڈ کرنے کا آسان فنکشن (زیرو بیلنس)
   void addManualCustomer({required String name, required String phone}) {
     if (name.trim().isEmpty) return;
 
-    CustomerModel newCustomer = CustomerModel(
-      name: name.trim(),
-      cast: '',
-      phone: phone.trim().isNotEmpty ? phone.trim() : 'نامعلوم',
-      transactions: [], // زیرو بیلنس
-    );
+    final Map<String, dynamic> manualCustomerData = {
+      'customerName': name.trim(),
+      'customerCaste': '',
+      'customerPhone': phone.trim().isNotEmpty ? phone.trim() : 'نامعلوم',
+      'transactions': [],
+    };
 
-    customerBox.add(newCustomer.toJson());
-    notifyListeners(); // اب یہ کنٹرولر کے اندر ہے اس لیے بالکل پرفیکٹ کام کرے گا
-  }
-
-  void addOrUpdateCustomer({
-    required String name,
-    String cast = '',
-    required String phone,
-    required double amount,
-    required String type,
-    required String description,
-  }) {
-    if (name.trim().isEmpty) return;
-
-    int existingKey = -1;
-    CustomerModel? existingCustomer;
-
-    for (var key in customerBox.keys) {
-      final rawData = customerBox.get(key);
-      if (rawData != null && rawData is Map) {
-        String dbName = rawData['name'] ?? '';
-        if (dbName.trim().toLowerCase() == name.trim().toLowerCase()) {
-          existingKey = key;
-          existingCustomer = CustomerModel.fromJson(rawData);
-          break;
-        }
-      }
-    }
-
-    String currentDate = DateTime.now().toString().split(' ')[0];
-    
-    CustomerTransaction newTx = CustomerTransaction(
-      date: currentDate,
-      amount: amount,
-      type: type,
-      description: description,
-    );
-
-    if (existingKey != -1 && existingCustomer != null) {
-      existingCustomer.name = name.trim();
-      if (cast.trim().isNotEmpty) existingCustomer.cast = cast.trim();
-      if (phone.trim().isNotEmpty && phone.trim() != 'نامعلوم') {
-        existingCustomer.phone = phone.trim();
-      }
-      if (amount > 0) {
-        existingCustomer.transactions.add(newTx);
-      }
-      customerBox.put(existingKey, existingCustomer.toJson());
-    } else {
-      CustomerModel newCustomer = CustomerModel(
-        name: name.trim(),
-        cast: cast.trim(),
-        phone: phone.trim().isNotEmpty ? phone.trim() : 'نامعلوم',
-        transactions: amount > 0 ? [newTx] : [],
-      );
-      customerBox.add(newCustomer.toJson());
-    }
-
+    customerBox.add(manualCustomerData);
     notifyListeners();
   }
 
   void removeCustomer(int index) {
     customerBox.deleteAt(index);
+    notifyListeners();
+  }
+
+  void refreshList() {
     notifyListeners();
   }
 }

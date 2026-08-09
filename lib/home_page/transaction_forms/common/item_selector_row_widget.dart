@@ -1,153 +1,153 @@
 import 'package:flutter/material.dart';
 
 class ItemSelectorRowWidget extends StatelessWidget {
-  final bool hasItems;
-  final String? itemName;
-  final int? totalQty;
-  final double? unitPrice;
-  final double? subTotal;
-  final String? description;
-  final VoidCallback? onTap;
-  final VoidCallback? onEditTap;
-  final VoidCallback? onDeleteTap;
-  final VoidCallback? onPlusTap;
+  final String itemName;
+  final String imeiNo;
+  final String subTotal;
+  final String calculationText;
+  final VoidCallback onAddPressed;
+  final VoidCallback onDeletePressed;
+  final VoidCallback onEditPressed;
+  final VoidCallback onRowPressed;
 
   const ItemSelectorRowWidget({
     super.key,
-    required this.hasItems,
-    this.itemName,
-    this.totalQty,
-    this.unitPrice,
-    this.subTotal,
-    this.description,
-    this.onTap,
-    this.onEditTap,
-    this.onDeleteTap,
-    this.onPlusTap,
+    required this.itemName,
+    required this.imeiNo,
+    required this.subTotal,
+    required this.calculationText,
+    required this.onAddPressed,
+    required this.onDeletePressed,
+    required this.onEditPressed,
+    required this.onRowPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (!hasItems) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: Colors.red.shade700, width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.add_circle_outline, color: Color(0xFFE53935), size: 20),
-              SizedBox(width: 8),
-              Text(
-                'آئٹم شامل کریں (Item Add کریں)',
-                style: TextStyle(
-                  color: Color(0xFFE53935),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    } else {
-      return Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade300),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade100,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          // بلاک کرنے والا ڈیلیے ہٹا کر براہ راست کلک کال کر دیا گیا ہے
+          onTap: onRowPressed,
+          borderRadius: BorderRadius.circular(8.0),
+          highlightColor: Colors.black.withValues(alpha: 0.04),
+          splashColor: Colors.grey.withValues(alpha: 0.1),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10.0),
+            child: Row(
+              textDirection: TextDirection.rtl,
               children: [
-                Expanded(
-                  child: Text(
-                    itemName ?? '',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
+                // دائیں طرف ایکشن بٹنز
+                _buildActionButton(
+                  icon: Icons.add_circle,
+                  color: Colors.green,
+                  size: 28,
+                  onPressed: onAddPressed,
                 ),
-                Row(
-                  children: [
-                    if (onEditTap != null)
-                      IconButton(
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        icon: const Icon(Icons.edit, size: 18, color: Colors.blue),
-                        onPressed: onEditTap,
-                      ),
-                    if (onDeleteTap != null)
-                      IconButton(
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                        onPressed: onDeleteTap,
-                      ),
-                  ],
+                const SizedBox(width: 6),
+                _buildActionButton(
+                  icon: Icons.delete,
+                  color: Colors.red,
+                  size: 22,
+                  onPressed: onDeletePressed,
                 ),
-              ],
-            ),
-            if (description != null && description!.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                description!,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
-            ],
-            const Divider(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'تعداد: $totalQty x قیمت: ${unitPrice?.toStringAsFixed(0) ?? '0'}',
-                  style: const TextStyle(fontSize: 13, color: Colors.black54),
+                const SizedBox(width: 6),
+                _buildActionButton(
+                  icon: Icons.edit,
+                  color: Colors.blue.shade700,
+                  size: 22,
+                  onPressed: onEditPressed,
                 ),
-                Row(
+
+                const SizedBox(width: 8),
+
+                // سب ٹوٹل اور حساب کتاب
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'کل: ${subTotal?.toStringAsFixed(0) ?? '0'}',
+                      subTotal.isEmpty ? '0.00' : subTotal,
                       style: const TextStyle(
-                        fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFFE53935),
+                        fontSize: 15,
+                        color: Colors.black,
                       ),
                     ),
-                    if (onPlusTap != null) ...[
-                      const SizedBox(width: 8),
-                      IconButton(
-                        constraints: const BoxConstraints(),
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.add_circle, color: Color(0xFFE53935), size: 22),
-                        onPressed: onPlusTap,
+                    Text(
+                      calculationText.isEmpty ? '1 × 0' : calculationText,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w500,
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+
+                const Spacer(),
+
+                // بائیں طرف آئٹم کا نام اور IMEI
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      itemName.isEmpty ? 'آئٹم کو منتخب کریں' : itemName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: itemName.isEmpty ? Colors.red.shade900 : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      imeiNo.isEmpty ? 'IMEI: درج نہیں' : 'IMEI: $imeiNo',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
-      );
-    }
+      ),
+    );
+  }
+
+  // ایکشن بٹن ہیلپر (InkWell کے ساتھ تاکہ ٹچ الگ سے رجسٹر ہو)
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required double size,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: Icon(icon, color: color, size: size),
+        ),
+      ),
+    );
   }
 }

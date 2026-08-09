@@ -26,7 +26,6 @@ class CustomerLedgerController extends ChangeNotifier {
     loadCustomerTransactions();
   }
 
-  // 🛡️ کسٹمر کا موبائل نمبر جو ہائیو باکس کی یونیک آئی ڈی ہے
   String get customerPhone {
     String phone = '';
     if (customer != null) {
@@ -90,45 +89,149 @@ class CustomerLedgerController extends ChangeNotifier {
     return '';
   }
 
-  // 💰 ٹوٹل بیلنس (اگر ایڈمن ہے تو پینڈنگ انٹریز بیلنس میں شمار نہیں ہوں گی)
-  double get totalBalance {
-    double total = 0.0;
-    for (var t in transactions) {
-      if (t == null) continue;
-      double amount = 0.0;
-      String type = 'get';
-      bool isPending = false;
+  // 🎯 تاریخ کی درست اردو/انگلش فارمیٹنگ
+  static Map<String, String> getParsedUrduDate(dynamic rawDate, dynamic rawTimestamp) {
+    DateTime? dt;
+    if (rawTimestamp != null && rawTimestamp.toString().isNotEmpty) {
+      dt = DateTime.tryParse(rawTimestamp.toString());
+    }
+    if (dt == null && rawDate != null && rawDate.toString().isNotEmpty) {
+      dt = DateTime.tryParse(rawDate.toString());
+    }
 
+    if (dt != null) {
+      List<String> urduMonths = [
+        'جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون',
+        'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'
+      ];
+      return {
+        'day': dt.day.toString(),
+        'month': urduMonths[dt.month - 1],
+        'year': dt.year.toString(),
+      };
+    }
+
+    return {'day': '', 'month': rawDate?.toString() ?? '', 'year': ''};
+  }
+
+  static double getRawTransactionAmount(dynamic tx) {
+    if (tx == null) return 0.0;
+    double amt = 0.0;
+    String type = getTransactionType(tx);
+
+    if (tx is Map) {
+      if (type == 'purchase' && tx['remainingBalance'] != null) {
+        amt = double.tryParse(tx['remainingBalance'].toString()) ?? 0.0;
+      } else {
+        amt = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
+      }
+    } else {
+      try {
+        if (type == 'purchase' && tx.remainingBalance != null) {
+          amt = double.tryParse(tx.remainingBalance.toString()) ?? 0.0;
+        } else {
+          amt = double.tryParse(tx.amount?.toString() ?? '0') ?? 0.0;
+        }
+      } catch (_) {}
+    }
+    return amt;
+  }
+
+  static double getTransactionAmount(dynamic tx) {
+    return getRawTransactionAmount(tx).abs();
+  }
+
+  static String getTransactionType(dynamic tx) {
+    if (tx == null) return '';
+    String type = '';
+    if (tx is Map) {
+      type = tx['type']?.toString().toLowerCase().trim() ?? '';
+    } else {
+      try {
+        type = tx.type?.toString().toLowerCase().trim() ?? '';
+      } catch (_) {}
+    }
+    return type;
+  }
+
+  static bool isGreenTransaction(dynamic tx) {
+    String type = getTransactionType(tx);
+
+    if (type == 'payment_in' || type == 'in' || type == 'received' || type == 'get') {
+      return true;
+    }
+    
+    if (type == 'payment_out' || type == 'out' || type == 'paid' || type == 'give' || type == 'given') {
+      return false;
+    }
+
+    if (type == 'purchase') {
+      double rawAmt = getRawTransactionAmount(tx);
+      return rawAmt >= 0;
+    }
+
+    return true;
+  }
+
+  static bool isGreenColumn(dynamic tx) => isGreenTransaction(tx);
+
+  double getRunningBalanceAtIndex(int index) {
+    double runningBalance = 0.0;
+
+    for (int i = transactions.length - 1; i >= index; i--) {
+      var t = transactions[i];
+      if (t == null) continue;
+
+      bool isPending = false;
       if (t is Map) {
-        amount = double.tryParse(t['amount']?.toString() ?? '0') ?? 0.0;
-        type = t['type']?.toString() ?? 'get';
-        String status = t['status']?.toString() ?? '';
-        if (status == 'pending' || t['isApproved'] == false) {
+        if (t['status']?.toString() == 'pending' || t['isApproved'] == false) {
           isPending = true;
         }
       } else {
         try {
-          amount = double.tryParse(t.amount?.toString() ?? '0') ?? 0.0;
-          type = t.type?.toString() ?? 'get';
           if (t.status == 'pending' || t.isApproved == false) {
             isPending = true;
           }
         } catch (_) {}
       }
 
-      // اگر ایڈمن ہے اور انٹری پینڈنگ ہے تو اسے ٹوٹل بیلنس سے نکال باہر رکھیں
-      if (isAdmin && isPending) continue;
+      if (isPending) continue;
 
-      if (type == 'give' || type == 'given' || type == 'paid' || type == 'out') {
-        total += amount;
-      } else if (type == 'get' || type == 'received' || type == 'in') {
-        total -= amount;
+      double amt = getTransactionAmount(t);
+      bool isGreen = isGreenTransaction(t);
+
+      if (isGreen) {
+        runningBalance += amt;
+      } else {
+        runningBalance -= amt;
       }
     }
-    if (total.abs() < 0.01) {
-      return 0.0;
-    }
-    return total;
+
+    return runningBalance;
+  }
+
+  double get totalBalance {
+    if (transactions.isEmpty) return 0.0;
+    return getRunningBalanceAtIndex(0);
+  }
+
+  DateTime _parseTxDate(dynamic tx) {
+    try {
+      if (tx is Map) {
+        if (tx['timestamp'] != null) return DateTime.parse(tx['timestamp'].toString());
+        if (tx['date'] != null) {
+          var parsed = DateTime.tryParse(tx['date'].toString());
+          if (parsed != null) return parsed;
+        }
+      } else {
+        if (tx.timestamp != null) return DateTime.parse(tx.timestamp.toString());
+        if (tx.date != null) {
+          var parsed = DateTime.tryParse(tx.date.toString());
+          if (parsed != null) return parsed;
+        }
+      }
+    } catch (_) {}
+    return DateTime(2000);
   }
 
   void loadCustomerTransactions() {
@@ -136,10 +239,7 @@ class CustomerLedgerController extends ChangeNotifier {
     try {
       if (customer != null) {
         dynamic rawTxs;
-        try {
-          rawTxs = customer.transactions;
-        } catch (_) {}
-
+        try { rawTxs = customer.transactions; } catch (_) {}
         if (rawTxs != null && rawTxs is List) {
           tempTransactions.addAll(List<dynamic>.from(rawTxs));
         }
@@ -157,10 +257,9 @@ class CustomerLedgerController extends ChangeNotifier {
         for (var key in box.keys) {
           var txValue = box.get(key);
           if (txValue != null && txValue is Map) {
-            String txPhone = (txValue['customerPhone'] ?? '').toString().trim();
+            String txPhone = (txValue['customerPhone'] ?? txValue['customerId'] ?? '').toString().trim();
             if (targetPhone.isNotEmpty && txPhone == targetPhone) {
               
-              // 🔍 اگر یہ ایڈمن ہے اور انٹری پینڈنگ ہے، تو اسے ایڈمن کے لیجر سے بالکل ہٹا دو
               bool isPendingTx = (txValue['status']?.toString() == 'pending' || txValue['isApproved'] == false);
               if (isAdmin && isPendingTx) {
                 continue; 
@@ -179,10 +278,7 @@ class CustomerLedgerController extends ChangeNotifier {
               });
 
               if (!alreadyExists) {
-                String amtCheck = txValue['amount']?.toString() ?? '';
-                if (amtCheck.isNotEmpty) {
-                  tempTransactions.add(Map<String, dynamic>.from(txValue));
-                }
+                tempTransactions.add(Map<String, dynamic>.from(txValue));
               }
             }
           }
@@ -190,36 +286,9 @@ class CustomerLedgerController extends ChangeNotifier {
       }
     } catch (_) {}
 
-    transactions = tempTransactions.reversed.toList();
+    tempTransactions.sort((a, b) => _parseTxDate(b).compareTo(_parseTxDate(a)));
+    transactions = tempTransactions;
     notifyListeners();
-  }
-
-  Future<void> saveTransaction({
-    required String type, 
-    required double amount,
-    required String description,
-    required String date,
-    bool hasAttachment = false,
-  }) async {
-    if (Hive.isBoxOpen('transactionBox')) {
-      var box = Hive.box('transactionBox');
-
-      Map<String, dynamic> newTx = {
-        'customerPhone': customerPhone,
-        'customerId': customerPhone,
-        'customerName': customerName,
-        'type': type,
-        'amount': amount,
-        'description': description,
-        'date': date,
-        'hasAttachment': hasAttachment,
-        'timestamp': DateTime.now().toString(),
-        'status': 'approved', // عام انٹریز فوری منظور شدہ ہوتی ہیں
-      };
-
-      await box.add(newTx);
-      loadCustomerTransactions();
-    }
   }
 
   List<dynamic> get filteredTransactions {
@@ -227,14 +296,12 @@ class CustomerLedgerController extends ChangeNotifier {
       return transactions.where((t) {
         if (t == null) return false;
         String desc = '';
-        String amt = '';
+        String amt = getTransactionAmount(t).toString();
         if (t is Map) {
           desc = (t['description'] ?? t['remarks'])?.toString().toLowerCase() ?? '';
-          amt = t['amount']?.toString() ?? '';
         } else {
           try {
             desc = t.description?.toString().toLowerCase() ?? '';
-            amt = t.amount?.toString() ?? '';
           } catch (_) {}
         }
         return desc.contains(searchQuery.toLowerCase()) || amt.contains(searchQuery);
