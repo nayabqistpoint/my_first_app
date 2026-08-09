@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+// ignore: unused_import
 import 'pay_now_body.dart';
 import 'pay_now_controller.dart';
 import '../../dashboard/widgets/payment_source_card.dart';
@@ -28,7 +29,7 @@ class _PayNowWidgetState extends State<PayNowWidget> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.green, // 🟢 گرین بیک گراؤنڈ
         foregroundColor: Colors.white,
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -69,7 +70,7 @@ class _PayNowWidgetState extends State<PayNowWidget> {
                           padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
                             "PKR",
-                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 14),
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 14), // 🟢 گرین PKR
                           ),
                         ),
                         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
@@ -78,7 +79,7 @@ class _PayNowWidgetState extends State<PayNowWidget> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Colors.red, width: 2),
+                          borderSide: const BorderSide(color: Colors.green, width: 2), // 🟢 گرین فوکس بارڈر
                         ),
                       ),
                     ),
@@ -141,7 +142,7 @@ class _PayNowWidgetState extends State<PayNowWidget> {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: Colors.green, // 🟢 گرین بٹن
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -171,6 +172,86 @@ class _PayNowWidgetState extends State<PayNowWidget> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ==========================================
+// PAY NOW BODY WIDGET
+// ==========================================
+class PayNowBody extends StatelessWidget {
+  const PayNowBody({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. تفصیل والا خانہ (پہلا کنٹرولر)
+        TextField(
+          controller: payNowController.descriptionController,
+          textAlign: TextAlign.right,
+          style: const TextStyle(fontSize: 15),
+          decoration: InputDecoration(
+            hintText: "تفصیل درج کریں (اختیاری)",
+            hintStyle: const TextStyle(color: Colors.grey),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Colors.green, width: 2), // 🟢 گرین فوکس بارڈر
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // 2. ریکارڈنگ / پلے والا خانہ (دوسرا کنٹرولر) - ہدایات سمیت
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade400),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // بائیں طرف مدھم انسٹرکشنز اور ٹائتل تاکہ جگہ کم لے
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      "آڈیو ریکارڈنگ (اختیاری)",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      "اپنا نام، کل بقایا رقم اور ماہانہ قسط زبانی ریکارڈ کروائیں۔",
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey, // مدھم رنگ تاکہ نمایاں نہ ہو لیکن پڑھا جا سکے
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // دائیں طرف مائیک کا بٹن
+              IconButton(
+                onPressed: () {
+                  // آڈیو ریکارڈنگ یا پلے کرنے کی لاجک یہاں آئے گی
+                },
+                icon: const Icon(Icons.mic, color: Colors.green), // 🟢 گرین مائیک آئیکن
+                tooltip: "آڈیو ریکارڈ کریں",
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
