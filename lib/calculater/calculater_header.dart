@@ -15,8 +15,8 @@ class CalculaterHeader extends StatefulWidget {
 }
 
 class _CalculaterHeaderState extends State<CalculaterHeader> {
-  int _selectedMode = 1; // 1: دستیاب سٹاک سے, 2: اپنی مرضی سے
-  String? _selectedStockKey; // ہائیو کی یونیک کی یا IMEI
+  int _selectedMode = 1; // 1: دستیاب سٹاک, 2: مینول
+  String? _selectedStockKey;
   String? _selectedStockMobileName;
 
   final TextEditingController _manualModelController = TextEditingController();
@@ -85,14 +85,8 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                   width: double.infinity,
                   child: SegmentedButton<int>(
                     segments: const [
-                      ButtonSegment<int>(
-                        value: 1,
-                        label: Text("دستیاب سٹاک سے", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                      ),
-                      ButtonSegment<int>(
-                        value: 2,
-                        label: Text("اپنی مرضی (مینول)", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                      ),
+                      ButtonSegment<int>(value: 1, label: Text("دستیاب سٹاک سے", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+                      ButtonSegment<int>(value: 2, label: Text("اپنی مرضی (مینول)", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
                     ],
                     selected: {_selectedMode},
                     onSelectionChanged: (Set<int> newSelection) {
@@ -113,12 +107,11 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                 ),
                 const SizedBox(height: 10),
 
-                // موڈ 1: دستیاب سٹاک سے انتخاب (ڈائریکٹ ڈراپ ڈاؤن کارڈ لے آؤٹ)
+                // موڈ 1: دستیاب سٹاک سے ڈراپ ڈاؤن
                 if (_selectedMode == 1) ...[
                   ValueListenableBuilder(
                     valueListenable: Hive.box('stockBox').listenable(),
                     builder: (context, Box box, _) {
-                      // صرف 'available' اسٹیٹس والے آئٹمز فلٹر کرنا
                       final availableItems = box.keys.map((key) {
                         final val = box.get(key);
                         if (val is Map) {
@@ -140,10 +133,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Center(
-                            child: Text(
-                              "اسٹاک میں کوئی موبائل دستیاب نہیں ہے",
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
-                            ),
+                            child: Text("اسٹاک میں کوئی موبائل دستیاب نہیں ہے", style: TextStyle(fontSize: 12, color: Colors.grey)),
                           ),
                         );
                       }
@@ -151,16 +141,12 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                       return DropdownButtonFormField<String>(
                         initialValue: _selectedStockKey,
                         isExpanded: true,
-                        itemHeight: 65,
+                        itemHeight: 60,
                         decoration: InputDecoration(
                           hintText: "دستیاب سٹاک سے موبائل منتخب کریں",
                           hintStyle: const TextStyle(fontSize: 12),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade400),
-                          ),
                         ),
                         selectedItemBuilder: (context) {
                           return availableItems.map((item) {
@@ -168,113 +154,26 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                             final imei = item['imeiNo']?.toString() ?? '';
                             return Align(
                               alignment: Alignment.centerRight,
-                              child: Text(
-                                '$name ${imei.isNotEmpty ? "($imei)" : ""}',
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
+                              child: Text('$name ${imei.isNotEmpty ? "($imei)" : ""}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
                             );
                           }).toList();
                         },
                         items: availableItems.map((item) {
                           final key = item!['hiveKey'].toString();
-                          final name = item['itemName']?.toString() ?? 'نامعلوم';
-                          final imei = item['imeiNo']?.toString() ?? 'کوئی IMEI نہیں';
-                          final ram = item['ram']?.toString() ?? '';
-                          final rom = item['rom']?.toString() ?? '';
-                          final cond = item['condition']?.toString() == 'new' ? 'نیا' : 'پرانا';
-                          final war = '${item['warranty'] ?? 0} ماہ';
-
                           return DropdownMenuItem<String>(
                             value: key,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 2),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04), // اصلاح: withValues کا استعمال
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  // بائیں طرف: موبائل کا نام اور IMEI
-                                  Expanded(
-                                    flex: 3,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          name,
-                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'IMEI: $imei',
-                                          style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  // دائیں طرف: RAM/ROM، New/Old اور وارنٹی
-                                  Expanded(
-                                    flex: 2,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                          decoration: BoxDecoration(
-                                            color: Colors.blue.shade50,
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            ram.isNotEmpty ? '$ram / $rom' : 'N/A',
-                                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '$cond | $war',
-                                          style: TextStyle(fontSize: 9, color: Colors.grey.shade700),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            child: _buildDropdownCardItem(item), // کارڈ لے آؤٹ کا علیحدہ ہیلپر فنکشن
                           );
                         }).toList(),
                         onChanged: (String? selectedKey) {
                           if (selectedKey == null) return;
-
-                          final selectedData = availableItems.firstWhere(
-                            (element) => element!['hiveKey'] == selectedKey,
-                          );
-
+                          final selectedData = availableItems.firstWhere((e) => e!['hiveKey'] == selectedKey);
                           if (selectedData != null) {
                             setState(() {
                               _selectedStockKey = selectedKey;
                               _selectedStockMobileName = selectedData['itemName']?.toString() ?? '';
                               _imeiController.text = selectedData['imeiNo']?.toString() ?? '';
-
-                              // اسٹاک کی قیمتِ فروخت کو کنٹرولر میں سیٹ کرنا
-                              String salePrice = selectedData['salePrice']?.toString() ?? '0';
-                              controller.setTotalAmount(salePrice);
-
+                              controller.setTotalAmount(selectedData['salePrice']?.toString() ?? '0');
                               _notifyDataChanged(controller);
                             });
                           }
@@ -287,108 +186,37 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 40,
-                            child: TextField(
-                              controller: _advanceController,
-                              textAlign: TextAlign.center,
-                              onChanged: (value) {
-                                controller.setAdvanceAmount(value);
-                                _notifyDataChanged(controller);
-                              },
-                              decoration: const InputDecoration(
-                                hintText: "ایڈوانس",
-                                contentPadding: EdgeInsets.symmetric(vertical: 0),
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                        ),
+                        Expanded(child: _buildTextField(_advanceController, "ایڈوانس", TextInputType.number, (v) {
+                          controller.setAdvanceAmount(v);
+                          _notifyDataChanged(controller);
+                        })),
                         const SizedBox(width: 6),
-                        Expanded(
-                          child: SizedBox(
-                            height: 40,
-                            child: TextField(
-                              controller: _imeiController,
-                              readOnly: true,
-                              textAlign: TextAlign.center,
-                              decoration: const InputDecoration(
-                                hintText: "IMEI نمبر",
-                                contentPadding: EdgeInsets.symmetric(vertical: 0),
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                        ),
+                        Expanded(child: _buildTextField(_imeiController, "IMEI نمبر", TextInputType.text, null, readOnly: true)),
                       ],
                     ),
                   ],
                 ],
 
-                // موڈ 2: اپنی مرضی سے انتخاب (مینول)
+                // موڈ 2: مینول انتخاب
                 if (_selectedMode == 2) ...[
-                  SizedBox(
-                    height: 40,
-                    child: TextField(
-                      controller: _manualModelController,
-                      textAlign: TextAlign.center,
-                      onChanged: (value) {
-                        setState(() {});
-                        _notifyDataChanged(controller);
-                      },
-                      decoration: const InputDecoration(
-                        hintText: "موبائل کا نام اور ماڈل لکھیں",
-                        contentPadding: EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
+                  _buildTextField(_manualModelController, "موبائل کا نام اور ماڈل لکھیں", TextInputType.text, (v) {
+                    setState(() {});
+                    _notifyDataChanged(controller);
+                  }),
                   
                   if (_manualModelController.text.trim().isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 40,
-                            child: TextField(
-                              controller: _manualTotalController,
-                              textAlign: TextAlign.center,
-                              onChanged: (value) {
-                                controller.setTotalAmount(value);
-                                _notifyDataChanged(controller);
-                              },
-                              decoration: const InputDecoration(
-                                hintText: "نقد قیمت",
-                                contentPadding: EdgeInsets.symmetric(vertical: 0),
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                        ),
+                        Expanded(child: _buildTextField(_manualTotalController, "نقد قیمت", TextInputType.number, (v) {
+                          controller.setTotalAmount(v);
+                          _notifyDataChanged(controller);
+                        })),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: SizedBox(
-                            height: 40,
-                            child: TextField(
-                              controller: _advanceController,
-                              textAlign: TextAlign.center,
-                              onChanged: (value) {
-                                controller.setAdvanceAmount(value);
-                                _notifyDataChanged(controller);
-                              },
-                              decoration: const InputDecoration(
-                                hintText: "ایڈوانس",
-                                contentPadding: EdgeInsets.symmetric(vertical: 0),
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                        ),
+                        Expanded(child: _buildTextField(_advanceController, "ایڈوانس", TextInputType.number, (v) {
+                          controller.setAdvanceAmount(v);
+                          _notifyDataChanged(controller);
+                        })),
                       ],
                     ),
                   ],
@@ -400,34 +228,24 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                     if (message == null) return const SizedBox.shrink(); 
                     return Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        message,
-                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                      ),
+                      child: Text(message, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                     );
                   },
                 ),
                 
                 const SizedBox(height: 12),
                 
-                // سوئچ والا حصہ
+                // سیکیورٹی چیک سوئچ
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Expanded(
-                      child: Text(
-                        "کیا آپ نے رعایت کے لیے سیکیورٹی چیک مہیا کیا ہے؟",
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
+                    const Expanded(child: Text("کیا آپ نے رعایت کے لیے سیکیورٹی چیک مہیا کیا ہے؟", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
                     Switch(
                       value: controller.hasSecurityCheck,
                       onChanged: (bool value) {
                         controller.toggleSecurityCheck(value);
                         _notifyDataChanged(controller);
                       },
-                      activeTrackColor: Colors.blue.withValues(alpha: 0.5),
                       activeThumbColor: Colors.blue,
                     ),
                   ],
@@ -437,39 +255,9 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 40,
-                          child: TextField(
-                            controller: _checkNumberController,
-                            textAlign: TextAlign.center,
-                            onChanged: (value) => _notifyDataChanged(controller),
-                            decoration: const InputDecoration(
-                              hintText: "چیک نمبر",
-                              contentPadding: EdgeInsets.symmetric(vertical: 0),
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.text,
-                          ),
-                        ),
-                      ),
+                      Expanded(child: _buildTextField(_checkNumberController, "چیک نمبر", TextInputType.text, (v) => _notifyDataChanged(controller))),
                       const SizedBox(width: 8),
-                      Expanded(
-                        child: SizedBox(
-                          height: 40,
-                          child: TextField(
-                            controller: _bankNameController,
-                            textAlign: TextAlign.center,
-                            onChanged: (value) => _notifyDataChanged(controller),
-                            decoration: const InputDecoration(
-                              hintText: "بینک کا نام",
-                              contentPadding: EdgeInsets.symmetric(vertical: 0),
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.text,
-                          ),
-                        ),
-                      ),
+                      Expanded(child: _buildTextField(_bankNameController, "بینک کا نام", TextInputType.text, (v) => _notifyDataChanged(controller))),
                     ],
                   ),
                 ],
@@ -489,6 +277,85 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- کوڈ کی لمبائی کم کرنے کے لیے ٹیکسٹ فیلڈ کا ری یوزیبل ہیلپر ---
+  Widget _buildTextField(TextEditingController ctrl, String hint, TextInputType type, Function(String)? onChange, {bool readOnly = false}) {
+    return SizedBox(
+      height: 40,
+      child: TextField(
+        controller: ctrl,
+        readOnly: readOnly,
+        textAlign: TextAlign.center,
+        keyboardType: type,
+        onChanged: onChange,
+        decoration: InputDecoration(
+          hintText: hint,
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
+  // --- ڈراپ ڈاؤن لسٹ آئٹم کا خوبصورت وائٹ 3D کارڈ لے آؤٹ ---
+  Widget _buildDropdownCardItem(Map<String, dynamic> item) {
+    final name = item['itemName']?.toString() ?? 'نامعلوم';
+    final imei = item['imeiNo']?.toString() ?? 'N/A';
+    final ram = item['ram']?.toString() ?? '';
+    final rom = item['rom']?.toString() ?? '';
+    final cond = item['condition']?.toString() == 'new' ? 'نیا' : 'پرانا';
+    final war = '${item['warranty'] ?? 0} ماہ';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87), overflow: TextOverflow.ellipsis),
+                Text('IMEI: $imei', style: TextStyle(fontSize: 10, color: Colors.grey.shade600), overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(4)),
+                  child: Text(ram.isNotEmpty ? '$ram / $rom' : 'N/A', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade800)),
+                ),
+                const SizedBox(height: 1),
+                Text('$cond | $war', style: TextStyle(fontSize: 9, color: Colors.grey.shade700)),
               ],
             ),
           ),
