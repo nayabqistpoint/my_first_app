@@ -10,9 +10,18 @@ class ItemDetailController {
   final TextEditingController adjustmentController = TextEditingController();
   final TextEditingController supplierController = TextEditingController();
 
+  // --- RAM اور ROM کے لیے کنٹرولرز ---
+  final TextEditingController ramController = TextEditingController();
+  final TextEditingController romController = TextEditingController();
+
   String selectedCondition = 'new';
   int selectedWarrantyMonths = 0;
   String? selectedColor;
+  
+  // --- RAM اور ROM کی منتخب ویلیوز ---
+  String? selectedRam;
+  String? selectedRom;
+
   bool isPercentageMode = false;
 
   final List<Map<String, dynamic>> addedItems = [];
@@ -34,6 +43,12 @@ class ItemDetailController {
     selectedCondition = data['condition'] ?? 'new';
     selectedWarrantyMonths = data['warranty'] ?? 0;
     selectedColor = data['color'];
+
+    // --- RAM اور ROM کو لوڈ کرنا ---
+    ramController.text = data['ram'] ?? '';
+    romController.text = data['rom'] ?? '';
+    selectedRam = data['selectedRam'];
+    selectedRom = data['selectedRom'];
   }
 
   bool saveCurrentAndPrepareNew() {
@@ -63,6 +78,13 @@ class ItemDetailController {
     salePriceController.clear();
     adjustmentController.clear();
     supplierController.clear();
+
+    // --- RAM اور ROM کلیئر کرنا ---
+    ramController.clear();
+    romController.clear();
+    selectedRam = null;
+    selectedRom = null;
+
     selectedCondition = 'new';
     selectedWarrantyMonths = 0;
     selectedColor = null;
@@ -72,6 +94,10 @@ class ItemDetailController {
   Map<String, dynamic> buildResultData() {
     final double price = double.tryParse(purchasePriceController.text) ?? 0.0;
     final int qty = int.tryParse(quantityController.text) ?? 1;
+
+    // اگر مینوئل لکھا گیا ہو تو وہ لیں ورنہ ڈراپ ڈاؤن کی ویلیو
+    final String finalRam = ramController.text.isNotEmpty ? ramController.text : (selectedRam ?? '');
+    final String finalRom = romController.text.isNotEmpty ? romController.text : (selectedRom ?? '');
 
     return {
       "itemName": nameController.text.isEmpty ? "موبائل / آئٹم" : nameController.text,
@@ -86,6 +112,12 @@ class ItemDetailController {
       "condition": selectedCondition,
       "warranty": selectedWarrantyMonths,
       "color": selectedColor,
+
+      // --- RAM اور ROM پیکٹ میں محفوظ کرنا ---
+      "ram": finalRam,
+      "selectedRam": selectedRam,
+      "rom": finalRom,
+      "selectedRom": selectedRom,
     };
   }
 
@@ -98,5 +130,9 @@ class ItemDetailController {
     salePriceController.dispose();
     adjustmentController.dispose();
     supplierController.dispose();
+
+    // --- RAM اور ROM کنٹرولرز ڈسپوز کرنا ---
+    ramController.dispose();
+    romController.dispose();
   }
 }

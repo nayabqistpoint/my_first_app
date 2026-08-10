@@ -5,11 +5,19 @@ class ConditionSelectorWidget extends StatefulWidget {
   final ValueChanged<String> onConditionChanged;
   final TextEditingController nameController;
   final TextEditingController imeiController;
-  final TextEditingController colorController; // کلر کے لیے ٹیکسٹ کنٹرولر
+  final TextEditingController colorController;
   final String? selectedColor;
   final ValueChanged<String?> onColorChanged;
   final int selectedWarrantyMonths;
   final ValueChanged<int?> onWarrantyChanged;
+
+  // نئی فیلڈز کے لیے کنٹرولرز اور ویلیوز
+  final TextEditingController ramController;
+  final TextEditingController romController;
+  final String? selectedRam;
+  final String? selectedRom;
+  final ValueChanged<String?> onRamChanged;
+  final ValueChanged<String?> onRomChanged;
 
   const ConditionSelectorWidget({
     super.key,
@@ -22,6 +30,12 @@ class ConditionSelectorWidget extends StatefulWidget {
     required this.onColorChanged,
     required this.selectedWarrantyMonths,
     required this.onWarrantyChanged,
+    required this.ramController,
+    required this.romController,
+    required this.selectedRam,
+    required this.selectedRom,
+    required this.onRamChanged,
+    required this.onRomChanged,
   });
 
   @override
@@ -29,11 +43,12 @@ class ConditionSelectorWidget extends StatefulWidget {
 }
 
 class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
-  bool isCustomColor = false; // چیک کرنے کے لیے کہ آیا یوزر نے مینوئل لکھنا ہے
+  bool isCustomColor = false;
+  bool isCustomRam = false; // مینوئل ریم کے لیے
+  bool isCustomRom = false; // مینوئل روم کے لیے
 
   @override
   Widget build(BuildContext context) {
-    // اردو اور انگلش کلر لسٹ
     final List<String> commonColors = [
       'بلیک (Black)',
       'وائٹ (White)',
@@ -44,6 +59,27 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
       'ریڈ (Red)',
       'پرپل (Purple)',
       'دیگر (Other - خود لکھیں)'
+    ];
+
+    final List<String> ramOptions = [
+      '2 GB',
+      '3 GB',
+      '4 GB',
+      '6 GB',
+      '8 GB',
+      '12 GB',
+      '16 GB',
+      'دیگر (خود لکھیں)'
+    ];
+
+    final List<String> romOptions = [
+      '32 GB',
+      '64 GB',
+      '128 GB',
+      '256 GB',
+      '512 GB',
+      '1 TB',
+      'دیگر (خود لکھیں)'
     ];
 
     return Column(
@@ -124,10 +160,9 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
         ),
         const SizedBox(height: 12),
 
-        // 3. دوسری لائن: کلر (ڈراپ ڈاؤن + مینوئل لکھنے کی سہولت) اور وارنٹی ڈراپ ڈاؤن
+        // 3. دوسری لائن: کلر اور وارنٹی ڈراپ ڈاؤن
         Row(
           children: [
-            // کلر والا باکس (اگر 'دیگر' سلیکٹ ہو تو ٹیکسٹ فیلڈ کھل جائے گا)
             Expanded(
               child: isCustomColor
                   ? TextField(
@@ -186,8 +221,6 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
                     ),
             ),
             const SizedBox(width: 10),
-
-            // وارنٹی ڈراپ ڈاؤن
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -219,6 +252,131 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // 4. نئی لائن: RAM اور ROM (ایک ہی لائن میں آدھے آدھے سائز کے دو چھوٹے باکس)
+        Row(
+          children: [
+            // RAM باکس
+            Expanded(
+              child: isCustomRam
+                  ? TextField(
+                      controller: widget.ramController,
+                      textAlign: TextAlign.right,
+                      decoration: InputDecoration(
+                        labelText: 'RAM',
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.all(12),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.arrow_back, size: 18),
+                          onPressed: () {
+                            setState(() {
+                              isCustomRam = false;
+                            });
+                          },
+                        ),
+                      ),
+                    )
+                  : Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('RAM:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          DropdownButton<String>(
+                            value: ramOptions.contains(widget.selectedRam) ? widget.selectedRam : null,
+                            hint: const Text('سائز', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            underline: const SizedBox(),
+                            dropdownColor: Colors.white,
+                            isDense: true,
+                            items: ramOptions.map((String ram) {
+                              return DropdownMenuItem<String>(
+                                value: ram,
+                                child: Text(ram, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val == 'دیگر (خود لکھیں)') {
+                                setState(() {
+                                  isCustomRam = true;
+                                });
+                              } else {
+                                widget.onRamChanged(val);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 10),
+
+            // ROM باکس
+            Expanded(
+              child: isCustomRom
+                  ? TextField(
+                      controller: widget.romController,
+                      textAlign: TextAlign.right,
+                      decoration: InputDecoration(
+                        labelText: 'ROM',
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.all(12),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.arrow_back, size: 18),
+                          onPressed: () {
+                            setState(() {
+                              isCustomRom = false;
+                            });
+                          },
+                        ),
+                      ),
+                    )
+                  : Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('ROM:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          DropdownButton<String>(
+                            value: romOptions.contains(widget.selectedRom) ? widget.selectedRom : null,
+                            hint: const Text('سائز', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            underline: const SizedBox(),
+                            dropdownColor: Colors.white,
+                            isDense: true,
+                            items: romOptions.map((String rom) {
+                              return DropdownMenuItem<String>(
+                                value: rom,
+                                child: Text(rom, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val == 'دیگر (خود لکھیں)') {
+                                setState(() {
+                                  isCustomRom = true;
+                                });
+                              } else {
+                                widget.onRomChanged(val);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
             ),
           ],
         ),

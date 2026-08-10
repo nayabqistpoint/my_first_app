@@ -80,6 +80,14 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                         onColorChanged: (val) => setState(() => controller.selectedColor = val),
                         selectedWarrantyMonths: controller.selectedWarrantyMonths,
                         onWarrantyChanged: (val) => setState(() => controller.selectedWarrantyMonths = val ?? 0),
+                        
+                        // --- RAM اور ROM کے فیلڈز شامل کر دیے گئے ہیں ---
+                        ramController: controller.ramController,
+                        romController: controller.romController,
+                        selectedRam: controller.selectedRam,
+                        selectedRom: controller.selectedRom,
+                        onRamChanged: (val) => setState(() => controller.selectedRam = val),
+                        onRomChanged: (val) => setState(() => controller.selectedRom = val),
                       ),
                       const SizedBox(height: 16),
                       ManualBoxesWidget(

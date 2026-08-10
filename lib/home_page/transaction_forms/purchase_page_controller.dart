@@ -12,6 +12,8 @@ class PurchasePageController {
       'imeiNo': '',
       'subTotal': '0.00',
       'calculationText': '1 × 0',
+      'ram': '',
+      'rom': '',
     }
   ];
 
@@ -29,7 +31,7 @@ class PurchasePageController {
   String? selectedPaymentSource = 'Cash';
   List<Map<String, dynamic>> splitPaymentsList = [];
 
-  // ✅ UI سے لائیو اسپلٹ پیمنٹ ڈیٹا پڑھنے کے لیے گلوبل کی (GlobalKey)
+  // UI سے لائیو اسپلٹ پیمنٹ ڈیٹا پڑھنے کے لیے گلوبل کی (GlobalKey)
   final GlobalKey<PaymentSourceCardState> paymentCardKey = GlobalKey<PaymentSourceCardState>();
 
   bool addNewItemRow() {
@@ -40,6 +42,8 @@ class PurchasePageController {
         'imeiNo': '',
         'subTotal': '0.00',
         'calculationText': '1 × 0',
+        'ram': '',
+        'rom': '',
       });
       return true;
     }
@@ -92,7 +96,7 @@ class PurchasePageController {
     }
   }
 
-  // ✅ ٹرانزیکشن باکس، سٹاک باکس اور بینک باکس میں محفوظ کرنے کا مکمل اور محفوظ طریقہ
+  // ٹرانزیکشن باکس، سٹاک باکس اور بینک باکس میں محفوظ کرنے کا مکمل اور محفوظ طریقہ
   Future<bool> savePurchase() async {
     if (itemsList.isEmpty || (itemsList.first['itemName'] ?? '').toString().isEmpty) {
       return false;
@@ -119,7 +123,6 @@ class PurchasePageController {
         if (Hive.isBoxOpen('customerBox')) {
           final customerBox = Hive.box('customerBox');
           
-          // موبائل نمبر کی بنیاد پر کسٹمر تلاش کرنا
           if (customerBox.containsKey(selectedPartyPhone)) {
             final cData = Map<String, dynamic>.from(customerBox.get(selectedPartyPhone) as Map);
             finalPartyName = cData['customerName']?.toString() ?? cData['name']?.toString() ?? '';
@@ -143,19 +146,28 @@ class PurchasePageController {
       }
 
       List<String> imeiList = [];
+      List<Map<String, dynamic>> minimalTransactionItems = []; // ٹرانزیکشن باکس کے لیے صرف مختصر لسٹ
       final String nowIso = DateTime.now().toIso8601String();
       final int timeKey = DateTime.now().millisecondsSinceEpoch;
 
-      // ✅ 2. تمام آئٹمز کو سٹاک باکس (stockBox) میں محفوظ کرنا
+      // 2. تمام تفصیلی آئٹمز کو صرف اسٹاک باکس (stockBox) میں محفوظ کرنا
       for (int i = 0; i < itemsList.length; i++) {
         var item = itemsList[i];
         if (item['itemName'] != null && item['itemName'].toString().isNotEmpty) {
           String imei = item['imeiNo']?.toString() ?? '';
           if (imei.isNotEmpty) imeiList.add(imei);
 
-          // سٹاک کے لیے منفرد کی (Unique Key)
           final stockKey = "${timeKey}_${i}_${item['itemName']}";
           
+          String itemRam = (item['ram'] != null && item['ram'].toString().isNotEmpty)
+              ? item['ram'].toString()
+              : (item['selectedRam']?.toString() ?? '');
+
+          String itemRom = (item['rom'] != null && item['rom'].toString().isNotEmpty)
+              ? item['rom'].toString()
+              : (item['selectedRom']?.toString() ?? '');
+
+          // اسٹاک باکس میں تمام تفصیلات محفوظ ہوں گی
           final stockData = {
             'itemName': item['itemName'],
             'imeiNo': imei,
@@ -169,16 +181,27 @@ class PurchasePageController {
             'condition': item['condition'] ?? 'new',
             'warranty': item['warranty'] ?? 0,
             'color': item['color'] ?? item['selectedColor'] ?? '',
+            'ram': itemRam,
+            'rom': itemRom,
             'date': nowIso,
             'status': 'available',
             'customerPhone': selectedPartyPhone ?? '',
           };
 
           await stockBox.put(stockKey, stockData);
+
+          // 3. ٹرانزیکشن باکس کے لیے صرف ہلکا/مختصر رو کا ڈیٹا تیار کرنا
+          minimalTransactionItems.add({
+            'itemName': item['itemName'],
+            'imeiNo': imei,
+            'quantity': item['quantity'] ?? '1',
+            'subTotal': item['subTotal'] ?? '0.00',
+            'calculationText': item['calculationText'] ?? '',
+          });
         }
       }
 
-      // ✅ UI سے لائیو اسپلٹ پیمنٹس اور سورس کی لسٹ حاصل کرنا
+      // UI سے لائیو اسپلٹ پیمنٹس اور سورس کی لسٹ حاصل کرنا
       final cardState = paymentCardKey.currentState;
       bool isSplit = cardState?.isSplitMode ?? false;
 
@@ -188,10 +211,9 @@ class PurchasePageController {
         splitPaymentsList.clear();
       }
 
-      // ✅ 3. بینک باکس (bankBox) سے رقم منہا (Deduct) کرنا - (Single Source of Truth)
+      // 4. بینک باکس (bankBox) سے رقم منہا (Deduct) کرنا
       if (paidAmount > 0) {
         if (isSplit && splitPaymentsList.isNotEmpty) {
-          // اسپلٹ پیمنٹس موڈ: ہر ایک منتخب سورس سے علیحدہ رقم منہا کرنا
           for (var split in splitPaymentsList) {
             String source = split['source'] ?? 'Cash';
             double amt = (split['amount'] ?? 0.0).toDouble();
@@ -201,14 +223,13 @@ class PurchasePageController {
             }
           }
         } else {
-          // سنگل پیمنٹ موڈ: منتخب کردہ بینک یا کیش سے کل رقم منہا کرنا
           String source = selectedPaymentSource ?? 'Cash';
           double currentBal = (bankBox.get(source) ?? 0.0).toDouble();
           await bankBox.put(source, currentBal - paidAmount);
         }
       }
 
-      // ✅ 4. ٹرانزیکشن باکس (transactionBox) میں مکمل خرید کا ریکارڈ سیو کرنا
+      // 5. ٹرانزیکشن باکس (transactionBox) میں مختصر آئٹم لسٹ کے ساتھ سیو کرنا
       final transactionKey = timeKey.toString();
 
       final transactionData = {
@@ -222,7 +243,7 @@ class PurchasePageController {
         'description': descriptionText,
         'remarks': imeiList.join(','),
         'date': nowIso,
-        'items': itemsList,
+        'items': minimalTransactionItems, // <-- اب یہاں اضافی ڈیٹا کے بغیر صرف مختصر آئٹمز جائیں گے
         'discount': {
           'value': discountValue,
           'isPercentage': isDiscountPercentage,
