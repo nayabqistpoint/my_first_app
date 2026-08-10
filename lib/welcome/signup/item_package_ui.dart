@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:my_first_app/installment_calculater_page.dart';
 import 'item_package_logic.dart';
 
+// ری یوزیبل IMEI ڈائیلاگ کی نئی امپورٹ
+import 'package:my_first_app/features/imei_details_dialog.dart';
+
 class ItemPackageUI extends StatefulWidget {
   const ItemPackageUI({super.key});
 
@@ -58,7 +61,6 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
           total: result['totalPrice'] ?? '',
           buyStock: result['isBuyStockMode'] ?? false,
           stockImei: result['imei'],
-          stockColor: result['color'],
           chqNumber: result['checkNumber'],
           bnkName: result['bankName'],
         );
@@ -79,6 +81,48 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
     });
   }
 
+  // --- IMEI کا ہائپر لنک باکس (اب ری یوزیبل showImeiDetailsDialog کال کر رہا ہے) ---
+  Widget _buildImeiHyperlinkBox(String label, String imeiValue) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.amber.shade300),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black87)),
+          Flexible(
+            child: InkWell(
+              onTap: () => showImeiDetailsDialog(context, imeiValue), // <-- ری یوزیبل ڈائیلاگ کال ہو رہا ہے
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.link, size: 12, color: Colors.blue),
+                  const SizedBox(width: 2),
+                  Flexible(
+                    child: Text(
+                      imeiValue,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -91,11 +135,10 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
     final String totalPrice = _logic.totalPrice ?? '';
     
     final String? imei = _logic.imei;
-    final String? color = _logic.color;
     final String? checkNumber = _logic.checkNumber;
     final String? bankName = _logic.bankName;
 
-    bool hasImeiOrColor = (imei != null && imei.isNotEmpty) || (color != null && color.isNotEmpty);
+    bool hasImei = (imei != null && imei.isNotEmpty);
     bool hasCheckOrBank = (checkNumber != null && checkNumber.isNotEmpty) || (bankName != null && bankName.isNotEmpty);
 
     return Card(
@@ -130,7 +173,6 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
               ],
             ),
             
-            // جب پرچیز ریکویسٹ آن ہو گی، تب ہی کیلکولیٹر، تفصیلات اور آڈیو سیکشن نظر آئے گا
             if (_isPurchaseRequested) ...[
               const SizedBox(height: 8),
               SizedBox(
@@ -174,19 +216,11 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
                       Expanded(child: _buildBox('کل ادھار قیمت:', totalPrice.isEmpty ? '0' : totalPrice, isTotal: true)),
                     ],
                   ),
-                  if (hasImeiOrColor) ...[
+                  if (hasImei) ...[
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        if (imei != null && imei.isNotEmpty)
-                          Expanded(child: _buildBox('IMEI نمبر:', imei, isSpecial: true))
-                        else
-                          const Spacer(),
-                        if (imei != null && imei.isNotEmpty && color != null && color.isNotEmpty) const SizedBox(width: 6),
-                        if (color != null && color.isNotEmpty)
-                          Expanded(child: _buildBox('کلر:', color, isSpecial: true))
-                        else
-                          const Spacer(),
+                        Expanded(child: _buildImeiHyperlinkBox('IMEI نمبر:', imei)),
                       ],
                     ),
                   ],
@@ -213,7 +247,6 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
               const Divider(color: Colors.red, thickness: 1),
               const SizedBox(height: 4),
 
-              // --- قانونی اعتراف کے لیے لازمی آڈیو ریکارڈنگ سیکشن (اب پرچیز سوئچ آن ہونے پر یہیں شو ہوگا) ---
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
