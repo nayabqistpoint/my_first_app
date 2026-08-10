@@ -5,10 +5,12 @@ import '../../dashboard/widgets/payment_source_card.dart';
 
 class PayNowWidget extends StatefulWidget {
   final String customerMobileNumber;
+  final double? initialAmount; // 🎯 ڈائیلاگ سے آٹو سلیکٹڈ رقم وصول کرنے کے لیے
 
   const PayNowWidget({
     super.key,
     required this.customerMobileNumber,
+    this.initialAmount,
   });
 
   @override
@@ -20,6 +22,16 @@ class _PayNowWidgetState extends State<PayNowWidget> {
   final GlobalKey<PaymentSourceCardState> _paymentCardKey = GlobalKey<PaymentSourceCardState>();
 
   String selectedPaymentSource = 'Cash';
+
+  @override
+  void initState() {
+    super.initState();
+    // 🎯 اگر ڈائیلاگ سے قسط کی رقم پاس ہوئی ہے تو فوراً فیلڈ اور کنٹرولر میں سیٹ کریں
+    if (widget.initialAmount != null && widget.initialAmount! > 0) {
+      final String formattedAmount = widget.initialAmount!.toStringAsFixed(0);
+      payNowController.amountController.text = formattedAmount;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +160,6 @@ class _PayNowWidgetState extends State<PayNowWidget> {
                   shape: const StadiumBorder(),
                 ),
                 onPressed: () {
-                  // کارڈ کی حالت سے چیک کریں کہ آیا یوزر اسپلٹ موڈ میں ہے یا نہیں
                   final cardState = _paymentCardKey.currentState;
                   List<Map<String, dynamic>>? splitList;
 

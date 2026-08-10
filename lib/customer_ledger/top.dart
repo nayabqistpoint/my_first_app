@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'customer_ledger_controller.dart';
+import '../features/installment_plan_dialog.dart';
 
 class LedgerTopWidget extends StatelessWidget {
   final CustomerLedgerController controller;
@@ -12,17 +13,18 @@ class LedgerTopWidget extends StatelessWidget {
     
     // کل بیلنس
     double totalBalance = controller.totalBalance;
-    
-    // 🎯 حل: اگر بیلنس پازیٹو (>=0) ہے تو لازمی گرین (Green)، اگر نیگیٹو ہے تو ریڈ (Red)
     bool isPositive = totalBalance >= 0;
-    Color balanceColor = isPositive ? Colors.green : Colors.red;
-    String balanceTypeLabel = isPositive ? "بقایا لینا ہے / ایڈوانس" : "بقایا دینا ہے";
+    Color balanceColor = isPositive ? Colors.green.shade700 : Colors.red.shade700;
+    String balanceTypeLabel = isPositive ? "بقایا لینا / ایڈوانس" : "بقایا دینا ہے";
+
+    // 🎯 لائیو شارٹ ڈیو کی رقم حاصل کرنا
+    double totalShort = InstallmentPlanDialog.calculateTotalShort(controller.customerPhone);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 🟢 ہیڈر
+        // 🟢 ۱۔ ہیڈر پٹی
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           color: const Color(0xFFE53935),
@@ -37,24 +39,24 @@ class LedgerTopWidget extends StatelessWidget {
               Expanded(
                 child: Center(
                   child: isAdmin
-                    ? Text(
-                        "${controller.customerName} ${controller.customerCast}".trim(),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      ? Text(
+                          "${controller.customerName} ${controller.customerCast}".trim(),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
+                        )
+                      : Text(
+                          "نایاب قسط پوائنٹ (${controller.customerName})",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
-                      )
-                    : Text(
-                        "نایاب قسط پوائنٹ (${controller.customerName})",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
                 ),
               ),
 
@@ -110,35 +112,153 @@ class LedgerTopWidget extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
 
-        // ۲۔ ٹوٹل بیلنس بکس (اب نیچے والی اینٹری کے ساتھ 100% میچ رہے گا)
+        // 🎯 ۲۔ ہم سائز (Equal Height) 3D ابھرے ہوئے باکسز
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              border: Border.all(color: balanceColor, width: 1.5),
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: IntrinsicHeight(
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  "Rs ${totalBalance.abs().toStringAsFixed(0)}",
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: balanceColor),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: balanceColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
+                // 🟢 (الف) بایاں باکس: کل بیلنس
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: balanceColor.withValues(alpha: 0.3), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: balanceColor.withValues(alpha: 0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Rs ${totalBalance.abs().toStringAsFixed(0)}",
+                          style: TextStyle(
+                            fontSize: 18, 
+                            fontWeight: FontWeight.w800, 
+                            color: balanceColor,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          balanceTypeLabel,
+                          style: TextStyle(
+                            fontSize: 10, 
+                            fontWeight: FontWeight.bold, 
+                            color: balanceColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Text(
-                    balanceTypeLabel,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: balanceColor),
+                ),
+
+                const SizedBox(width: 10),
+
+                // 🟢 (ب) دایاں باکس: 3D ایکشن چپ (اقساط کا پلان + کل شارٹ ڈیو)
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => InstallmentPlanDialog(
+                            customerPhone: controller.customerPhone,
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.indigo.shade300, width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.indigo.shade200.withValues(alpha: 0.4),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            // بایاں حصہ: عنوان
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "اقساط کا پلان",
+                                    style: TextStyle(
+                                      fontSize: 11, 
+                                      fontWeight: FontWeight.w800, 
+                                      color: Colors.indigo.shade900,
+                                    ),
+                                  ),
+                                  const Text(
+                                    "تفصیلات دیکھیں",
+                                    style: TextStyle(
+                                      fontSize: 8, 
+                                      color: Colors.black54, 
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // عمودی ڈیوائیڈر
+                            Container(
+                              height: 28,
+                              width: 1,
+                              color: Colors.indigo.shade100,
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                            ),
+
+                            // دایاں حصہ: کل شارٹ ڈیو
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Rs ${totalShort.toStringAsFixed(0)}",
+                                    style: TextStyle(
+                                      fontSize: 13, 
+                                      fontWeight: FontWeight.w900, 
+                                      color: totalShort > 0 ? Colors.red.shade800 : Colors.green.shade800,
+                                    ),
+                                  ),
+                                  Text(
+                                    totalShort > 0 ? "کل شارٹ" : "شارٹ نہیں",
+                                    style: TextStyle(
+                                      fontSize: 8, 
+                                      fontWeight: FontWeight.bold, 
+                                      color: totalShort > 0 ? Colors.red.shade800 : Colors.green.shade800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -146,7 +266,7 @@ class LedgerTopWidget extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
 
         // ۳۔ سمارٹ کیپسولز
         Padding(
