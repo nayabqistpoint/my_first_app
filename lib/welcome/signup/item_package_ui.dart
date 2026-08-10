@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_first_app/installment_calculater_page.dart';
 import 'item_package_logic.dart';
 
-// ری یوزیبل IMEI ڈائیلاگ کی نئی امپورٹ
+// ری یوزیبل IMEI ڈائیلاگ کی امپورٹ
 import 'package:my_first_app/features/imei_details_dialog.dart';
 
 class ItemPackageUI extends StatefulWidget {
@@ -28,6 +28,15 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
   void initState() {
     super.initState();
     _logic = ItemPackageLogic();
+  }
+
+  /// باہر سے یا سائن ان / پرچیز پیج سے سوئچ فورس آن کرنے کا ہیلپر
+  void setPurchaseRequested(bool value) {
+    if (mounted) {
+      setState(() {
+        _isPurchaseRequested = value;
+      });
+    }
   }
 
   Map<String, dynamic> getPackageData() {
@@ -81,46 +90,52 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
     });
   }
 
-  // --- IMEI کا ہائپر لنک باکس (اب ری یوزیبل showImeiDetailsDialog کال کر رہا ہے) ---
-  Widget _buildImeiHyperlinkBox(String label, String imeiValue) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.amber.shade300),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black87)),
-          Flexible(
-            child: InkWell(
-              onTap: () => showImeiDetailsDialog(context, imeiValue), // <-- ری یوزیبل ڈائیلاگ کال ہو رہا ہے
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.link, size: 12, color: Colors.blue),
-                  const SizedBox(width: 2),
-                  Flexible(
-                    child: Text(
-                      imeiValue,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                        decoration: TextDecoration.underline,
+  // --- ڈائنامک IMEI / نقد قیمت باکس ---
+  Widget _buildDynamicPriceOrImeiBox({required bool hasImei, required String cashPrice, required String? imei}) {
+    if (hasImei && imei != null) {
+      // اگر اسٹاک سے آئے تو نقد قیمت کی جگہ IMEI کا ہائپر لنک نظر آئے گا
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.amber.shade50,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.amber.shade300),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('IMEI نمبر:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black87)),
+            Flexible(
+              child: InkWell(
+                onTap: () => showImeiDetailsDialog(context, imei),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.link, size: 12, color: Colors.blue),
+                    const SizedBox(width: 2),
+                    Flexible(
+                      child: Text(
+                        imei,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    } else {
+      // اگر مینول آئے تو نقد قیمت کا باکس ظاہر ہوگا
+      return _buildBox('نقد قیمت:', cashPrice.isEmpty ? '0' : cashPrice);
+    }
   }
 
   @override
@@ -153,7 +168,7 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  '3. آئٹم اور پیکج کی معلومات',
+                  'آئٹم اور پیکج کی معلومات',
                   style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
                 ),
                 Row(
@@ -203,7 +218,14 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Expanded(child: _buildBox('نقد قیمت:', cashPrice.isEmpty ? '0' : cashPrice)),
+                      // نقد قیمت اور IMEI دونوں کے لیے ایک ہی ڈائنامک باکس
+                      Expanded(
+                        child: _buildDynamicPriceOrImeiBox(
+                          hasImei: hasImei,
+                          cashPrice: cashPrice,
+                          imei: imei,
+                        ),
+                      ),
                       const SizedBox(width: 6),
                       Expanded(child: _buildBox('ایڈوانس:', advanceAmount.isEmpty ? '0' : advanceAmount)),
                     ],
@@ -216,14 +238,6 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
                       Expanded(child: _buildBox('کل ادھار قیمت:', totalPrice.isEmpty ? '0' : totalPrice, isTotal: true)),
                     ],
                   ),
-                  if (hasImei) ...[
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Expanded(child: _buildImeiHyperlinkBox('IMEI نمبر:', imei)),
-                      ],
-                    ),
-                  ],
                   if (hasCheckOrBank) ...[
                     const SizedBox(height: 6),
                     Row(
