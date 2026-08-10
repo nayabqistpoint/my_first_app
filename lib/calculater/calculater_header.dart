@@ -113,7 +113,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                 ),
                 const SizedBox(height: 10),
 
-                // موڈ 1: دستیاب سٹاک سے انتخاب (ڈائریکٹ ڈراپ ڈاؤن)
+                // موڈ 1: دستیاب سٹاک سے انتخاب (ڈائریکٹ ڈراپ ڈاؤن کارڈ لے آؤٹ)
                 if (_selectedMode == 1) ...[
                   ValueListenableBuilder(
                     valueListenable: Hive.box('stockBox').listenable(),
@@ -151,20 +151,28 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                       return DropdownButtonFormField<String>(
                         initialValue: _selectedStockKey,
                         isExpanded: true,
+                        itemHeight: 65,
                         decoration: InputDecoration(
                           hintText: "دستیاب سٹاک سے موبائل منتخب کریں",
                           hintStyle: const TextStyle(fontSize: 12),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade400),
+                          ),
                         ),
                         selectedItemBuilder: (context) {
                           return availableItems.map((item) {
                             final name = item!['itemName']?.toString() ?? '';
                             final imei = item['imeiNo']?.toString() ?? '';
-                            return Text(
-                              '$name ${imei.isNotEmpty ? "($imei)" : ""}',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            return Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                '$name ${imei.isNotEmpty ? "($imei)" : ""}',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
                             );
                           }).toList();
                         },
@@ -179,8 +187,21 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
 
                           return DropdownMenuItem<String>(
                             value: key,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.shade300),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04), // اصلاح: withValues کا استعمال
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -193,12 +214,13 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                                       children: [
                                         Text(
                                           name,
-                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
                                           overflow: TextOverflow.ellipsis,
                                         ),
+                                        const SizedBox(height: 2),
                                         Text(
                                           'IMEI: $imei',
-                                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                          style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
@@ -212,13 +234,21 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                                       crossAxisAlignment: CrossAxisAlignment.end,
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Text(
-                                          ram.isNotEmpty ? '$ram / $rom' : 'N/A',
-                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.blue),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.shade50,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            ram.isNotEmpty ? '$ram / $rom' : 'N/A',
+                                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                                          ),
                                         ),
+                                        const SizedBox(height: 2),
                                         Text(
                                           '$cond | $war',
-                                          style: const TextStyle(fontSize: 10, color: Colors.black54),
+                                          style: TextStyle(fontSize: 9, color: Colors.grey.shade700),
                                         ),
                                       ],
                                     ),
