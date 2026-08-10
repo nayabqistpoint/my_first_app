@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'calculater_controller.dart'; 
 import 'calculater_config.dart';
 
@@ -15,40 +16,31 @@ class CalculaterHeader extends StatefulWidget {
 
 class _CalculaterHeaderState extends State<CalculaterHeader> {
   int _selectedMode = 1; // 1: دستیاب سٹاک سے, 2: اپنی مرضی سے
-  String? _selectedStockMobile;
+  String? _selectedStockKey; // ہائیو کی یونیک کی یا IMEI
+  String? _selectedStockMobileName;
+
   final TextEditingController _manualModelController = TextEditingController();
-  
-  // ان پٹس کے کنٹرولرز تاکہ ڈیٹا کو باہر بھیجا جا سکے
   final TextEditingController _advanceController = TextEditingController();
   final TextEditingController _imeiController = TextEditingController();
-  final TextEditingController _colorController = TextEditingController();
   final TextEditingController _manualTotalController = TextEditingController();
   final TextEditingController _checkNumberController = TextEditingController();
   final TextEditingController _bankNameController = TextEditingController();
-  
-  final List<String> _dummyStockMobiles = [
-    'Samsung Galaxy A15',
-    'Xiaomi Redmi Note 13',
-    'Infinix Hot 40 Pro',
-    'Tecno Spark 20 Pro',
-    'Realme C67',
-  ];
 
-  void _notifyDataChanged() {
+  void _notifyDataChanged(CalculaterController controller) {
     if (widget.onDataChanged != null) {
       String mobileName = _selectedMode == 1 
-          ? (_selectedStockMobile ?? '') 
+          ? (_selectedStockMobileName ?? '') 
           : _manualModelController.text;
 
       widget.onDataChanged!({
         'mobileName': mobileName,
-        'cashPrice': _selectedMode == 2 ? _manualTotalController.text : '', // نقد قیمت صرف مینول موڈ میں یہاں سے جائے گی
+        'cashPrice': controller.totalAmount.toStringAsFixed(0),
         'advanceAmount': _advanceController.text,
         'imei': _imeiController.text,
-        'color': _colorController.text,
-        'totalAmount': _manualTotalController.text,
+        'totalAmount': controller.totalAmount.toStringAsFixed(0),
         'checkNumber': _checkNumberController.text,
         'bankName': _bankNameController.text,
+        'isBuyStockMode': _selectedMode == 1,
       });
     }
   }
@@ -58,7 +50,6 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
     _manualModelController.dispose();
     _advanceController.dispose();
     _imeiController.dispose();
-    _colorController.dispose();
     _manualTotalController.dispose();
     _checkNumberController.dispose();
     _bankNameController.dispose();
@@ -107,59 +98,166 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                     onSelectionChanged: (Set<int> newSelection) {
                       setState(() {
                         _selectedMode = newSelection.first;
-                        if (_selectedMode == 1) {
-                          _selectedStockMobile = null;
-                          _manualModelController.clear();
-                          _manualTotalController.clear();
-                          controller.setTotalAmount("0");
-                        } else {
-                          _selectedStockMobile = null;
-                          _advanceController.clear();
-                          controller.setAdvanceAmount("0");
-                        }
-                        _notifyDataChanged();
+                        _selectedStockKey = null;
+                        _selectedStockMobileName = null;
+                        _manualModelController.clear();
+                        _manualTotalController.clear();
+                        _advanceController.clear();
+                        _imeiController.clear();
+                        controller.setTotalAmount("0");
+                        controller.setAdvanceAmount("0");
+                        _notifyDataChanged(controller);
                       });
                     },
                   ),
                 ),
                 const SizedBox(height: 10),
 
-                // موڈ 1: دستیاب سٹاک سے انتخاب
+                // موڈ 1: دستیاب سٹاک سے انتخاب (ڈائریکٹ ڈراپ ڈاؤن)
                 if (_selectedMode == 1) ...[
-                  Container(
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
+                  ValueListenableBuilder(
+                    valueListenable: Hive.box('stockBox').listenable(),
+                    builder: (context, Box box, _) {
+                      // صرف 'available' اسٹیٹس والے آئٹمز فلٹر کرنا
+                      final availableItems = box.keys.map((key) {
+                        final val = box.get(key);
+                        if (val is Map) {
+                          final data = Map<String, dynamic>.from(val);
+                          data['hiveKey'] = key.toString();
+                          return data;
+                        }
+                        return null;
+                      }).where((element) {
+                        if (element == null) return false;
+                        return (element['status']?.toString() ?? 'available') == 'available';
+                      }).toList();
+
+                      if (availableItems.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              "اسٹاک میں کوئی موبائل دستیاب نہیں ہے",
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ),
+                        );
+                      }
+
+                      return DropdownButtonFormField<String>(
+                        initialValue: _selectedStockKey,
                         isExpanded: true,
-                        hint: const Text("دستیاب سٹاک سے موبائل منتخب کریں", textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
-                        value: _selectedStockMobile,
-                        items: _dummyStockMobiles.map((String mobile) {
+                        decoration: InputDecoration(
+                          hintText: "دستیاب سٹاک سے موبائل منتخب کریں",
+                          hintStyle: const TextStyle(fontSize: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+                        ),
+                        selectedItemBuilder: (context) {
+                          return availableItems.map((item) {
+                            final name = item!['itemName']?.toString() ?? '';
+                            final imei = item['imeiNo']?.toString() ?? '';
+                            return Text(
+                              '$name ${imei.isNotEmpty ? "($imei)" : ""}',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            );
+                          }).toList();
+                        },
+                        items: availableItems.map((item) {
+                          final key = item!['hiveKey'].toString();
+                          final name = item['itemName']?.toString() ?? 'نامعلوم';
+                          final imei = item['imeiNo']?.toString() ?? 'کوئی IMEI نہیں';
+                          final ram = item['ram']?.toString() ?? '';
+                          final rom = item['rom']?.toString() ?? '';
+                          final cond = item['condition']?.toString() == 'new' ? 'نیا' : 'پرانا';
+                          final war = '${item['warranty'] ?? 0} ماہ';
+
                           return DropdownMenuItem<String>(
-                            value: mobile,
-                            child: Text(mobile, style: const TextStyle(fontSize: 13)),
+                            value: key,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // بائیں طرف: موبائل کا نام اور IMEI
+                                  Expanded(
+                                    flex: 3,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'IMEI: $imei',
+                                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  // دائیں طرف: RAM/ROM، New/Old اور وارنٹی
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          ram.isNotEmpty ? '$ram / $rom' : 'N/A',
+                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.blue),
+                                        ),
+                                        Text(
+                                          '$cond | $war',
+                                          style: const TextStyle(fontSize: 10, color: Colors.black54),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           );
                         }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedStockMobile = newValue;
-                            _notifyDataChanged();
-                          });
+                        onChanged: (String? selectedKey) {
+                          if (selectedKey == null) return;
+
+                          final selectedData = availableItems.firstWhere(
+                            (element) => element!['hiveKey'] == selectedKey,
+                          );
+
+                          if (selectedData != null) {
+                            setState(() {
+                              _selectedStockKey = selectedKey;
+                              _selectedStockMobileName = selectedData['itemName']?.toString() ?? '';
+                              _imeiController.text = selectedData['imeiNo']?.toString() ?? '';
+
+                              // اسٹاک کی قیمتِ فروخت کو کنٹرولر میں سیٹ کرنا
+                              String salePrice = selectedData['salePrice']?.toString() ?? '0';
+                              controller.setTotalAmount(salePrice);
+
+                              _notifyDataChanged(controller);
+                            });
+                          }
                         },
-                      ),
-                    ),
+                      );
+                    },
                   ),
                   
-                  if (_selectedStockMobile != null) ...[
+                  if (_selectedStockMobileName != null) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
-                          flex: 1,
                           child: SizedBox(
                             height: 40,
                             child: TextField(
@@ -167,7 +265,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                               textAlign: TextAlign.center,
                               onChanged: (value) {
                                 controller.setAdvanceAmount(value);
-                                _notifyDataChanged();
+                                _notifyDataChanged(controller);
                               },
                               decoration: const InputDecoration(
                                 hintText: "ایڈوانس",
@@ -180,37 +278,17 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                         ),
                         const SizedBox(width: 6),
                         Expanded(
-                          flex: 1,
                           child: SizedBox(
                             height: 40,
                             child: TextField(
                               controller: _imeiController,
+                              readOnly: true,
                               textAlign: TextAlign.center,
-                              onChanged: (value) => _notifyDataChanged(),
                               decoration: const InputDecoration(
                                 hintText: "IMEI نمبر",
                                 contentPadding: EdgeInsets.symmetric(vertical: 0),
                                 border: OutlineInputBorder(),
                               ),
-                              keyboardType: TextInputType.text,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          flex: 1,
-                          child: SizedBox(
-                            height: 40,
-                            child: TextField(
-                              controller: _colorController,
-                              textAlign: TextAlign.center,
-                              onChanged: (value) => _notifyDataChanged(),
-                              decoration: const InputDecoration(
-                                hintText: "کلر",
-                                contentPadding: EdgeInsets.symmetric(vertical: 0),
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.text,
                             ),
                           ),
                         ),
@@ -228,7 +306,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                       textAlign: TextAlign.center,
                       onChanged: (value) {
                         setState(() {});
-                        _notifyDataChanged();
+                        _notifyDataChanged(controller);
                       },
                       decoration: const InputDecoration(
                         hintText: "موبائل کا نام اور ماڈل لکھیں",
@@ -250,7 +328,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                               textAlign: TextAlign.center,
                               onChanged: (value) {
                                 controller.setTotalAmount(value);
-                                _notifyDataChanged();
+                                _notifyDataChanged(controller);
                               },
                               decoration: const InputDecoration(
                                 hintText: "نقد قیمت",
@@ -270,7 +348,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                               textAlign: TextAlign.center,
                               onChanged: (value) {
                                 controller.setAdvanceAmount(value);
-                                _notifyDataChanged();
+                                _notifyDataChanged(controller);
                               },
                               decoration: const InputDecoration(
                                 hintText: "ایڈوانس",
@@ -315,7 +393,10 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                     const SizedBox(width: 5),
                     Switch(
                       value: controller.hasSecurityCheck,
-                      onChanged: (bool value) => controller.toggleSecurityCheck(value),
+                      onChanged: (bool value) {
+                        controller.toggleSecurityCheck(value);
+                        _notifyDataChanged(controller);
+                      },
                       activeTrackColor: Colors.blue.withValues(alpha: 0.5),
                       activeThumbColor: Colors.blue,
                     ),
@@ -332,7 +413,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                           child: TextField(
                             controller: _checkNumberController,
                             textAlign: TextAlign.center,
-                            onChanged: (value) => _notifyDataChanged(),
+                            onChanged: (value) => _notifyDataChanged(controller),
                             decoration: const InputDecoration(
                               hintText: "چیک نمبر",
                               contentPadding: EdgeInsets.symmetric(vertical: 0),
@@ -349,7 +430,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
                           child: TextField(
                             controller: _bankNameController,
                             textAlign: TextAlign.center,
-                            onChanged: (value) => _notifyDataChanged(),
+                            onChanged: (value) => _notifyDataChanged(controller),
                             decoration: const InputDecoration(
                               hintText: "بینک کا نام",
                               contentPadding: EdgeInsets.symmetric(vertical: 0),
@@ -381,7 +462,7 @@ class _CalculaterHeaderState extends State<CalculaterHeader> {
               ],
             ),
           ),
-      ],
+        ],
       ),
     );
   }

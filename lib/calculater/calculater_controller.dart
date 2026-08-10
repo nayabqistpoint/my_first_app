@@ -36,7 +36,6 @@ class CalculaterController extends ChangeNotifier {
 
   double calculateInstallmentWithoutAdvance(int months) => getTotalWithProfit(months) / months;
 
-  // یہاں ہم کم از کم 80% والی رزلਟ اماؤنٹ نکال رہے ہیں
   double getMinimumRequiredAdvance(int months) {
     double base6MonthInstallment = getTotalWithProfit(6) / 6;
     return base6MonthInstallment * 0.8;
@@ -70,22 +69,19 @@ class CalculaterController extends ChangeNotifier {
       double installmentWithout = calculateInstallmentWithoutAdvance(i);
       double installmentWith = calculateInstallment(i);
       
-      // یہاں ہم چیک کرتے ہیں کہ اگر یوزر نے باکس خالی چھوڑا ہے تو 80% والی اصل رقم (رزلٹ) کیا بنتی ہے
       double minAdv = getMinimumRequiredAdvance(i);
       double actualAdvanceToDisplay = (_advanceAmount > 0 && _advanceAmount >= minAdv) ? _advanceAmount : minAdv;
       
-      // آپشن A: ایڈوانس کے ساتھ (یہاں ہمیشہ اصل رقم آئے گی، کبھی صفر نہیں)
       results.add({
         "packageName": "${i}A",
         "title": "$i ماہ (ایڈوانس کے ساتھ)",
         "months": "$i ماہ",
         "total": total.toStringAsFixed(0),
         "installment": installmentWith.toStringAsFixed(0),
-        "advance": actualAdvanceToDisplay.toStringAsFixed(0), // یہ اب وہ رزلٹ والی رقم ہے جو آپ مانگ رہے تھے
+        "advance": actualAdvanceToDisplay.toStringAsFixed(0),
         "isAdvance": true,
       });
 
-      // آپشن B: بغیر ایڈوانس کے (یہاں ایڈوانس ہمیشہ 0 ہوگا)
       results.add({
         "packageName": "${i}B",
         "title": "$i ماہ (بغیر ایڈوانس)",
