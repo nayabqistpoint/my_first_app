@@ -4,58 +4,83 @@ import 'dart:developer' as developer;
 import '../../welcome/signup/item_package_ui.dart';
 
 class PurchaseNowController {
-  // پیکج یو آئی کی گلوبل کی (Key) جو ویجیٹ سے ڈیٹا اٹھانے کے لیے ہے
+  // پیکج یو آئی کی گلوبل کی (Key)
   final GlobalKey<ItemPackageUIState> packageKey = GlobalKey<ItemPackageUIState>();
 
-  /// پرچیز ریکوئسٹ سبمٹ کرنے کا فائنل اور پرفیکٹ طریقہ
+  /// پرچیز ریکوئسٹ سبمٹ کرنے کا فائنل طریقہ
   Future<void> submitPurchaseRequest({
-    required String customerMobileNumber, // کسٹمر کی اصل شناخت (موبائل نمبر/ID) جو سب کچھ جوڑتی ہے
+    required String customerMobileNumber,
     Map<String, dynamic>? packageDetails,
     required VoidCallback onSuccess,
     required Function(String error) onError,
   }) async {
     try {
-      if (customerMobileNumber.trim().isEmpty) {
+      // 1. نمبر میں سے صرف ہندسے نکالنا (SignUpController کے مطابق)
+      String cleanPhone = customerMobileNumber.trim().replaceAll(RegExp(r'[^0-9]'), '');
+      if (cleanPhone.isEmpty) {
         onError("خامی: کسٹمر کا موبائل نمبر غائب ہے!");
         return;
       }
 
-      // پیکج کا اصل ڈیٹا حاصل کرنا
-      var finalPackageData = packageDetails ?? packageKey.currentState?.getPackageData() ?? {};
+      // 2. پیکج کا اصل ڈیٹا حاصل کرنا
+      Map<String, dynamic> packageData = {};
 
-      if (finalPackageData.isEmpty || finalPackageData['packageName'] == 'N/A' || finalPackageData['packageName'] == null) {
-        onError("براہ کرم پہلے پیکج کی تفصیلات مکمل منتخب کریں!");
+      if (packageDetails != null && packageDetails.isNotEmpty) {
+        packageData = Map<String, dynamic>.from(packageDetails);
+      } else if (packageKey.currentState != null) {
+        final state = packageKey.currentState!;
+        state.setPurchaseRequested(true);
+        
+        final extractedData = state.getPackageData();
+        if (extractedData.isNotEmpty) {
+          packageData = Map<String, dynamic>.from(extractedData);
+        }
+      }
+
+      if (packageData.isEmpty || packageData['isPurchaseRequested'] != true) {
+        onError("براہ کرم پہلے قسط کیلکولیٹر سے پیکج کا انتخاب کریں!");
         return;
       }
 
-      var customerBox = Hive.isBoxOpen('customerBox') 
-          ? Hive.box('customerBox') 
-          : await Hive.openBox('customerBox');
-
-      // چیک کرنا کہ آیا یہ کسٹمر ہائیو باکس میں پہلے سے موجود ہے یا نہیں
-      if (customerBox.containsKey(customerMobileNumber)) {
-        // پرانا تمام ڈیٹا (نام، ایڈریس، ضامن وغیرہ) نکالنا تاکہ کوئی چیز ضائع نہ ہو
-        var existingData = Map<String, dynamic>.from(customerBox.get(customerMobileNumber));
-
-        // یہاں ہم نے بالکل درست طور پر 'purchase' کر دیا ہے تاکہ ایڈمن پینل کا چپ اسے فوراً اٹھا لے
-        existingData['requestType'] = 'پرچیز';
-        existingData['filterKey'] = 'purchase'; 
-        existingData['purchaseStatus'] = 'pending';
-        existingData['isPurchaseRequested'] = true;
-        existingData['status'] = 'Pending';
-        
-        // پیکج کا نیا تمام ڈیٹا کسٹمر کے پرانے ریکارڈ میں بالکل درست طریقے سے مرج کرنا 
-        existingData.addAll(finalPackageData); 
-        existingData['purchaseDate'] = DateTime.now().toIso8601String();
-
-        // اسی کسٹمر کے موبائل نمبر (ID) پر مکمل اپ ڈیٹ شدہ ڈیٹا واپس محفوظ کرنا
-        await customerBox.put(customerMobileNumber, existingData);
-        
-        onSuccess();
+      // 3. packageBox کو کھولنا
+      Box packageBox;
+      if (Hive.isBoxOpen('packageBox')) {
+        packageBox = Hive.box('packageBox');
       } else {
-        developer.log('Customer mobile number not found in box: $customerMobileNumber', name: 'PurchaseNowController');
-        onError("مطلوبہ کسٹمر سسٹم میں رجسٹرڈ نہیں ہے!");
+        packageBox = await Hive.openBox('packageBox');
       }
+
+      final String currentTimestamp = DateTime.now().toString();
+
+      // 4. پچھلا اسٹیٹس چیک کرنے کی لاجک (Pending vs Approved)
+      if (packageBox.containsKey(cleanPhone)) {
+        final existingRecord = packageBox.get(cleanPhone);
+        
+        if (existingRecord is Map) {
+          String existingStatus = existingRecord['status'] ?? 'Pending';
+
+          // اگر پچھلی درخواست Approved ہو چکی ہے، تو اسے پرانے آرکائیو ریکارڈ میں شفٹ کر دیں
+          if (existingStatus != 'Pending') {
+            final String archiveKey = "${cleanPhone}_${existingRecord['timestamp'] ?? currentTimestamp}";
+            await packageBox.put(archiveKey, existingRecord);
+          }
+        }
+      }
+
+      // 5. بالکل سائن اپ (SignUpController) والا صاف ستھرا پے لوڈ
+      final Map<String, dynamic> finalPackageMap = {
+        'customerPhone': cleanPhone, // کسٹمر سے جوڑنے والی کڑی
+        ...packageData,
+        'status': 'Pending',
+        'timestamp': currentTimestamp,
+      };
+
+      // 6. پینڈنگ کی حالت میں پرانی درخواست اوور رائڈ ہوگی اور ڈیٹا صاف ستھرا جا کر سیو ہوگا
+      await packageBox.put(cleanPhone, finalPackageMap);
+
+      developer.log('Success: Saved clean request to packageBox under Key: $cleanPhone', name: 'PurchaseNowController');
+      
+      onSuccess();
     } catch (e) {
       developer.log('Error submitting purchase request', error: e, name: 'PurchaseNowController');
       onError("خرابی پیش آئی: ${e.toString()}");
