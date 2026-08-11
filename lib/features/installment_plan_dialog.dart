@@ -4,8 +4,13 @@ import '../features/pay_now/pay_now_widget.dart';
 
 class InstallmentPlanDialog extends StatelessWidget {
   final String customerPhone;
+  final bool isAdmin; // 👈 1. یہاں پیرامیٹر ڈیفائن کیا گیا ہے
 
-  const InstallmentPlanDialog({super.key, required this.customerPhone});
+  const InstallmentPlanDialog({
+    super.key,
+    required this.customerPhone,
+    this.isAdmin = false, // 👈 2. یہاں ڈیفالٹ ویلیو رکھی گئی ہے
+  });
 
   /// 🎯 سمارٹ فنکشن: صرف ماضی اور آج کی تاریخ تک کا شارٹ نکالنا
   static double calculateTotalShort(String customerPhone) {
@@ -217,6 +222,96 @@ class InstallmentPlanDialog extends StatelessWidget {
     bool isOverdue = inst['isOverdue'];
     int percentage = (progress * 100).round();
 
+    Widget rowContent = Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(inst['label'], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 2),
+                Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(inst['day'], style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isOverdue ? Colors.red.shade700 : Colors.grey.shade700)),
+                      const SizedBox(width: 3),
+                      Text(inst['monthText'], style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isOverdue ? Colors.red.shade700 : Colors.grey.shade700)),
+                      const SizedBox(width: 3),
+                      Text(inst['year'], style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isOverdue ? Colors.red.shade700 : Colors.grey.shade700)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(flex: 2, child: Text("Rs ${inst['due']}", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+          Expanded(flex: 2, child: Text("Rs ${inst['paid']}", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: double.parse(inst['paid']) > 0 ? Colors.green.shade800 : Colors.black54))),
+          Expanded(
+            flex: 4,
+            child: Container(
+              height: 26,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: isFullyPaid ? Colors.green.shade600 : (isOverdue ? Colors.red.shade400 : Colors.grey.shade300), width: 1.2),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(5),
+                child: Stack(
+                  children: [
+                    FractionallySizedBox(
+                      widthFactor: progress,
+                      child: Container(color: isFullyPaid ? Colors.green.shade600 : Colors.green.shade500),
+                    ),
+                    Center(
+                      child: isFullyPaid
+                          ? const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.check_circle, size: 13, color: Colors.white),
+                                SizedBox(width: 3),
+                                Text("100% مکمل", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                              ],
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (progress > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: Text("$percentage% ادا", style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+                                  ),
+                                Text(
+                                  isOverdue ? "-Rs ${inst['short']}" : "آئندہ قسط",
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: isOverdue ? (progress > 0.6 ? Colors.white : Colors.red.shade900) : Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // 🎯 ایڈمن موڈ میں کلک ڈس ایبل کرنے کی شرط
+    if (isAdmin) {
+      return rowContent;
+    }
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -233,90 +328,7 @@ class InstallmentPlanDialog extends StatelessWidget {
           );
         },
         splashColor: Colors.indigo.shade50,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(inst['label'], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 2),
-                    Directionality(
-                      textDirection: TextDirection.rtl,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(inst['day'], style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isOverdue ? Colors.red.shade700 : Colors.grey.shade700)),
-                          const SizedBox(width: 3),
-                          Text(inst['monthText'], style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isOverdue ? Colors.red.shade700 : Colors.grey.shade700)),
-                          const SizedBox(width: 3),
-                          Text(inst['year'], style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isOverdue ? Colors.red.shade700 : Colors.grey.shade700)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(flex: 2, child: Text("Rs ${inst['due']}", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-              Expanded(flex: 2, child: Text("Rs ${inst['paid']}", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: double.parse(inst['paid']) > 0 ? Colors.green.shade800 : Colors.black54))),
-              Expanded(
-                flex: 4,
-                child: Container(
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: isFullyPaid ? Colors.green.shade600 : (isOverdue ? Colors.red.shade400 : Colors.grey.shade300), width: 1.2),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(5),
-                    child: Stack(
-                      children: [
-                        FractionallySizedBox(
-                          widthFactor: progress,
-                          child: Container(color: isFullyPaid ? Colors.green.shade600 : Colors.green.shade500),
-                        ),
-                        Center(
-                          child: isFullyPaid
-                              ? const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.check_circle, size: 13, color: Colors.white),
-                                    SizedBox(width: 3),
-                                    Text("100% مکمل", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
-                                  ],
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    if (progress > 0)
-                                      Padding(
-                                        padding: const EdgeInsets.only(right: 4),
-                                        child: Text("$percentage% ادا", style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
-                                      ),
-                                    Text(
-                                      isOverdue ? "-Rs ${inst['short']}" : "آئندہ قسط",
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: isOverdue ? (progress > 0.6 ? Colors.white : Colors.red.shade900) : Colors.black54,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        child: rowContent,
       ),
     );
   }

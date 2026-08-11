@@ -174,6 +174,7 @@ class LedgerTopWidget extends StatelessWidget {
                           context: context,
                           builder: (context) => InstallmentPlanDialog(
                             customerPhone: controller.customerPhone,
+                            isAdmin: isAdmin, // 👈 🎯 یہ تھا وہ مرکزی مسئلہ! یہاں isAdmin پاس کر دیا گیا ہے
                           ),
                         );
                       },

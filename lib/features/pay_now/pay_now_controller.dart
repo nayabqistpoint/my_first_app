@@ -67,7 +67,7 @@ class PayNowController extends ChangeNotifier {
     final String currentDate = "${DateTime.now().day} اگست ${DateTime.now().year}";
 
     final Map<String, dynamic> transactionData = {
-      'type': 'paid',
+      'type': 'received',
       'customerPhone': customerMobileNumber,
       'customerId': customerMobileNumber,
       'amount': _enteredAmount,
