@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'admin_panel_controller.dart';
-import 'capsule_filter.dart';
 import 'request_card_item.dart';
 
 class ApprovedView extends StatelessWidget {
@@ -15,46 +14,26 @@ class ApprovedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // صرف 'approved' سٹیٹس والی ریکویسٹس کو فلٹر کریں (یہاں requests کی جگہ approvedRequests کر دیا ہے)
-    String currentSubFilter = controller.pageFilters['approved'] ?? 'all';
+    // براہ راست منظور شدہ ریکویسٹس کی لسٹ
+    List<Map<String, dynamic>> approvedList = controller.approvedRequests;
 
-    List<Map<String, dynamic>> filteredList = controller.approvedRequests.where((req) {
-      if (currentSubFilter == 'all') return true;
-      return req['filterKey'] == currentSubFilter;
-    }).toList();
-
-    return Column(
-      children: [
-        // ان-پیج سب-فلٹرز
-        InPageSubFiltersWidget(
-          pageStatus: 'approved',
-          controller: controller,
-          onStateChanged: onStateChanged,
-        ),
-        const Divider(height: 1, color: Colors.grey),
-
-        // کارڈز کی لسٹ
-        Expanded(
-          child: filteredList.isEmpty
-              ? const Center(
-                  child: Text(
-                    "کوئی منظور شدہ ریکویسٹ موجود نہیں ہے",
-                    style: TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(10),
-                  itemCount: filteredList.length,
-                  itemBuilder: (context, index) {
-                    return RequestCardItem(
-                      request: filteredList[index],
-                      controller: controller,
-                      onStateChanged: onStateChanged,
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
+    return approvedList.isEmpty
+        ? const Center(
+            child: Text(
+              "کوئی منظور شدہ ریکویسٹ موجود نہیں ہے",
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          )
+        : ListView.builder(
+            padding: const EdgeInsets.all(10),
+            itemCount: approvedList.length,
+            itemBuilder: (context, index) {
+              return RequestCardItem(
+                request: approvedList[index],
+                controller: controller,
+                onStateChanged: onStateChanged,
+              );
+            },
+          );
   }
 }

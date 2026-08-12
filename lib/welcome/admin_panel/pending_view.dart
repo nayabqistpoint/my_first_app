@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'admin_panel_controller.dart';
-import 'capsule_filter.dart';
 import 'request_card_item.dart';
 
 class PendingView extends StatelessWidget {
@@ -15,47 +14,28 @@ class PendingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // صرف 'pending' سٹیٹس والی ریکویسٹس کو فلٹر کریں
-    String currentSubFilter = controller.pageFilters['pending'] ?? 'all';
-
-    List<Map<String, dynamic>> filteredList = controller.requests.where((req) {
-      if (req['status'] != 'pending') return false;
-      if (currentSubFilter == 'all') return true;
-      return req['filterKey'] == currentSubFilter;
+    // براہِ راست صرف پینڈنگ ریکویسٹس کی لسٹ
+    List<Map<String, dynamic>> pendingList = controller.requests.where((req) {
+      return req['status'] == 'pending';
     }).toList();
 
-    return Column(
-      children: [
-        // ان-پیج سب-فلٹرز (تمام، صرف پرچیز، صرف سائن اپ، دونوں مکس)
-        InPageSubFiltersWidget(
-          pageStatus: 'pending',
-          controller: controller,
-          onStateChanged: onStateChanged,
-        ),
-        const Divider(height: 1, color: Colors.grey),
-
-        // کارڈز کی لسٹ
-        Expanded(
-          child: filteredList.isEmpty
-              ? const Center(
-                  child: Text(
-                    "کوئی پینڈنگ ریکویسٹ موجود نہیں ہے",
-                    style: TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(10),
-                  itemCount: filteredList.length,
-                  itemBuilder: (context, index) {
-                    return RequestCardItem(
-                      request: filteredList[index],
-                      controller: controller,
-                      onStateChanged: onStateChanged,
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
+    return pendingList.isEmpty
+        ? const Center(
+            child: Text(
+              "کوئی پینڈنگ ریکویسٹ موجود نہیں ہے",
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          )
+        : ListView.builder(
+            padding: const EdgeInsets.all(10),
+            itemCount: pendingList.length,
+            itemBuilder: (context, index) {
+              return RequestCardItem(
+                request: pendingList[index],
+                controller: controller,
+                onStateChanged: onStateChanged,
+              );
+            },
+          );
   }
 }
