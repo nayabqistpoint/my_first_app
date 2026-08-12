@@ -31,6 +31,7 @@ class ApprovedView extends StatelessWidget {
               return RequestCardItem(
                 request: approvedList[index],
                 controller: controller,
+                isApprovedView: true, // 🎯 یہ فلیگ منظور شدہ سکرین کی چیک لسٹ دکھائے گا
                 onStateChanged: onStateChanged,
               );
             },

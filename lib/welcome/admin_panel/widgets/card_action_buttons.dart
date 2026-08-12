@@ -22,157 +22,103 @@ class CardActionButtons extends StatelessWidget {
     this.onStateChanged,
   });
 
-  // 🎯 واٹس ایپ بھیجنے کا بغیر رکے (Non-blocking) فنکشن
-  void _launchWhatsApp(String phone, String message) {
-    Future.microtask(() async {
-      String cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
-      if (cleanPhone.startsWith('0')) {
-        cleanPhone = '92${cleanPhone.substring(1)}';
-      }
-
-      final Uri url = Uri.parse("https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}");
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      }
-    });
+  void _sendWhatsApp(String phone, String msg) async {
+    String cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
+    if (cleanPhone.startsWith('0')) cleanPhone = '92${cleanPhone.substring(1)}';
+    final Uri url = Uri.parse("https://wa.me/$cleanPhone?text=${Uri.encodeComponent(msg)}");
+    if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
-  // 🎯 فوری UI اپڈیٹ اور پاپ اپ ڈسپلے
-  void _executeAction(BuildContext context, String phone, String newStatus, String popMessage, Color bgColor, String whatsappMsg) {
-    // 1. ہائیو باکس اپڈیٹ
-    final customerBox = Hive.box('customerBox');
-    final keyToUpdate = hiveKey ?? phone;
-
-    if (customerBox.containsKey(keyToUpdate)) {
-      var data = Map<String, dynamic>.from(customerBox.get(keyToUpdate));
-      data['status'] = newStatus;
-      customerBox.put(keyToUpdate, data);
-    } else {
-      final index = customerBox.values.toList().indexWhere(
-        (e) => e is Map && ((e['customerPhone'] ?? e['phone'] ?? '').toString().trim() == phone),
-      );
-      if (index != -1) {
-        var data = Map<String, dynamic>.from(customerBox.getAt(index));
-        data['status'] = newStatus;
-        customerBox.putAt(index, data);
+  void _processAction(BuildContext context, String phone, String status, String toastText, Color color, String msg) {
+    // 1. ہائیو اپڈیٹ
+    if (Hive.isBoxOpen('customerBox')) {
+      final box = Hive.box('customerBox');
+      final key = hiveKey ?? phone;
+      if (box.containsKey(key)) {
+        var d = Map<String, dynamic>.from(box.get(key));
+        d['status'] = status;
+        box.put(key, d);
+      } else {
+        final idx = box.values.toList().indexWhere((e) => e is Map && (e['customerPhone'] ?? e['phone'] ?? '').toString().trim() == phone);
+        if (idx != -1) {
+          var d = Map<String, dynamic>.from(box.getAt(idx));
+          d['status'] = status;
+          box.putAt(idx, d);
+        }
       }
     }
 
-    // 2. فوری سنیک بار پاپ اپ (ایکشن سے پہلے ہی دکھائیں)
+    // 2. فوری سنیک بار
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              newStatus == 'approved' ? Icons.check_circle : Icons.error_outline,
-              color: Colors.white,
-              size: 22,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                popMessage,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: bgColor,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        content: Text(toastText, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: color,
+        duration: const Duration(milliseconds: 1500),
       ),
     );
 
-    // 3. فوراً لسٹ سے غائب کریں
+    // 3. لسٹ ریفریش
     if (onStateChanged != null) onStateChanged!();
 
-    // 4. بیک گراؤنڈ میں واٹس ایپ کھولیں
-    _launchWhatsApp(phone, whatsappMsg);
+    // 4. واٹس ایپ لانچ
+    _sendWhatsApp(phone, msg);
   }
 
   @override
   Widget build(BuildContext context) {
     final String phone = (requestData['customerPhone'] ?? requestData['phone'] ?? '').toString().trim();
+    
+    bool isPurchaseRequested = false;
+    if (Hive.isBoxOpen('packageBox')) {
+      isPurchaseRequested = Hive.box('packageBox').values.any((e) => e is Map && (e['customerPhone'] ?? e['phone'] ?? '').toString().trim() == phone && e['isPurchaseRequested'] == true);
+    }
+
+    final String pass = phone.length >= 4 ? phone.substring(phone.length - 4) : '1234';
 
     return Row(
       children: [
-        // 1. 🎯 تصدیق کریں
+        // 1. منظور / تصدیق کریں
         Expanded(
           child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade700,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade700, foregroundColor: Colors.white),
             icon: const Icon(Icons.check_circle_outline, size: 16),
-            label: const Text("تصدیق کریں", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            label: Text(isPurchaseRequested ? "تصدیق کریں" : "سائن اپ منظور کریں", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
             onPressed: () {
-              const msg = "محترم کسٹمر! آپ کی درخواست ابتدائی طور پر منظور کر لی گئی ہے۔ برائے مہربانی اپنے اصل شناختی کارڈ، ضمانتی کاغذات اور وصولی کے لیے دکان پر تشریف لائیں۔ شکریہ!";
-              _executeAction(
-                context, 
-                phone, 
-                'approved', 
-                "درخواست کامیابی سے منظور شدہ میں منتقل ہو گئی!", 
-                Colors.green.shade800,
-                msg
-              );
+              if (isPurchaseRequested) {
+                _processAction(context, phone, 'approved', "منظور شدہ میں منتقل ہو گیا!", Colors.green.shade800, "محترم کسٹمر! آپ کی درخواست ابتدائی طور پر منظور کر لی گئی ہے۔ اصل شناختی کارڈ اور ضروری کاغذات کے ساتھ تشریف لائیں۔");
+              } else {
+                _processAction(context, phone, 'completed', "سائن اپ منظور ہو گیا!", Colors.blue.shade800, "محترم کسٹمر! آپ کا سائن اپ منظور ہو گیا ہے۔\nیوزر نیم: $phone\nپاسورڈ: $pass");
+              }
             },
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 5),
 
-        // 2. 🎯 ریٹ مس میچ
-        Expanded(
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade800,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        // 🎯 2. ریٹ مس میچ (صرف سائن اپ + پرچیز کی صورت میں دکھائیں)
+        if (isPurchaseRequested) ...[
+          Expanded(
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800, foregroundColor: Colors.white),
+              icon: const Icon(Icons.edit_note, size: 16),
+              label: const Text("ریٹ مس میچ", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              onPressed: () {
+                final newPrice = priceController?.text.trim() ?? '';
+                _processAction(context, phone, 'rejected', "ریٹ مس میچ کے باعث مسترد!", Colors.orange.shade900, "محترم کسٹمر! قیمت مارکیٹ ریٹ سے موافقت نہیں رکھتی۔ RS: $newPrice تجدید کی گئی ہے۔");
+              },
             ),
-            icon: const Icon(Icons.edit_note, size: 16),
-            label: const Text("ریٹ مس میچ", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-            onPressed: () {
-              final newPrice = priceController?.text.trim() ?? '';
-              final msg = "محترم کسٹمر! آپ کی درخواست میں موبائل کی قیمت مارکیٹ ریٹ سے موافقت نہیں رکھتی۔ ہم نے آپ کے ماڈل کی قیمت RS: $newPrice تجدید کی ہے۔ برائے مہربانی ایپ پر جا کر اس قیمت کے ساتھ دوبارہ درخواست دیں۔";
-              _executeAction(
-                context, 
-                phone, 
-                'rejected', 
-                "درخواست ریٹ مس میچ کے باعث مسترد کر دی گئی!", 
-                Colors.orange.shade900,
-                msg
-              );
-            },
           ),
-        ),
-        const SizedBox(width: 6),
+          const SizedBox(width: 5),
+        ],
 
-        // 3. 🎯 مسترد کریں
+        // 3. مسترد کریں
         Expanded(
           child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade700,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700, foregroundColor: Colors.white),
             icon: const Icon(Icons.cancel_outlined, size: 16),
             label: const Text("مسترد کریں", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
             onPressed: () {
-              const msg = "محترم کسٹمر! معذرت کے ساتھ آپ کی درخواست منظور نہیں کی جا سکی۔ مزید معلومات کے لیے دکان سے رابطہ کریں۔";
-              _executeAction(
-                context, 
-                phone, 
-                'rejected', 
-                "درخواست مسترد کر دی گئی!", 
-                Colors.red.shade800,
-                msg
-              );
+              _processAction(context, phone, 'rejected', "درخواست مسترد کر دی گئی!", Colors.red.shade800, "محترم کسٹمر! معذرت کے ساتھ آپ کی درخواست منظور نہیں کی جا سکی۔");
             },
           ),
         ),

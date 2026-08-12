@@ -31,6 +31,7 @@ class CompletedView extends StatelessWidget {
               return RequestCardItem(
                 request: completedList[index],
                 controller: controller,
+                isCompletedView: true, // 🎯 نیچے والے تمام ایکشن بٹنز ختم کر کے صرف Read-Only دکھانے کے لیے
                 onStateChanged: onStateChanged,
               );
             },

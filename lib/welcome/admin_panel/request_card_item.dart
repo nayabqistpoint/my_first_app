@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'widgets/approval_checks_widget.dart';
 import 'widgets/card_action_buttons.dart';
 import 'widgets/customer_info_widget.dart';
 import 'widgets/guarantor_info_widget.dart';
@@ -9,6 +10,8 @@ class RequestCardItem extends StatefulWidget {
   final Map<String, dynamic>? requestData;
   final dynamic request;
   final dynamic controller;
+  final bool isApprovedView;  // 🎯 منظور شدہ پیج کے لیے
+  final bool isCompletedView; // 🎯 مکمل (Completed) ریڈ اونلی پیج کے لیے
   final VoidCallback? onStateChanged;
 
   const RequestCardItem({
@@ -16,6 +19,8 @@ class RequestCardItem extends StatefulWidget {
     this.requestData,
     this.request,
     this.controller,
+    this.isApprovedView = false,
+    this.isCompletedView = false, // 👈 ڈیفالٹ میں false
     this.onStateChanged,
   });
 
@@ -72,7 +77,7 @@ class _RequestCardItemState extends State<RequestCardItem> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // رو 1: آئیکن + کسٹمر کا نام/ولدیت/قوم + فون + کیپسول + ایرو
+              // 🎯 رو 1: آئیکن + کسٹمر کا نام/ولدیت/قوم + فون + کیپسول + ایرو
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -126,7 +131,7 @@ class _RequestCardItemState extends State<RequestCardItem> {
               const Divider(height: 1, thickness: 0.8),
               const SizedBox(height: 12),
 
-              // رو 2: ابھرا ہوا ایڈیٹیبل قیمت کا باکس اور IMEI
+              // 🎯 رو 2: موبائل ماڈل + پرائس باکس + IMEI
               RequestCardHelper.buildPackageAndImeiRow(
                 context: context,
                 data: data,
@@ -134,6 +139,7 @@ class _RequestCardItemState extends State<RequestCardItem> {
                 priceController: _priceController,
               ),
 
+              // 🎯 3. کولیپس ایبل کسٹمر اور ضامن کی معلومات
               if (_isExpanded) ...[
                 const SizedBox(height: 12),
                 const Divider(height: 1),
@@ -144,17 +150,30 @@ class _RequestCardItemState extends State<RequestCardItem> {
                 GuarantorInfoWidget(guarantorData: {'customerPhone': phone, ...data}),
               ],
 
-              const SizedBox(height: 12),
-              const Divider(height: 1, thickness: 0.8),
-              const SizedBox(height: 10),
+              // 🎯 4. مشروط ایکشن وزٹس (اگر completed ہو تو بٹنز غائب رہیں گے)
+              if (!widget.isCompletedView) ...[
+                const SizedBox(height: 12),
+                const Divider(height: 1, thickness: 0.8),
+                const SizedBox(height: 10),
 
-              // 🎯 4. کارڈ ایکشن بٹنز (درست امپورٹ کے ساتھ)
-              CardActionButtons(
-                requestData: {'customerPhone': phone, ...data},
-                controller: widget.controller,
-                priceController: _priceController,
-                onStateChanged: widget.onStateChanged,
-              ),
+                if (widget.isApprovedView)
+                  // منظور شدہ پیج کی چیک لسٹ
+                  ApprovalChecksWidget(
+                    requestData: {'customerPhone': phone, ...data},
+                    onStateChanged: widget.onStateChanged,
+                  )
+                else
+                  // پینڈنگ پیج کے ایکشن بٹنز
+                  CardActionButtons(
+                    requestData: {'customerPhone': phone, ...data},
+                    request: widget.request,
+                    controller: widget.controller,
+                    hiveKey: phone,
+                    isPurchase: false,
+                    priceController: _priceController,
+                    onStateChanged: widget.onStateChanged,
+                  ),
+              ],
             ],
           ),
         ),
