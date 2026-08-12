@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'widgets/card_action_buttons.dart';
 import 'widgets/customer_info_widget.dart';
 import 'widgets/guarantor_info_widget.dart';
 import 'widgets/request_card_helper.dart';
@@ -24,6 +25,19 @@ class RequestCardItem extends StatefulWidget {
 
 class _RequestCardItemState extends State<RequestCardItem> {
   bool _isExpanded = false;
+  late TextEditingController _priceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _priceController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    super.dispose();
+  }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
     final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
@@ -35,7 +49,6 @@ class _RequestCardItemState extends State<RequestCardItem> {
     final Map<String, dynamic> data = widget.requestData ?? 
         (widget.request is Map<String, dynamic> ? widget.request : {});
 
-    // 🎯 کسٹمر کا فون نمبر (مرکزی یونیک ID)
     final String phone = (data['customerPhone'] ?? data['phone'] ?? '').toString().trim();
 
     return Directionality(
@@ -92,7 +105,6 @@ class _RequestCardItemState extends State<RequestCardItem> {
                     ),
                   ),
 
-                  // کیپسول
                   RequestCardHelper.buildTypeCapsuleWidget(
                     data: data,
                     phone: phone,
@@ -114,27 +126,35 @@ class _RequestCardItemState extends State<RequestCardItem> {
               const Divider(height: 1, thickness: 0.8),
               const SizedBox(height: 12),
 
-              // رو 2: قسطوں کا پلان اور IMEI (ہیلپر کے ذریعے)
+              // رو 2: ابھرا ہوا ایڈیٹیبل قیمت کا باکس اور IMEI
               RequestCardHelper.buildPackageAndImeiRow(
                 context: context,
                 data: data,
                 phone: phone,
+                priceController: _priceController,
               ),
 
-              // 🎯 3. نیچے والا حصہ (کولیپس ایبل کسٹمر اور ضامن وزٹس)
               if (_isExpanded) ...[
                 const SizedBox(height: 12),
                 const Divider(height: 1),
                 const SizedBox(height: 12),
                 
-                // کسٹمر انفو
                 CustomerInfoWidget(customerData: {'customerPhone': phone, ...data}),
-                
                 const SizedBox(height: 10),
-                
-                // 🎯 ضامن انفو (مرکزی فون نمبر کے ساتھ ڈائریکٹ میپڈ)
                 GuarantorInfoWidget(guarantorData: {'customerPhone': phone, ...data}),
               ],
+
+              const SizedBox(height: 12),
+              const Divider(height: 1, thickness: 0.8),
+              const SizedBox(height: 10),
+
+              // 🎯 4. کارڈ ایکشن بٹنز (درست امپورٹ کے ساتھ)
+              CardActionButtons(
+                requestData: {'customerPhone': phone, ...data},
+                controller: widget.controller,
+                priceController: _priceController,
+                onStateChanged: widget.onStateChanged,
+              ),
             ],
           ),
         ),
