@@ -35,6 +35,7 @@ class _RequestCardItemState extends State<RequestCardItem> {
     final Map<String, dynamic> data = widget.requestData ?? 
         (widget.request is Map<String, dynamic> ? widget.request : {});
 
+    // 🎯 کسٹمر کا فون نمبر (مرکزی یونیک ID)
     final String phone = (data['customerPhone'] ?? data['phone'] ?? '').toString().trim();
 
     return Directionality(
@@ -58,7 +59,7 @@ class _RequestCardItemState extends State<RequestCardItem> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🎯 رو 1: آئیکن + کسٹمر کا نام/ولدیت/قوم + فون + ڈائنامک کیپسول + ایرو
+              // رو 1: آئیکن + کسٹمر کا نام/ولدیت/قوم + فون + کیپسول + ایرو
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -69,14 +70,12 @@ class _RequestCardItemState extends State<RequestCardItem> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // کسٹمر کا نام، ولدیت، قوم (ہیلپر سے)
                         RequestCardHelper.buildCustomerHeaderWidget(
                           data: data,
                           phone: phone,
                         ),
                         const SizedBox(height: 3),
                         
-                        // کسٹمر کا فون نمبر
                         InkWell(
                           onTap: () => _makePhoneCall(phone),
                           child: Text(
@@ -93,7 +92,7 @@ class _RequestCardItemState extends State<RequestCardItem> {
                     ),
                   ),
 
-                  // 🎯 کیپسول (صرف سائن اپ / سائن اپ + پرچیز) - ہیلپر کے ذریعے
+                  // کیپسول
                   RequestCardHelper.buildTypeCapsuleWidget(
                     data: data,
                     phone: phone,
@@ -115,7 +114,7 @@ class _RequestCardItemState extends State<RequestCardItem> {
               const Divider(height: 1, thickness: 0.8),
               const SizedBox(height: 12),
 
-              // 🎯 رو 2: قسطوں کا پلان اور IMEI (ہیلپر کے ذریعے)
+              // رو 2: قسطوں کا پلان اور IMEI (ہیلپر کے ذریعے)
               RequestCardHelper.buildPackageAndImeiRow(
                 context: context,
                 data: data,
@@ -127,9 +126,14 @@ class _RequestCardItemState extends State<RequestCardItem> {
                 const SizedBox(height: 12),
                 const Divider(height: 1),
                 const SizedBox(height: 12),
-                CustomerInfoWidget(customerData: data['customerInfo'] ?? data),
+                
+                // کسٹمر انفو
+                CustomerInfoWidget(customerData: {'customerPhone': phone, ...data}),
+                
                 const SizedBox(height: 10),
-                GuarantorInfoWidget(guarantorData: data['guarantorInfo'] ?? {}),
+                
+                // 🎯 ضامن انفو (مرکزی فون نمبر کے ساتھ ڈائریکٹ میپڈ)
+                GuarantorInfoWidget(guarantorData: {'customerPhone': phone, ...data}),
               ],
             ],
           ),
