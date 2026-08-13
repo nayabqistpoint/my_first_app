@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// 🎯 پرچیز پیج کا امپورٹ (سائز اور فولڈر پاتھ کے مطابق)
+// 🎯 پرچیز پیج کا امپورٹ
 import '../../home_page/transaction_forms/purchase_page.dart';
 
 import 'widgets/card_action_buttons.dart';
@@ -167,7 +167,7 @@ class _RequestCardItemState extends State<RequestCardItem> {
 
                 if (widget.isApprovedView) ...[
                   if (!hasImei)
-                    // 🎯 A. اگر IMEI نہیں ہے -> ImeiController دکھائیں اور PurchasePage پر نیویگیٹ کریں
+                    // 🎯 A. اگر IMEI نہیں ہے -> ImeiController دکھائیں اور کسٹمر فون کے ساتھ PurchasePage پر نیویگیٹ کریں
                     ImeiControllerWidget(
                       requestData: {'customerPhone': phone, ...data},
                       phone: phone,
@@ -176,7 +176,7 @@ class _RequestCardItemState extends State<RequestCardItem> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => PurchasePage(
-                              // کسٹمر کا فون نمبر ساتھ پاس کریں گے (اگر پرچیز پیج کا پیرامیٹر تیار ہو)
+                              applicantPhone: phone, // 👈 کسٹمر کا فون نمبر اب لازمی بھیجا جا رہا ہے
                             ),
                           ),
                         );
