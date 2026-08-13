@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'widgets/approval_checks_widget.dart';
 import 'widgets/card_action_buttons.dart';
 import 'widgets/customer_info_widget.dart';
 import 'widgets/guarantor_info_widget.dart';
+import 'widgets/imei_controller_widget.dart';
+import 'widgets/legal_docs_ui.dart';
 import 'widgets/request_card_helper.dart';
 
 class RequestCardItem extends StatefulWidget {
@@ -55,6 +56,10 @@ class _RequestCardItemState extends State<RequestCardItem> {
         (widget.request is Map<String, dynamic> ? widget.request : {});
 
     final String phone = (data['customerPhone'] ?? data['phone'] ?? '').toString().trim();
+
+    // 🎯 IMEI کی موجودگی چیک کریں
+    final String rawImei = (data['imei'] ?? 'N/A').toString().trim();
+    final bool hasImei = rawImei.isNotEmpty && rawImei != 'N/A' && rawImei != 'null';
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -150,20 +155,32 @@ class _RequestCardItemState extends State<RequestCardItem> {
                 GuarantorInfoWidget(guarantorData: {'customerPhone': phone, ...data}),
               ],
 
-              // 🎯 4. مشروط ایکشن وزٹس (اگر completed ہو تو بٹنز غائب رہیں گے)
+              // 🎯 4. مشروط ایکشن وزٹس (مکمل پیج پر ریڈ اونلی رہے گا)
               if (!widget.isCompletedView) ...[
                 const SizedBox(height: 12),
                 const Divider(height: 1, thickness: 0.8),
                 const SizedBox(height: 10),
 
-                if (widget.isApprovedView)
-                  // منظور شدہ پیج کی چیک لسٹ
-                  ApprovalChecksWidget(
-                    requestData: {'customerPhone': phone, ...data},
-                    onStateChanged: widget.onStateChanged,
-                  )
-                else
-                  // پینڈنگ پیج کے ایکشن بٹنز
+                if (widget.isApprovedView) ...[
+                  // 🎯 اگر منظور شدہ سکرین ہے:
+                  if (!hasImei)
+                    // A. اگر IMEI نہیں ہے -> ImeiController دکھائیں
+                    ImeiControllerWidget(
+                      requestData: {'customerPhone': phone, ...data},
+                      phone: phone,
+                      onNavigateToPurchase: () {
+                        // پرچیز سکرین پر فون نمبر پاس کر کے جانے کی لاجک
+                      },
+                    )
+                  else
+                    // B. اگر IMEI موجود ہے -> LegalDocsUI دکھائیں
+                    LegalDocsUI(
+                      requestData: {'customerPhone': phone, ...data},
+                      phone: phone,
+                      onStateChanged: widget.onStateChanged,
+                    ),
+                ] else
+                  // 🎯 اگر پینڈنگ سکرین ہے -> واٹس ایپ ایکشن بٹنز
                   CardActionButtons(
                     requestData: {'customerPhone': phone, ...data},
                     request: widget.request,
