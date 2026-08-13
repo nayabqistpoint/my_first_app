@@ -15,7 +15,7 @@ class PurchaseNowController {
     required Function(String error) onError,
   }) async {
     try {
-      // 1. نمبر میں سے صرف ہندسے نکالنا (SignUpController کے مطابق)
+      // 1. نمبر میں سے صرف ہندسے نکالنا
       String cleanPhone = customerMobileNumber.trim().replaceAll(RegExp(r'[^0-9]'), '');
       if (cleanPhone.isEmpty) {
         onError("خامی: کسٹمر کا موبائل نمبر غائب ہے!");
@@ -52,30 +52,32 @@ class PurchaseNowController {
 
       final String currentTimestamp = DateTime.now().toString();
 
-      // 4. پچھلا اسٹیٹس چیک کرنے کی لاجک (Pending vs Approved)
+      // 4. 🎯 [طے شدہ قانون] پچھلا اسٹیٹس چیک کرنے کی لاجک (1 Customer = 1 Active Device)
       if (packageBox.containsKey(cleanPhone)) {
         final existingRecord = packageBox.get(cleanPhone);
         
         if (existingRecord is Map) {
-          String existingStatus = existingRecord['status'] ?? 'Pending';
+          String existingStatus = (existingRecord['status'] ?? 'Pending').toString().trim().toLowerCase();
 
-          // اگر پچھلی درخواست Approved ہو چکی ہے، تو اسے پرانے آرکائیو ریکارڈ میں شفٹ کر دیں
-          if (existingStatus != 'Pending') {
-            final String archiveKey = "${cleanPhone}_${existingRecord['timestamp'] ?? currentTimestamp}";
-            await packageBox.put(archiveKey, existingRecord);
+          // 🛑 A. اگر اسٹیٹس Completed ہو چکا ہے تو نئی ریکویسٹ کو روک دیں
+          if (existingStatus == 'completed') {
+            onError("محترم صارف! اس موبائل نمبر پر آپ کا ایک فعال قسطوں کا اکاؤنٹ پہلے سے موجود ہے۔ براہ کرم دوسرا موبائل نمبر استعمال کریں!");
+            return;
           }
+          
+          // 🔄 B. اگر Pending یا Approved ہے، تو وہ نیچے خود بخود اوور رائٹ ہو کر 'Pending' بن جائے گا۔
         }
       }
 
-      // 5. بالکل سائن اپ (SignUpController) والا صاف ستھرا پے لوڈ
+      // 5. بالکل صاف ستھرا پے لوڈ
       final Map<String, dynamic> finalPackageMap = {
         'customerPhone': cleanPhone, // کسٹمر سے جوڑنے والی کڑی
         ...packageData,
-        'status': 'Pending',
+        'status': 'Pending', // 👈 نئی یا اوور رائٹ درخواست ہمیشہ پینڈنگ ہوگی
         'timestamp': currentTimestamp,
       };
 
-      // 6. پینڈنگ کی حالت میں پرانی درخواست اوور رائڈ ہوگی اور ڈیٹا صاف ستھرا جا کر سیو ہوگا
+      // 6. 🎯 فون نمبر کی Key پر ڈائریکٹ اوور رائٹ کریں (کوئی اضافی archiveKey نہیں بنے گی)
       await packageBox.put(cleanPhone, finalPackageMap);
 
       developer.log('Success: Saved clean request to packageBox under Key: $cleanPhone', name: 'PurchaseNowController');

@@ -30,25 +30,50 @@ class CardActionButtons extends StatelessWidget {
   }
 
   void _processAction(BuildContext context, String phone, String status, String toastText, Color color, String msg) {
-    // 1. ہائیو اپڈیٹ
-    if (Hive.isBoxOpen('customerBox')) {
-      final box = Hive.box('customerBox');
-      final key = hiveKey ?? phone;
-      if (box.containsKey(key)) {
-        var d = Map<String, dynamic>.from(box.get(key));
+    final String cleanPhone = phone.trim();
+    final String targetKey = hiveKey ?? cleanPhone;
+
+    // 🎯 1. packageBox میں اسٹیٹس اپڈیٹ کرنا (مرکزی فلٹر باکس)
+    if (Hive.isBoxOpen('packageBox')) {
+      final pBox = Hive.box('packageBox');
+      if (pBox.containsKey(targetKey)) {
+        var d = Map<String, dynamic>.from(pBox.get(targetKey));
         d['status'] = status;
-        box.put(key, d);
+        pBox.put(targetKey, d);
       } else {
-        final idx = box.values.toList().indexWhere((e) => e is Map && (e['customerPhone'] ?? e['phone'] ?? '').toString().trim() == phone);
-        if (idx != -1) {
-          var d = Map<String, dynamic>.from(box.getAt(idx));
-          d['status'] = status;
-          box.putAt(idx, d);
+        for (var key in pBox.keys) {
+          final val = pBox.get(key);
+          if (val is Map && (val['customerPhone'] ?? val['phone'] ?? '').toString().trim() == cleanPhone) {
+            var d = Map<String, dynamic>.from(val);
+            d['status'] = status;
+            pBox.put(key, d);
+            break;
+          }
         }
       }
     }
 
-    // 2. فوری سنیک بار
+    // 🎯 2. customerBox میں بھی اسٹیٹس اپڈیٹ رکھنا
+    if (Hive.isBoxOpen('customerBox')) {
+      final cBox = Hive.box('customerBox');
+      if (cBox.containsKey(targetKey)) {
+        var d = Map<String, dynamic>.from(cBox.get(targetKey));
+        d['status'] = status;
+        cBox.put(targetKey, d);
+      } else {
+        for (var key in cBox.keys) {
+          final val = cBox.get(key);
+          if (val is Map && (val['customerPhone'] ?? val['phone'] ?? '').toString().trim() == cleanPhone) {
+            var d = Map<String, dynamic>.from(val);
+            d['status'] = status;
+            cBox.put(key, d);
+            break;
+          }
+        }
+      }
+    }
+
+    // 3. سنیک بار دکھانا
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -58,11 +83,11 @@ class CardActionButtons extends StatelessWidget {
       ),
     );
 
-    // 3. لسٹ ریفریش
+    // 4. لسٹ کی حالت ریفریش کرنا
     if (onStateChanged != null) onStateChanged!();
 
-    // 4. واٹس ایپ لانچ
-    _sendWhatsApp(phone, msg);
+    // 5. واٹس ایپ میسج بھیجنا
+    _sendWhatsApp(cleanPhone, msg);
   }
 
   @override
@@ -71,7 +96,11 @@ class CardActionButtons extends StatelessWidget {
     
     bool isPurchaseRequested = false;
     if (Hive.isBoxOpen('packageBox')) {
-      isPurchaseRequested = Hive.box('packageBox').values.any((e) => e is Map && (e['customerPhone'] ?? e['phone'] ?? '').toString().trim() == phone && e['isPurchaseRequested'] == true);
+      isPurchaseRequested = Hive.box('packageBox').values.any((e) => 
+        e is Map && 
+        (e['customerPhone'] ?? e['phone'] ?? '').toString().trim() == phone && 
+        e['isPurchaseRequested'] == true
+      );
     }
 
     final String pass = phone.length >= 4 ? phone.substring(phone.length - 4) : '1234';
@@ -83,19 +112,38 @@ class CardActionButtons extends StatelessWidget {
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade700, foregroundColor: Colors.white),
             icon: const Icon(Icons.check_circle_outline, size: 16),
-            label: Text(isPurchaseRequested ? "تصدیق کریں" : "سائن اپ منظور کریں", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            label: Text(
+              isPurchaseRequested ? "تصدیق کریں" : "سائن اپ منظور کریں", 
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)
+            ),
             onPressed: () {
               if (isPurchaseRequested) {
-                _processAction(context, phone, 'approved', "منظور شدہ میں منتقل ہو گیا!", Colors.green.shade800, "محترم کسٹمر! آپ کی درخواست ابتدائی طور پر منظور کر لی گئی ہے۔ اصل شناختی کارڈ اور ضروری کاغذات کے ساتھ تشریف لائیں۔");
+                // پرچیز کے ساتھ ریکویسٹ -> 'Approved' اسٹیٹس (منظور شدہ ویو میں جائے گا)
+                _processAction(
+                  context, 
+                  phone, 
+                  'Approved', 
+                  "منظور شدہ میں منتقل ہو گیا!", 
+                  Colors.green.shade800, 
+                  "محترم کسٹمر! آپ کی درخواست ابتدائی طور پر منظور کر لی گئی ہے۔ اصل شناختی کارڈ اور ضروری کاغذات کے ساتھ تشریف لائیں۔"
+                );
               } else {
-                _processAction(context, phone, 'completed', "سائن اپ منظور ہو گیا!", Colors.blue.shade800, "محترم کسٹمر! آپ کا سائن اپ منظور ہو گیا ہے۔\nیوزر نیم: $phone\nپاسورڈ: $pass");
+                // صرف سائن اپ ریکویسٹ -> 'Completed' اسٹیٹس
+                _processAction(
+                  context, 
+                  phone, 
+                  'Completed', 
+                  "سائن اپ منظور ہو گیا!", 
+                  Colors.blue.shade800, 
+                  "محترم کسٹمر! آپ کا سائن اپ منظور ہو گیا ہے۔\nیوزر نیم: $phone\nپاسورڈ: $pass"
+                );
               }
             },
           ),
         ),
         const SizedBox(width: 5),
 
-        // 🎯 2. ریٹ مس میچ (صرف سائن اپ + پرچیز کی صورت میں دکھائیں)
+        // 🎯 2. ریٹ مس میچ (صرف سائن اپ + پرچیز موڈ میں دکھائیں)
         if (isPurchaseRequested) ...[
           Expanded(
             child: ElevatedButton.icon(
@@ -104,7 +152,14 @@ class CardActionButtons extends StatelessWidget {
               label: const Text("ریٹ مس میچ", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
               onPressed: () {
                 final newPrice = priceController?.text.trim() ?? '';
-                _processAction(context, phone, 'rejected', "ریٹ مس میچ کے باعث مسترد!", Colors.orange.shade900, "محترم کسٹمر! قیمت مارکیٹ ریٹ سے موافقت نہیں رکھتی۔ RS: $newPrice تجدید کی گئی ہے۔");
+                _processAction(
+                  context, 
+                  phone, 
+                  'Rejected', 
+                  "ریٹ مس میچ کے باعث مسترد!", 
+                  Colors.orange.shade900, 
+                  "محترم کسٹمر! قیمت مارکیٹ ریٹ سے موافقت نہیں رکھتی۔ RS: $newPrice تجدید کی گئی ہے۔"
+                );
               },
             ),
           ),
@@ -118,7 +173,14 @@ class CardActionButtons extends StatelessWidget {
             icon: const Icon(Icons.cancel_outlined, size: 16),
             label: const Text("مسترد کریں", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
             onPressed: () {
-              _processAction(context, phone, 'rejected', "درخواست مسترد کر دی گئی!", Colors.red.shade800, "محترم کسٹمر! معذرت کے ساتھ آپ کی درخواست منظور نہیں کی جا سکی۔");
+              _processAction(
+                context, 
+                phone, 
+                'Rejected', 
+                "درخواست مسترد کر دی گئی!", 
+                Colors.red.shade800, 
+                "محترم کسٹمر! معذرت کے ساتھ آپ کی درخواست منظور نہیں کی جا سکی۔"
+              );
             },
           ),
         ),

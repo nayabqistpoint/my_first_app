@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // 🎯 پرچیز پیج کا امپورٹ
@@ -56,12 +57,24 @@ class _RequestCardItemState extends State<RequestCardItem> {
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> data = widget.requestData ?? 
+    // 🎯 1. ابتدائی ڈیٹا حاصل کریں
+    Map<String, dynamic> data = widget.requestData ?? 
         (widget.request is Map<String, dynamic> ? widget.request : {});
 
     final String phone = (data['customerPhone'] ?? data['phone'] ?? '').toString().trim();
 
-    // 🎯 IMEI کی موجودگی چیک کریں
+    // 🎯 2. [لائیو ڈیٹا ہینڈلنگ] اگر packageBox کھلی ہے تو وہاں سے تازہ ترین لائیو ڈیٹا لیں
+    if (Hive.isBoxOpen('packageBox') && phone.isNotEmpty) {
+      final packageBox = Hive.box('packageBox');
+      if (packageBox.containsKey(phone)) {
+        final liveData = packageBox.get(phone);
+        if (liveData is Map) {
+          data = Map<String, dynamic>.from(liveData);
+        }
+      }
+    }
+
+    // 🎯 3. IMEI کی تازہ ترین لائیو موجودگی چیک کریں
     final String rawImei = (data['imei'] ?? 'N/A').toString().trim();
     final bool hasImei = rawImei.isNotEmpty && rawImei != 'N/A' && rawImei != 'null';
 
@@ -167,19 +180,27 @@ class _RequestCardItemState extends State<RequestCardItem> {
 
                 if (widget.isApprovedView) ...[
                   if (!hasImei)
-                    // 🎯 A. اگر IMEI نہیں ہے -> ImeiController دکھائیں اور کسٹمر فون کے ساتھ PurchasePage پر نیویگیٹ کریں
+                    // 🎯 A. اگر IMEI نہیں ہے -> ImeiController دکھائیں اور نیویگیشن کے بعد آٹو ری فریش کریں
                     ImeiControllerWidget(
                       requestData: {'customerPhone': phone, ...data},
                       phone: phone,
-                      onNavigateToPurchase: () {
-                        Navigator.push(
+                      onNavigateToPurchase: () async {
+                        final result = await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => PurchasePage(
-                              applicantPhone: phone, // 👈 کسٹمر کا فون نمبر اب لازمی بھیجا جا رہا ہے
+                              applicantPhone: phone,
                             ),
                           ),
                         );
+
+                        // 🎯 واپس آتے ہی سکرین ری فریش کریں تاکہ LegalDocsUI فوراً ڈسپلے ہو جائے
+                        if (result == true || mounted) {
+                          if (widget.onStateChanged != null) {
+                            widget.onStateChanged!();
+                          }
+                          setState(() {});
+                        }
                       },
                     )
                   else
