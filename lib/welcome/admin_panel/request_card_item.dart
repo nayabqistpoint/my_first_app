@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+// 🎯 پرچیز پیج کا امپورٹ (سائز اور فولڈر پاتھ کے مطابق)
+import '../../home_page/transaction_forms/purchase_page.dart';
+
 import 'widgets/card_action_buttons.dart';
 import 'widgets/customer_info_widget.dart';
 import 'widgets/guarantor_info_widget.dart';
@@ -21,7 +25,7 @@ class RequestCardItem extends StatefulWidget {
     this.request,
     this.controller,
     this.isApprovedView = false,
-    this.isCompletedView = false, // 👈 ڈیفالٹ میں false
+    this.isCompletedView = false,
     this.onStateChanged,
   });
 
@@ -155,32 +159,38 @@ class _RequestCardItemState extends State<RequestCardItem> {
                 GuarantorInfoWidget(guarantorData: {'customerPhone': phone, ...data}),
               ],
 
-              // 🎯 4. مشروط ایکشن وزٹس (مکمل پیج پر ریڈ اونلی رہے گا)
+              // 🎯 4. مشروط ایکشن وزٹس
               if (!widget.isCompletedView) ...[
                 const SizedBox(height: 12),
                 const Divider(height: 1, thickness: 0.8),
                 const SizedBox(height: 10),
 
                 if (widget.isApprovedView) ...[
-                  // 🎯 اگر منظور شدہ سکرین ہے:
                   if (!hasImei)
-                    // A. اگر IMEI نہیں ہے -> ImeiController دکھائیں
+                    // 🎯 A. اگر IMEI نہیں ہے -> ImeiController دکھائیں اور PurchasePage پر نیویگیٹ کریں
                     ImeiControllerWidget(
                       requestData: {'customerPhone': phone, ...data},
                       phone: phone,
                       onNavigateToPurchase: () {
-                        // پرچیز سکرین پر فون نمبر پاس کر کے جانے کی لاجک
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PurchasePage(
+                              // کسٹمر کا فون نمبر ساتھ پاس کریں گے (اگر پرچیز پیج کا پیرامیٹر تیار ہو)
+                            ),
+                          ),
+                        );
                       },
                     )
                   else
-                    // B. اگر IMEI موجود ہے -> LegalDocsUI دکھائیں
+                    // 🎯 B. اگر IMEI موجود ہے -> LegalDocsUI دکھائیں
                     LegalDocsUI(
                       requestData: {'customerPhone': phone, ...data},
                       phone: phone,
                       onStateChanged: widget.onStateChanged,
                     ),
                 ] else
-                  // 🎯 اگر پینڈنگ سکرین ہے -> واٹس ایپ ایکشن بٹنز
+                  // 🎯 اگر پینڈنگ سکرین ہے -> ایکشن بٹنز
                   CardActionButtons(
                     requestData: {'customerPhone': phone, ...data},
                     request: widget.request,
