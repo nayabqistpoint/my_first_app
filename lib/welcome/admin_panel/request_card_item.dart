@@ -1,265 +1,230 @@
 import 'package:flutter/material.dart';
-import 'admin_panel_controller.dart';
-import 'widgets/card_action_buttons.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class RequestCardItem extends StatelessWidget {
-  final Map<String, dynamic> request;
-  final AdminPanelController controller;
-  final VoidCallback onStateChanged;
+// 🎯 پرچیز پیج کا امپورٹ
+import '../../home_page/transaction_forms/purchase_page.dart';
+
+import 'widgets/card_action_buttons.dart';
+import 'widgets/customer_info_widget.dart';
+import 'widgets/guarantor_info_widget.dart';
+import 'widgets/imei_controller_widget.dart';
+import 'widgets/legal_docs_ui.dart';
+import 'widgets/request_card_helper.dart';
+
+class RequestCardItem extends StatefulWidget {
+  final Map<String, dynamic>? requestData;
+  final dynamic request;
+  final dynamic controller;
+  final bool isApprovedView;  // 🎯 منظور شدہ پیج کے لیے
+  final bool isCompletedView; // 🎯 مکمل (Completed) ریڈ اونلی پیج کے لیے
+  final VoidCallback? onStateChanged;
 
   const RequestCardItem({
     super.key,
-    required this.request,
-    required this.controller,
-    required this.onStateChanged,
+    this.requestData,
+    this.request,
+    this.controller,
+    this.isApprovedView = false,
+    this.isCompletedView = false,
+    this.onStateChanged,
   });
 
   @override
+  State<RequestCardItem> createState() => _RequestCardItemState();
+}
+
+class _RequestCardItemState extends State<RequestCardItem> {
+  bool _isExpanded = false;
+  late TextEditingController _priceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _priceController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(launchUri)) await launchUrl(launchUri);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    String reqId = request['id']?.toString() ?? 'temp_id_${request.hashCode}';
+    // 🎯 1. ابتدائی ڈیٹا حاصل کریں
+    Map<String, dynamic> data = widget.requestData ?? 
+        (widget.request is Map<String, dynamic> ? widget.request : {});
 
-    if (!controller.priceControllers.containsKey(reqId)) {
-      controller.priceControllers[reqId] = TextEditingController(
-        text: request['cashPrice']?.toString() ?? '',
-      );
+    final String phone = (data['customerPhone'] ?? data['phone'] ?? '').toString().trim();
+
+    // 🎯 2. [لائیو ڈیٹا ہینڈلنگ] اگر packageBox کھلی ہے تو وہاں سے تازہ ترین لائیو ڈیٹا لیں
+    if (Hive.isBoxOpen('packageBox') && phone.isNotEmpty) {
+      final packageBox = Hive.box('packageBox');
+      if (packageBox.containsKey(phone)) {
+        final liveData = packageBox.get(phone);
+        if (liveData is Map) {
+          data = Map<String, dynamic>.from(liveData);
+        }
+      }
     }
-    final priceController = controller.priceControllers[reqId]!;
-    bool isExpanded = request['isExpanded'] ?? false;
 
-    bool hasMobilePackage = request['mobileName'] != null && 
-        request['mobileName'].toString() != 'کوئی ڈیوائس نہیں' && 
-        request['mobileName'].toString().isNotEmpty &&
-        request['mobileName'].toString() != 'N/A';
+    // 🎯 3. IMEI کی تازہ ترین لائیو موجودگی چیک کریں
+    final String rawImei = (data['imei'] ?? 'N/A').toString().trim();
+    final bool hasImei = rawImei.isNotEmpty && rawImei != 'N/A' && rawImei != 'null';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      elevation: 2,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: Colors.red.withValues(alpha: 0.3), width: 1),
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: () {
-              request['isExpanded'] = !isExpanded;
-              onStateChanged();
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 🎯 رو 1: آئیکن + کسٹمر کا نام/ولدیت/قوم + فون + کیپسول + ایرو
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.person, color: Color(0xFFE53935)),
-                  ),
+                  const Icon(Icons.account_circle, color: Colors.grey, size: 38),
                   const SizedBox(width: 10),
+                  
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Text(request['name'] ?? 'نام نا معلوم', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: const Color(0xFFE53935), width: 1),
-                              ),
-                              child: Text(
-                                request['requestType'] ?? 'صرف سائن اپ', 
-                                style: const TextStyle(fontSize: 10, color: Color(0xFFE53935), fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
+                        RequestCardHelper.buildCustomerHeaderWidget(
+                          data: data,
+                          phone: phone,
                         ),
                         const SizedBox(height: 3),
-                        Text(
-                          hasMobilePackage 
-                            ? "فون: ${request['phone']} | ماڈل: ${request['mobileName']}" 
-                            : "فون: ${request['phone']} | (صرف سائن اپ - کوئی پیکج نہیں)",
-                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        
+                        InkWell(
+                          onTap: () => _makePhoneCall(phone),
+                          child: Text(
+                            phone,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.green,
+                              fontWeight: FontWeight.w700,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(isExpanded ? Icons.expand_less : Icons.expand_more, color: Colors.grey[600]),
+
+                  RequestCardHelper.buildTypeCapsuleWidget(
+                    data: data,
+                    phone: phone,
+                  ),
+
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () => setState(() => _isExpanded = !_isExpanded),
+                    child: Icon(
+                      _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      color: Colors.black54,
+                      size: 26,
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ),
 
-          if (isExpanded) ...[
-            const Divider(height: 1, color: Colors.grey),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("■ کسٹمر کی معلومات", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFE53935), fontSize: 14)),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 90,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Icon(Icons.camera_alt, size: 30, color: Colors.grey),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "${request['name']} (والد: ${request['fatherName']}) | قوم: ${request['caste']}", 
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)
-                              ),
-                              const SizedBox(height: 4),
-                              InkWell(
-                                onTap: () => controller.makePhoneCall(request['phone']),
-                                child: Text("فون نمبر: ${request['phone']} 📞 (کال کریں)", style: const TextStyle(fontSize: 13, color: Colors.blue, fontWeight: FontWeight.bold)),
-                              ),
-                              const SizedBox(height: 3),
-                              Text("شناختی کارڈ: ${request['cnic']}", style: const TextStyle(fontSize: 12)),
-                              const SizedBox(height: 3),
-                              Text("پتہ: ${request['address']}", style: const TextStyle(fontSize: 12)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              const SizedBox(height: 12),
+              const Divider(height: 1, thickness: 0.8),
+              const SizedBox(height: 12),
 
-                  if (hasMobilePackage) ...[
-                    const SizedBox(height: 12),
-                    const Text("■ منتخب کردہ موبائل اور قسط پیکج", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFE53935), fontSize: 14)),
-                    const SizedBox(height: 6),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("موبائل ماڈل: ${request['mobileName'] ?? 'N/A'}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 3),
-                          Text("خریداری کا موڈ: ${request['isBuyStockMode'] == true ? 'بائے اسٹاک' : 'مینول'}", style: const TextStyle(fontSize: 12)),
-                          
-                          if (request['isBuyStockMode'] != true) ...[
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: priceController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: "مارکیٹ تصدیق شدہ نقد قیمت درج کریں",
-                                isDense: true,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-                              ),
-                            ),
-                          ],
+              // 🎯 رو 2: موبائل ماڈل + پرائس باکس + IMEI
+              RequestCardHelper.buildPackageAndImeiRow(
+                context: context,
+                data: data,
+                phone: phone,
+                priceController: _priceController,
+              ),
 
-                          const SizedBox(height: 6),
-                          Text("پیکج: ${request['packageName'] ?? 'N/A'} | ماہانہ قسط: ${request['monthlyInstallment'] ?? '0'} روپے", style: const TextStyle(fontSize: 12)),
-                          const SizedBox(height: 3),
-                          Text("نقد قیمت: ${request['cashPrice'] ?? '0'} روپے", style: const TextStyle(fontSize: 12)),
-                          const SizedBox(height: 3),
-                          Text("ایڈوانس: ${request['advanceAmount'] ?? '0'} روپے", style: const TextStyle(fontSize: 12)),
-                          const SizedBox(height: 3),
-                          Text("کل ادھار قیمت: ${request['totalPrice'] ?? '0'} روپے", style: const TextStyle(fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  ],
+              // 🎯 3. کولیپس ایبل کسٹمر اور ضامن کی معلومات
+              if (_isExpanded) ...[
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                
+                CustomerInfoWidget(customerData: {'customerPhone': phone, ...data}),
+                const SizedBox(height: 10),
+                GuarantorInfoWidget(guarantorData: {'customerPhone': phone, ...data}),
+              ],
 
-                  if (request['hasGuarantor'] == true) ...[
-                    const SizedBox(height: 12),
-                    const Text("■ ضامن کی معلومات", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFE53935), fontSize: 14)),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 60,
-                            height: 70,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Icon(Icons.person_outline, size: 25, color: Colors.grey),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "${request['guarantorName']} (والد: ${request['guarantorFatherName']}) | قوم: ${request['guarantorCaste']} | رشتہ: ${request['guarantorRelationship']}", 
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)
-                                ),
-                                const SizedBox(height: 4),
-                                InkWell(
-                                  onTap: () => controller.makePhoneCall(request['guarantorPhone']),
-                                  child: Text("فون: ${request['guarantorPhone']} 📞", style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold)),
-                                ),
-                                const SizedBox(height: 3),
-                                Text("شناختی کارڈ: ${request['guarantorCnic']}", style: const TextStyle(fontSize: 12)),
-                                const SizedBox(height: 3),
-                                Text("پتہ: ${request['guarantorAddress']}", style: const TextStyle(fontSize: 12)),
-                              ],
+              // 🎯 4. مشروط ایکشن وزٹس
+              if (!widget.isCompletedView) ...[
+                const SizedBox(height: 12),
+                const Divider(height: 1, thickness: 0.8),
+                const SizedBox(height: 10),
+
+                if (widget.isApprovedView) ...[
+                  if (!hasImei)
+                    // 🎯 A. اگر IMEI نہیں ہے -> ImeiController دکھائیں اور نیویگیشن کے بعد آٹو ری فریش کریں
+                    ImeiControllerWidget(
+                      requestData: {'customerPhone': phone, ...data},
+                      phone: phone,
+                      onNavigateToPurchase: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PurchasePage(
+                              applicantPhone: phone,
                             ),
                           ),
-                        ],
-                      ),
+                        );
+
+                        // 🎯 واپس آتے ہی سکرین ری فریش کریں تاکہ LegalDocsUI فوراً ڈسپلے ہو جائے
+                        if (result == true || mounted) {
+                          if (widget.onStateChanged != null) {
+                            widget.onStateChanged!();
+                          }
+                          setState(() {});
+                        }
+                      },
+                    )
+                  else
+                    // 🎯 B. اگر IMEI موجود ہے -> LegalDocsUI دکھائیں
+                    LegalDocsUI(
+                      requestData: {'customerPhone': phone, ...data},
+                      phone: phone,
+                      onStateChanged: widget.onStateChanged,
                     ),
-                  ],
-
-                  const SizedBox(height: 15),
-
-                  // --- چاروں فائنل ایکشن بٹنز ---
+                ] else
+                  // 🎯 اگر پینڈنگ سکرین ہے -> ایکشن بٹنز
                   CardActionButtons(
-                    controller: controller,
-                    hiveKey: reqId,
-                    isPurchase: hasMobilePackage,
-                    request: request,
+                    requestData: {'customerPhone': phone, ...data},
+                    request: widget.request,
+                    controller: widget.controller,
+                    hiveKey: phone,
+                    isPurchase: false,
+                    priceController: _priceController,
+                    onStateChanged: widget.onStateChanged,
                   ),
-
-                ],
-              ),
-            ),
-          ],
-        ],
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

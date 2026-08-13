@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'welcome/admin_panel/admin_panel_controller.dart';
-import 'welcome/admin_panel/capsule_filter.dart';
 import 'welcome/admin_panel/approved_view.dart';
 import 'welcome/admin_panel/pending_view.dart';
 import 'welcome/admin_panel/completed_view.dart'; 
 import 'welcome/admin_panel/pending/pending_approvals_drawer.dart'; 
 import 'welcome/admin_panel/pending/pending_approvals_controller.dart';
+import 'welcome/admin_panel/admin_top_ui.dart';
 
 class AdminPanelPage extends StatefulWidget {
   const AdminPanelPage({super.key});
@@ -48,87 +48,55 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: Colors.grey[100],
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFE53935),
-          title: const Text(
-            "ایڈمن پینل - موصولہ درخواستیں", 
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          centerTitle: true,
-          leadingWidth: 120, 
-          leading: Builder(
-            builder: (context) => Transform.translate(
-              offset: const Offset(-12, 0),
-              child: Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
+        drawer: const PendingApprovalsDrawer(),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // 🎯 ٹاپ ہیڈر (ایڈمن پینل، نایاب قسط پوائنٹ اور ڈراور بٹن)
+              Builder(
+                builder: (context) {
+                  return AdminTopUI(
+                    selectedIndex: _controller.currentIndex,
+                    onTabSelected: (index) {
+                      _controller.pageController.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    onMenuPressed: () => Scaffold.of(context).openDrawer(),
+                    pendingCount: pendingDrawerCount,
+                  );
+                },
+              ),
+
+              // 🎯 پیج ویو (تمام ویوز کا سائز کنٹرول کرنے کے لیے)
+              Expanded(
+                child: PageView(
+                  controller: _controller.pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _controller.currentIndex = index;
+                    });
+                  },
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.menu, color: Colors.white, size: 28),
-                      onPressed: () => Scaffold.of(context).openDrawer(),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                    ApprovedView(
+                      controller: _controller,
+                      onStateChanged: _refreshState,
                     ),
-                    if (pendingDrawerCount > 0) const SizedBox(width: 8),
-                    if (pendingDrawerCount > 0)
-                      Container(
-                        width: 23,
-                        height: 23,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '$pendingDrawerCount',
-                          style: const TextStyle(
-                            color: Color(0xFFE53935),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
+                    PendingView(
+                      controller: _controller,
+                      onStateChanged: _refreshState,
+                    ),
+                    CompletedView(
+                      controller: _controller,
+                      onStateChanged: _refreshState,
+                    ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-        ),
-        drawer: const PendingApprovalsDrawer(),
-        body: Column(
-          children: [
-            CapsuleFilterWidget(
-              controller: _controller,
-              onStateChanged: _refreshState,
-            ),
-            const Divider(height: 1, color: Colors.grey),
-            Expanded(
-              child: PageView(
-                controller: _controller.pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _controller.currentIndex = index;
-                  });
-                },
-                children: [
-                  ApprovedView(
-                    controller: _controller,
-                    onStateChanged: _refreshState,
-                  ),
-                  PendingView(
-                    controller: _controller,
-                    onStateChanged: _refreshState,
-                  ),
-                  CompletedView(
-                    controller: _controller,
-                    onStateChanged: _refreshState,
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );

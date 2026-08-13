@@ -1,19 +1,15 @@
-// file: item_package_logic.dart
-
 class ItemPackageLogic {
   // مین ویری ایبلز جو UI میں شو ہوں گے
   String? mobileName;
   String? packageName;
-  String? cashPrice; // نقد قیمت کا نیا ویری ایبل
+  String? cashPrice;
   String? advanceAmount;
   String? monthlyInstallment;
   String? totalPrice;
   String? imei;
-  String? color;
   String? checkNumber;
   String? bankName;
   
-  // یہ چیک کرنے کے لیے کہ آیا بائی اسٹاک موڈ ہے یا مینول
   bool isBuyStockMode = false;
 
   /// جب قسط کیلکولیٹر سے ڈیٹا واپس آئے گا تو یہ فنکشن اسے سیٹ کرے گا
@@ -26,7 +22,6 @@ class ItemPackageLogic {
     required String total,
     bool buyStock = false,
     String? stockImei,
-    String? stockColor,
     String? chqNumber,
     String? bnkName,
   }) {
@@ -39,11 +34,10 @@ class ItemPackageLogic {
     
     isBuyStockMode = buyStock;
 
-    // بائے اسٹاک موڈ کی اضافی فیلڈز
+    // بائے اسٹاک موڈ کی فیلڈ (کلر کو مکمل طور پر ہٹا دیا گیا ہے)
     imei = (buyStock && stockImei != null && stockImei.isNotEmpty) ? stockImei : null;
-    color = (buyStock && stockColor != null && stockColor.isNotEmpty) ? stockColor : null;
 
-    // سکیورٹی چیک / بینک کی فیلڈز (دونوں موڈز کے لیے آپشنل)
+    // سکیورٹی چیک / بینک کی فیلڈز
     checkNumber = (chqNumber != null && chqNumber.isNotEmpty) ? chqNumber : null;
     bankName = (bnkName != null && bnkName.isNotEmpty) ? bnkName : null;
   }
@@ -59,7 +53,6 @@ class ItemPackageLogic {
       'totalPrice': totalPrice ?? '0',
       'isBuyStockMode': isBuyStockMode,
       'imei': imei,
-      'color': color,
       'checkNumber': checkNumber,
       'bankName': bankName,
     };
@@ -74,7 +67,6 @@ class ItemPackageLogic {
     monthlyInstallment = null;
     totalPrice = null;
     imei = null;
-    color = null;
     checkNumber = null;
     bankName = null;
     isBuyStockMode = false;

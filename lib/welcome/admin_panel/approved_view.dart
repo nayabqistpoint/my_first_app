@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'admin_panel_controller.dart';
-import 'capsule_filter.dart';
 import 'request_card_item.dart';
 
 class ApprovedView extends StatelessWidget {
@@ -15,46 +15,56 @@ class ApprovedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // صرف 'approved' سٹیٹس والی ریکویسٹس کو فلٹر کریں (یہاں requests کی جگہ approvedRequests کر دیا ہے)
-    String currentSubFilter = controller.pageFilters['approved'] ?? 'all';
+    return ValueListenableBuilder<Box?>(
+      valueListenable: Hive.isBoxOpen('packageBox')
+          ? Hive.box('packageBox').listenable()
+          : ValueNotifier<Box?>(null),
+      builder: (context, Box? box, _) {
+        List<Map<String, dynamic>> approvedList = [];
 
-    List<Map<String, dynamic>> filteredList = controller.approvedRequests.where((req) {
-      if (currentSubFilter == 'all') return true;
-      return req['filterKey'] == currentSubFilter;
-    }).toList();
+        if (box != null && box.isOpen) {
+          for (var item in box.values) {
+            if (item is Map) {
+              final Map<String, dynamic> data = Map<String, dynamic>.from(item);
+              final String status = (data['status'] ?? '').toString().trim().toLowerCase();
 
-    return Column(
-      children: [
-        // ان-پیج سب-فلٹرز
-        InPageSubFiltersWidget(
-          pageStatus: 'approved',
-          controller: controller,
-          onStateChanged: onStateChanged,
-        ),
-        const Divider(height: 1, color: Colors.grey),
+              // 🎯 صرف 'approved' والے کارڈ دکھائیں (کیپٹل/اسمال دونوں ہینڈل ہیں)
+              if (status == 'approved') {
+                approvedList.add(data);
+              }
+            }
+          }
+        } else {
+          // اگر ہائیو باکس اوپن نہ ہو تو کنٹرولر سے فلٹر کریں
+          approvedList = controller.approvedRequests.where((item) {
+            final String status = (item['status'] ?? '').toString().trim().toLowerCase();
+            return status == 'approved';
+          }).toList();
+        }
 
-        // کارڈز کی لسٹ
-        Expanded(
-          child: filteredList.isEmpty
-              ? const Center(
-                  child: Text(
-                    "کوئی منظور شدہ ریکویسٹ موجود نہیں ہے",
-                    style: TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(10),
-                  itemCount: filteredList.length,
-                  itemBuilder: (context, index) {
-                    return RequestCardItem(
-                      request: filteredList[index],
-                      controller: controller,
-                      onStateChanged: onStateChanged,
-                    );
-                  },
-                ),
-        ),
-      ],
+        if (approvedList.isEmpty) {
+          return const Center(
+            child: Text(
+              "کوئی منظور شدہ ریکویسٹ موجود نہیں ہے",
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(10),
+          itemCount: approvedList.length,
+          itemBuilder: (context, index) {
+            return RequestCardItem(
+              requestData: approvedList[index],
+              request: approvedList[index],
+              controller: controller,
+              isApprovedView: true,
+              onStateChanged: onStateChanged,
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'common/item_detail_widget.dart';
-
-// پیمنٹ سورس کارڈ کی حالت (State) پڑھنے کے لیے امپورٹ
 import '../../dashboard/widgets/payment_source_card.dart';
 
 class PurchasePageController {
+  // 🎯 اس کسٹمر (Applicant) کا فون نمبر جس کی خریداری ہو رہی ہے
+  String? targetApplicantPhone;
+
   List<Map<String, dynamic>> itemsList = [
     {
       'itemName': '',
@@ -27,16 +28,22 @@ class PurchasePageController {
   bool isDiscountPercentage = false;
   String descriptionText = '';
 
-  // پیمنٹ سورس اور اسپلٹ پیمنٹس کے لیے ویری ایبلز
   String? selectedPaymentSource = 'Cash';
   List<Map<String, dynamic>> splitPaymentsList = [];
 
+<<<<<<< HEAD
   // UI سے لائیو اسپلٹ پیمنٹ ڈیٹا پڑھنے کے لیے گلوبل کی (GlobalKey)
+=======
+>>>>>>> a
   final GlobalKey<PaymentSourceCardState> paymentCardKey = GlobalKey<PaymentSourceCardState>();
+
+  // 🎯 محفوظ طریقے سے ہائیو باکسز گیٹ کرنے کا ہیلپر فنکشن (سائز کم کرنے کے لیے)
+  Future<Box> _getBox(String boxName) async =>
+      Hive.isBoxOpen(boxName) ? Hive.box(boxName) : await Hive.openBox(boxName);
 
   bool addNewItemRow() {
     final lastItem = itemsList.last;
-    if (lastItem['itemName'] != null && lastItem['itemName'].toString().isNotEmpty) {
+    if ((lastItem['itemName'] ?? '').toString().isNotEmpty) {
       itemsList.add({
         'itemName': '',
         'imeiNo': '',
@@ -56,7 +63,6 @@ class PurchasePageController {
     }
   }
 
-  // رو کلک کرنے پر آئٹم ڈیٹیل وجٹ کھولنے کی لاجک
   Future<void> handleItemDetailNavigation(BuildContext context, int index, {bool isEdit = false}) async {
     int currentIndex = index;
     bool shouldContinue = true;
@@ -70,12 +76,8 @@ class PurchasePageController {
         context,
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) => ItemDetailWidget(initialData: initialData),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
-          },
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              FadeTransition(opacity: animation, child: child),
           transitionDuration: const Duration(milliseconds: 150),
         ),
       );
@@ -96,32 +98,27 @@ class PurchasePageController {
     }
   }
 
+<<<<<<< HEAD
   // ٹرانزیکشن باکس، سٹاک باکس اور بینک باکس میں محفوظ کرنے کا مکمل اور محفوظ طریقہ
+=======
+>>>>>>> a
   Future<bool> savePurchase() async {
     if (itemsList.isEmpty || (itemsList.first['itemName'] ?? '').toString().isEmpty) {
       return false;
     }
 
     try {
-      // 1. باکسز کو محفوظ طریقے سے گیٹ (Get/Open) کرنا
-      final Box transactionBox = Hive.isBoxOpen('transactionBox') 
-          ? Hive.box('transactionBox') 
-          : await Hive.openBox('transactionBox');
-          
-      final Box stockBox = Hive.isBoxOpen('stockBox') 
-          ? Hive.box('stockBox') 
-          : await Hive.openBox('stockBox');
-
-      final Box bankBox = Hive.isBoxOpen('bankBox')
-          ? Hive.box('bankBox')
-          : await Hive.openBox('bankBox');
+      final Box transactionBox = await _getBox('transactionBox');
+      final Box stockBox = await _getBox('stockBox');
+      final Box bankBox = await _getBox('bankBox');
 
       String finalPartyName = selectedPartyName ?? '';
 
-      // کسٹمر/پارٹی کا نام نکالنا (اگر فون نمبر موجود ہو)
+      // 1. کسٹمر/پارٹی کا نام نکالنا
       if (finalPartyName.isEmpty && selectedPartyPhone != null && selectedPartyPhone!.isNotEmpty) {
         if (Hive.isBoxOpen('customerBox')) {
           final customerBox = Hive.box('customerBox');
+<<<<<<< HEAD
           
           if (customerBox.containsKey(selectedPartyPhone)) {
             final cData = Map<String, dynamic>.from(customerBox.get(selectedPartyPhone) as Map);
@@ -141,22 +138,40 @@ class PurchasePageController {
               final Map<String, dynamic> cData = Map<String, dynamic>.from(matchedCustomer as Map);
               finalPartyName = cData['customerName']?.toString() ?? cData['name']?.toString() ?? '';
             }
+=======
+          final cVal = customerBox.get(selectedPartyPhone) ??
+              customerBox.values.firstWhere(
+                (e) => e is Map && ((e['customerPhone'] ?? e['phone'] ?? '').toString() == selectedPartyPhone),
+                orElse: () => null,
+              );
+          if (cVal is Map) {
+            finalPartyName = cVal['customerName']?.toString() ?? cVal['name']?.toString() ?? '';
+>>>>>>> a
           }
         }
       }
 
       List<String> imeiList = [];
+<<<<<<< HEAD
       List<Map<String, dynamic>> minimalTransactionItems = []; // ٹرانزیکشن باکس کے لیے صرف مختصر لسٹ
       final String nowIso = DateTime.now().toIso8601String();
       final int timeKey = DateTime.now().millisecondsSinceEpoch;
 
       // 2. تمام تفصیلی آئٹمز کو صرف اسٹاک باکس (stockBox) میں محفوظ کرنا
+=======
+      List<Map<String, dynamic>> minimalTransactionItems = [];
+      final String nowIso = DateTime.now().toIso8601String();
+      final int timeKey = DateTime.now().millisecondsSinceEpoch;
+
+      // 2. تمام آئٹمز کو سٹاک باکس (stockBox) میں محفوظ کرنا
+>>>>>>> a
       for (int i = 0; i < itemsList.length; i++) {
         var item = itemsList[i];
-        if (item['itemName'] != null && item['itemName'].toString().isNotEmpty) {
+        if ((item['itemName'] ?? '').toString().isNotEmpty) {
           String imei = item['imeiNo']?.toString() ?? '';
           if (imei.isNotEmpty) imeiList.add(imei);
 
+<<<<<<< HEAD
           final stockKey = "${timeKey}_${i}_${item['itemName']}";
           
           String itemRam = (item['ram'] != null && item['ram'].toString().isNotEmpty)
@@ -168,6 +183,11 @@ class PurchasePageController {
               : (item['selectedRom']?.toString() ?? '');
 
           // اسٹاک باکس میں تمام تفصیلات محفوظ ہوں گی
+=======
+          String itemRam = (item['ram'] ?? '').toString().isNotEmpty ? item['ram'].toString() : (item['selectedRam']?.toString() ?? '');
+          String itemRom = (item['rom'] ?? '').toString().isNotEmpty ? item['rom'].toString() : (item['selectedRom']?.toString() ?? '');
+
+>>>>>>> a
           final stockData = {
             'itemName': item['itemName'],
             'imeiNo': imei,
@@ -175,9 +195,7 @@ class PurchasePageController {
             'salePrice': item['salePrice'] ?? '0',
             'quantity': item['quantity'] ?? '1',
             'adjustment': item['adjustment'] ?? '',
-            'supplier': (item['supplier'] != null && item['supplier'].toString().isNotEmpty) 
-                ? item['supplier'] 
-                : finalPartyName,
+            'supplier': (item['supplier'] ?? '').toString().isNotEmpty ? item['supplier'] : finalPartyName,
             'condition': item['condition'] ?? 'new',
             'warranty': item['warranty'] ?? 0,
             'color': item['color'] ?? item['selectedColor'] ?? '',
@@ -188,9 +206,14 @@ class PurchasePageController {
             'customerPhone': selectedPartyPhone ?? '',
           };
 
+<<<<<<< HEAD
           await stockBox.put(stockKey, stockData);
 
           // 3. ٹرانزیکشن باکس کے لیے صرف ہلکا/مختصر رو کا ڈیٹا تیار کرنا
+=======
+          await stockBox.put("${timeKey}_${i}_${item['itemName']}", stockData);
+
+>>>>>>> a
           minimalTransactionItems.add({
             'itemName': item['itemName'],
             'imeiNo': imei,
@@ -201,10 +224,16 @@ class PurchasePageController {
         }
       }
 
+<<<<<<< HEAD
       // UI سے لائیو اسپلٹ پیمنٹس اور سورس کی لسٹ حاصل کرنا
+=======
+      // 3. اسپلٹ پیمنٹس اور بینک باکس (bankBox) سے رقم منہا کرنا
+>>>>>>> a
       final cardState = paymentCardKey.currentState;
       bool isSplit = cardState?.isSplitMode ?? false;
+      splitPaymentsList = isSplit ? (cardState?.getSplitPaymentsList() ?? []) : [];
 
+<<<<<<< HEAD
       if (isSplit) {
         splitPaymentsList = cardState?.getSplitPaymentsList() ?? [];
       } else {
@@ -212,6 +241,8 @@ class PurchasePageController {
       }
 
       // 4. بینک باکس (bankBox) سے رقم منہا (Deduct) کرنا
+=======
+>>>>>>> a
       if (paidAmount > 0) {
         if (isSplit && splitPaymentsList.isNotEmpty) {
           for (var split in splitPaymentsList) {
@@ -229,9 +260,13 @@ class PurchasePageController {
         }
       }
 
+<<<<<<< HEAD
       // 5. ٹرانزیکشن باکس (transactionBox) میں مختصر آئٹم لسٹ کے ساتھ سیو کرنا
       final transactionKey = timeKey.toString();
 
+=======
+      // 4. ٹرانزیکشن باکس (transactionBox) میں محفوظ کرنا
+>>>>>>> a
       final transactionData = {
         'type': 'purchase',
         'customerPhone': selectedPartyPhone ?? '',
@@ -243,7 +278,11 @@ class PurchasePageController {
         'description': descriptionText,
         'remarks': imeiList.join(','),
         'date': nowIso,
+<<<<<<< HEAD
         'items': minimalTransactionItems, // <-- اب یہاں اضافی ڈیٹا کے بغیر صرف مختصر آئٹمز جائیں گے
+=======
+        'items': minimalTransactionItems,
+>>>>>>> a
         'discount': {
           'value': discountValue,
           'isPercentage': isDiscountPercentage,
@@ -256,7 +295,49 @@ class PurchasePageController {
         'isCreatedByAdmin': true,
       };
 
-      await transactionBox.put(transactionKey, transactionData);
+      await transactionBox.put(timeKey.toString(), transactionData);
+
+      // 🎯 5. [میپنگ برج] packageBox کے اندر IMEI، mobileName، اور cashPrice کی اپڈیٹ
+      final String phoneToUpdate = (targetApplicantPhone ?? selectedPartyPhone ?? '').trim();
+
+      if (phoneToUpdate.isNotEmpty && itemsList.isNotEmpty) {
+        try {
+          final Box packageBox = await _getBox('packageBox');
+          final firstItem = itemsList.first;
+
+          final String purchasedImei = firstItem['imeiNo']?.toString() ?? '';
+          final String purchasedName = firstItem['itemName']?.toString() ?? '';
+          final String purchasedSalePrice = firstItem['salePrice']?.toString() ?? '';
+
+          dynamic targetKey;
+          Map<String, dynamic>? targetData;
+
+          if (packageBox.containsKey(phoneToUpdate)) {
+            targetKey = phoneToUpdate;
+            targetData = Map<String, dynamic>.from(packageBox.get(phoneToUpdate) as Map);
+          } else {
+            for (var key in packageBox.keys) {
+              final val = packageBox.get(key);
+              if (val is Map && (val['customerPhone'] ?? val['phone'] ?? '').toString().trim() == phoneToUpdate) {
+                targetKey = key;
+                targetData = Map<String, dynamic>.from(val);
+                break;
+              }
+            }
+          }
+
+          if (targetKey != null && targetData != null) {
+            if (purchasedImei.isNotEmpty) targetData['imei'] = purchasedImei;
+            if (purchasedName.isNotEmpty && purchasedName != "موبائل / آئٹم") targetData['mobileName'] = purchasedName;
+            if (purchasedSalePrice.isNotEmpty) targetData['cashPrice'] = purchasedSalePrice;
+
+            await packageBox.put(targetKey, targetData);
+          }
+        } catch (e) {
+          debugPrint("Error in Mapping packageBox fields: $e");
+        }
+      }
+
       return true;
     } catch (e) {
       debugPrint("Save Purchase Error: $e");

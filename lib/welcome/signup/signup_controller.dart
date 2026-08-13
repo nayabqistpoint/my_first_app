@@ -51,7 +51,7 @@ class SignUpController extends ChangeNotifier {
         return false;
       }
 
-      // موبائل نمبر سے صرف ہندسے نکالنا (یونیک کی کے لیے)
+      // موبائل نمبر سے صرف ہندسے نکالنا
       String cleanPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
 
       _isLoading = true;
@@ -75,7 +75,7 @@ class SignUpController extends ChangeNotifier {
       final String currentTimestamp = DateTime.now().toString();
 
       // -------------------------------------------------------------
-      // 2. ہائیو باکسز میں لنکیج اور سیونگ لاجک (بغیر کسی ڈیٹا مسنگ کے)
+      // 2. ہائیو باکسز میں لنکیج اور سیونگ لاجک
       // -------------------------------------------------------------
 
       // (الف) کسٹمر باکس (customerBox)
@@ -93,28 +93,53 @@ class SignUpController extends ChangeNotifier {
       final Box guarantorBox = Hive.box('guarantorBox');
       if (guarantorData['isGuarantorPresent'] == true) {
         final Map<String, dynamic> finalGuarantorMap = {
-          'customerPhone': cleanPhone, // کسٹمر سے جوڑنے والی کڑی
+          'customerPhone': cleanPhone,
           ...guarantorData,
           'timestamp': currentTimestamp,
         };
         await guarantorBox.put(cleanPhone, finalGuarantorMap);
       } else {
-        // اگر ضامن موجود نہیں تو پہلے سے موجود کوئی پرانی اینٹری ڈیلیٹ کر دیں
         await guarantorBox.delete(cleanPhone);
       }
 
       // (ج) پیکج باکس (packageBox)
       final Box packageBox = Hive.box('packageBox');
       if (packageData['isPurchaseRequested'] == true) {
+
+        // 🎯 [طے شدہ قانون]: پچھلا سٹیٹس چیک کرنا (1 Customer = 1 Active Device)
+        if (packageBox.containsKey(cleanPhone)) {
+          final existingRecord = packageBox.get(cleanPhone);
+          if (existingRecord is Map) {
+            String existingStatus = (existingRecord['status'] ?? 'Pending').toString().trim().toLowerCase();
+
+            // 🛑 1. اگر ڈیوائس کا ہینڈ اوور مکمل (Completed) ہو چکا ہے تو روک دیں
+            if (existingStatus == 'completed') {
+              _isLoading = false;
+              notifyListeners();
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('محترم صارف! اس موبائل نمبر پر آپ کا ایک فعال قسطوں کا اکاؤنٹ پہلے سے موجود ہے۔ براہ کرم دوسرا موبائل نمبر استعمال کریں!'),
+                    backgroundColor: Colors.orange,
+                    duration: Duration(seconds: 4),
+                  ),
+                );
+              }
+              return false;
+            }
+          }
+        }
+
+        // 🔄 2. اگر Pending یا Approved موڈ میں ہے تو پرانی اینٹری اوور رائٹ ہو کر نیا 'Pending' بن جائے گی
         final Map<String, dynamic> finalPackageMap = {
-          'customerPhone': cleanPhone, // کسٹمر سے جوڑنے والی کڑی
+          'customerPhone': cleanPhone,
           ...packageData,
           'status': 'Pending',
           'timestamp': currentTimestamp,
         };
         await packageBox.put(cleanPhone, finalPackageMap);
       } else {
-        // اگر پرچیز ریکویسٹ آن نہیں ہے تو اس باکس میں اینٹری نہ رکھیں
         await packageBox.delete(cleanPhone);
       }
 

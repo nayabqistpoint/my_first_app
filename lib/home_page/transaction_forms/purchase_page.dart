@@ -10,7 +10,10 @@ import 'common/transaction_summary_widget.dart';
 import '../../dashboard/widgets/payment_source_card.dart';
 
 class PurchasePage extends StatefulWidget {
-  const PurchasePage({super.key});
+  // 🎯 کسٹمر (Applicant) کا فون نمبر ریسیو کرنے کے لیے نيا پیرامیٹر
+  final String? applicantPhone;
+
+  const PurchasePage({super.key, this.applicantPhone});
 
   @override
   State<PurchasePage> createState() => _PurchasePageState();
@@ -30,6 +33,11 @@ class _PurchasePageState extends State<PurchasePage> {
   void initState() {
     super.initState();
     controller = PurchasePageController();
+    
+    // 🎯 کسٹمر کے فون نمبر کو کنٹرولر کی targetApplicantPhone فیلڈ سے جوڑ دیا گیا
+    if (widget.applicantPhone != null && widget.applicantPhone!.trim().isNotEmpty) {
+      controller.targetApplicantPhone = widget.applicantPhone!.trim();
+    }
   }
 
   @override

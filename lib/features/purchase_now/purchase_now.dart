@@ -19,6 +19,15 @@ class _PurchaseNowState extends State<PurchaseNow> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    // پیج کھلتے ہی سوئچ کو خودکار طور پر ON کر دیا جائے گا تاکہ ڈیٹا مس نہ ہو
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.packageKey.currentState?.setPurchaseRequested(true);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -33,7 +42,9 @@ class _PurchaseNowState extends State<PurchaseNow> {
         elevation: 0,
       ),
       // پیکج یو آئی کو کنٹرولر کی کی کے ساتھ جوڑنا
-      body: ItemPackageUI(key: _controller.packageKey),
+      body: SingleChildScrollView(
+        child: ItemPackageUI(key: _controller.packageKey),
+      ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         color: Colors.white,
@@ -55,7 +66,8 @@ class _PurchaseNowState extends State<PurchaseNow> {
                       if (widget.customerMobileNumber.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content: Text("خامی: کسٹمر کا موبائل نمبر غائب ہے!")),
+                            content: Text("خامی: کسٹمر کا موبائل نمبر غائب ہے!"),
+                          ),
                         );
                         return;
                       }
@@ -98,8 +110,7 @@ class _PurchaseNowState extends State<PurchaseNow> {
                     )
                   : const Text(
                       "سبمٹ کریں",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
             ),
           ),
