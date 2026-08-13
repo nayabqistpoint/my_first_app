@@ -11,11 +11,7 @@ class ConditionSelectorWidget extends StatefulWidget {
   final int selectedWarrantyMonths;
   final ValueChanged<int?> onWarrantyChanged;
 
-<<<<<<< HEAD
-  // نئی فیلڈز کے لیے کنٹرولرز اور ویلیوز
-=======
   // --- RAM اور ROM کے لیے پیرامیٹرز ---
->>>>>>> a
   final TextEditingController ramController;
   final TextEditingController romController;
   final String? selectedRam;
@@ -48,13 +44,8 @@ class ConditionSelectorWidget extends StatefulWidget {
 
 class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
   bool isCustomColor = false;
-<<<<<<< HEAD
-  bool isCustomRam = false; // مینوئل ریم کے لیے
-  bool isCustomRom = false; // مینوئل روم کے لیے
-=======
   bool isCustomRam = false;
   bool isCustomRom = false;
->>>>>>> a
 
   @override
   Widget build(BuildContext context) {
@@ -266,16 +257,9 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
         ),
         const SizedBox(height: 12),
 
-<<<<<<< HEAD
-        // 4. نئی لائن: RAM اور ROM (ایک ہی لائن میں آدھے آدھے سائز کے دو چھوٹے باکس)
-        Row(
-          children: [
-            // RAM باکس
-=======
         // 4. تیسری لائن: RAM اور ROM باکسز
         Row(
           children: [
->>>>>>> a
             Expanded(
               child: isCustomRam
                   ? TextField(
@@ -334,11 +318,6 @@ class _ConditionSelectorWidgetState extends State<ConditionSelectorWidget> {
                     ),
             ),
             const SizedBox(width: 10),
-<<<<<<< HEAD
-
-            // ROM باکس
-=======
->>>>>>> a
             Expanded(
               child: isCustomRom
                   ? TextField(

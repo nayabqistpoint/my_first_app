@@ -81,11 +81,7 @@ class _ItemDetailWidgetState extends State<ItemDetailWidget> {
                         selectedWarrantyMonths: controller.selectedWarrantyMonths,
                         onWarrantyChanged: (val) => setState(() => controller.selectedWarrantyMonths = val ?? 0),
                         
-<<<<<<< HEAD
-                        // --- RAM اور ROM کے فیلڈز شامل کر دیے گئے ہیں ---
-=======
                         // --- RAM اور ROM کے کنٹرولرز اور فنکشنز پاس کر دیے گئے ہیں ---
->>>>>>> a
                         ramController: controller.ramController,
                         romController: controller.romController,
                         selectedRam: controller.selectedRam,

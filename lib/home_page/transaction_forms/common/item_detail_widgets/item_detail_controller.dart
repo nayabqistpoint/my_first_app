@@ -10,22 +10,14 @@ class ItemDetailController {
   final TextEditingController adjustmentController = TextEditingController();
   final TextEditingController supplierController = TextEditingController();
 
-<<<<<<< HEAD
-  // --- RAM اور ROM کے لیے کنٹرولرز ---
-=======
   // --- RAM اور ROM کے لیے ٹیکسٹ کنٹرولرز ---
->>>>>>> a
   final TextEditingController ramController = TextEditingController();
   final TextEditingController romController = TextEditingController();
 
   String selectedCondition = 'new';
   int selectedWarrantyMonths = 0;
   String? selectedColor;
-<<<<<<< HEAD
-  
-=======
 
->>>>>>> a
   // --- RAM اور ROM کی منتخب ویلیوز ---
   String? selectedRam;
   String? selectedRom;
@@ -87,11 +79,7 @@ class ItemDetailController {
     adjustmentController.clear();
     supplierController.clear();
 
-<<<<<<< HEAD
-    // --- RAM اور ROM کلیئر کرنا ---
-=======
     // --- RAM اور ROM کنٹرولرز کلیئر کرنا ---
->>>>>>> a
     ramController.clear();
     romController.clear();
     selectedRam = null;
@@ -125,11 +113,7 @@ class ItemDetailController {
       "warranty": selectedWarrantyMonths,
       "color": selectedColor,
 
-<<<<<<< HEAD
-      // --- RAM اور ROM پیکٹ میں محفوظ کرنا ---
-=======
       // --- RAM اور ROM ڈیٹا پیکٹ میں محفوظ کرنا ---
->>>>>>> a
       "ram": finalRam,
       "selectedRam": selectedRam,
       "rom": finalRom,

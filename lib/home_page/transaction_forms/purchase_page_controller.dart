@@ -31,10 +31,6 @@ class PurchasePageController {
   String? selectedPaymentSource = 'Cash';
   List<Map<String, dynamic>> splitPaymentsList = [];
 
-<<<<<<< HEAD
-  // UI سے لائیو اسپلٹ پیمنٹ ڈیٹا پڑھنے کے لیے گلوبل کی (GlobalKey)
-=======
->>>>>>> a
   final GlobalKey<PaymentSourceCardState> paymentCardKey = GlobalKey<PaymentSourceCardState>();
 
   // 🎯 محفوظ طریقے سے ہائیو باکسز گیٹ کرنے کا ہیلپر فنکشن (سائز کم کرنے کے لیے)
@@ -98,10 +94,6 @@ class PurchasePageController {
     }
   }
 
-<<<<<<< HEAD
-  // ٹرانزیکشن باکس، سٹاک باکس اور بینک باکس میں محفوظ کرنے کا مکمل اور محفوظ طریقہ
-=======
->>>>>>> a
   Future<bool> savePurchase() async {
     if (itemsList.isEmpty || (itemsList.first['itemName'] ?? '').toString().isEmpty) {
       return false;
@@ -118,27 +110,6 @@ class PurchasePageController {
       if (finalPartyName.isEmpty && selectedPartyPhone != null && selectedPartyPhone!.isNotEmpty) {
         if (Hive.isBoxOpen('customerBox')) {
           final customerBox = Hive.box('customerBox');
-<<<<<<< HEAD
-          
-          if (customerBox.containsKey(selectedPartyPhone)) {
-            final cData = Map<String, dynamic>.from(customerBox.get(selectedPartyPhone) as Map);
-            finalPartyName = cData['customerName']?.toString() ?? cData['name']?.toString() ?? '';
-          } else {
-            final matchedCustomer = customerBox.values.firstWhere(
-              (element) {
-                if (element is! Map) return false;
-                final data = Map<String, dynamic>.from(element);
-                String phone = data['customerPhone']?.toString() ?? data['phone']?.toString() ?? '';
-                return phone == selectedPartyPhone;
-              },
-              orElse: () => null,
-            );
-
-            if (matchedCustomer != null) {
-              final Map<String, dynamic> cData = Map<String, dynamic>.from(matchedCustomer as Map);
-              finalPartyName = cData['customerName']?.toString() ?? cData['name']?.toString() ?? '';
-            }
-=======
           final cVal = customerBox.get(selectedPartyPhone) ??
               customerBox.values.firstWhere(
                 (e) => e is Map && ((e['customerPhone'] ?? e['phone'] ?? '').toString() == selectedPartyPhone),
@@ -146,48 +117,25 @@ class PurchasePageController {
               );
           if (cVal is Map) {
             finalPartyName = cVal['customerName']?.toString() ?? cVal['name']?.toString() ?? '';
->>>>>>> a
           }
         }
       }
 
       List<String> imeiList = [];
-<<<<<<< HEAD
-      List<Map<String, dynamic>> minimalTransactionItems = []; // ٹرانزیکشن باکس کے لیے صرف مختصر لسٹ
-      final String nowIso = DateTime.now().toIso8601String();
-      final int timeKey = DateTime.now().millisecondsSinceEpoch;
-
-      // 2. تمام تفصیلی آئٹمز کو صرف اسٹاک باکس (stockBox) میں محفوظ کرنا
-=======
       List<Map<String, dynamic>> minimalTransactionItems = [];
       final String nowIso = DateTime.now().toIso8601String();
       final int timeKey = DateTime.now().millisecondsSinceEpoch;
 
       // 2. تمام آئٹمز کو سٹاک باکس (stockBox) میں محفوظ کرنا
->>>>>>> a
       for (int i = 0; i < itemsList.length; i++) {
         var item = itemsList[i];
         if ((item['itemName'] ?? '').toString().isNotEmpty) {
           String imei = item['imeiNo']?.toString() ?? '';
           if (imei.isNotEmpty) imeiList.add(imei);
 
-<<<<<<< HEAD
-          final stockKey = "${timeKey}_${i}_${item['itemName']}";
-          
-          String itemRam = (item['ram'] != null && item['ram'].toString().isNotEmpty)
-              ? item['ram'].toString()
-              : (item['selectedRam']?.toString() ?? '');
-
-          String itemRom = (item['rom'] != null && item['rom'].toString().isNotEmpty)
-              ? item['rom'].toString()
-              : (item['selectedRom']?.toString() ?? '');
-
-          // اسٹاک باکس میں تمام تفصیلات محفوظ ہوں گی
-=======
           String itemRam = (item['ram'] ?? '').toString().isNotEmpty ? item['ram'].toString() : (item['selectedRam']?.toString() ?? '');
           String itemRom = (item['rom'] ?? '').toString().isNotEmpty ? item['rom'].toString() : (item['selectedRom']?.toString() ?? '');
 
->>>>>>> a
           final stockData = {
             'itemName': item['itemName'],
             'imeiNo': imei,
@@ -206,14 +154,8 @@ class PurchasePageController {
             'customerPhone': selectedPartyPhone ?? '',
           };
 
-<<<<<<< HEAD
-          await stockBox.put(stockKey, stockData);
-
-          // 3. ٹرانزیکشن باکس کے لیے صرف ہلکا/مختصر رو کا ڈیٹا تیار کرنا
-=======
           await stockBox.put("${timeKey}_${i}_${item['itemName']}", stockData);
 
->>>>>>> a
           minimalTransactionItems.add({
             'itemName': item['itemName'],
             'imeiNo': imei,
@@ -224,25 +166,11 @@ class PurchasePageController {
         }
       }
 
-<<<<<<< HEAD
-      // UI سے لائیو اسپلٹ پیمنٹس اور سورس کی لسٹ حاصل کرنا
-=======
       // 3. اسپلٹ پیمنٹس اور بینک باکس (bankBox) سے رقم منہا کرنا
->>>>>>> a
       final cardState = paymentCardKey.currentState;
       bool isSplit = cardState?.isSplitMode ?? false;
       splitPaymentsList = isSplit ? (cardState?.getSplitPaymentsList() ?? []) : [];
 
-<<<<<<< HEAD
-      if (isSplit) {
-        splitPaymentsList = cardState?.getSplitPaymentsList() ?? [];
-      } else {
-        splitPaymentsList.clear();
-      }
-
-      // 4. بینک باکس (bankBox) سے رقم منہا (Deduct) کرنا
-=======
->>>>>>> a
       if (paidAmount > 0) {
         if (isSplit && splitPaymentsList.isNotEmpty) {
           for (var split in splitPaymentsList) {
@@ -260,13 +188,7 @@ class PurchasePageController {
         }
       }
 
-<<<<<<< HEAD
-      // 5. ٹرانزیکشن باکس (transactionBox) میں مختصر آئٹم لسٹ کے ساتھ سیو کرنا
-      final transactionKey = timeKey.toString();
-
-=======
       // 4. ٹرانزیکشن باکس (transactionBox) میں محفوظ کرنا
->>>>>>> a
       final transactionData = {
         'type': 'purchase',
         'customerPhone': selectedPartyPhone ?? '',
@@ -278,11 +200,7 @@ class PurchasePageController {
         'description': descriptionText,
         'remarks': imeiList.join(','),
         'date': nowIso,
-<<<<<<< HEAD
-        'items': minimalTransactionItems, // <-- اب یہاں اضافی ڈیٹا کے بغیر صرف مختصر آئٹمز جائیں گے
-=======
         'items': minimalTransactionItems,
->>>>>>> a
         'discount': {
           'value': discountValue,
           'isPercentage': isDiscountPercentage,
