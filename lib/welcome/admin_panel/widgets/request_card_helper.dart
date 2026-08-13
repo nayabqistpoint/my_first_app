@@ -87,7 +87,7 @@ class RequestCardHelper {
     );
   }
 
-  // 🎯 4. سینٹرڈ ایڈیٹیبل پرائس باکس (بڑا فونٹ)
+  // 🎯 4. ایڈیٹیبل کیش پرائس باکس + خودکار غیر قابلِ ترمیم پرافٹ بیج
   static Widget buildEditablePriceBox(BuildContext context, Map<String, dynamic> data, String phone, TextEditingController? priceController) {
     return ValueListenableBuilder<Box>(
       valueListenable: Hive.box('packageBox').listenable(),
@@ -97,30 +97,63 @@ class RequestCardHelper {
           orElse: () => data,
         );
 
-        final currentPrice = (pkg['totalPrice'] ?? pkg['estimatedPrice'] ?? '0').toString();
+        // ۱۔ صرف 'کیش پرائس' کی رقم لسن کرنا
+        final cashPriceStr = (pkg['cashPrice'] ?? pkg['estimatedPrice'] ?? '0').toString();
+        
         if (priceController != null && priceController.text.isEmpty) {
-          priceController.text = currentPrice;
+          priceController.text = cashPriceStr;
         }
 
-        return Container(
-          height: 36,
-          width: 95,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.red.shade500, width: 1.5),
-            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 3, offset: Offset(0, 2))],
-          ),
-          child: TextField(
-            controller: priceController,
-            keyboardType: TextInputType.number,
-            textAlign: TextAlign.center,
-            textAlignVertical: TextAlignVertical.center,
-            style: TextStyle(color: Colors.red.shade800, fontSize: 15, fontWeight: FontWeight.bold),
-            decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
-          ),
+        // ۲۔ پرافٹ (Profit) کا لائیو حساب: Total Price - Cash Price
+        final double totalPrice = double.tryParse((pkg['totalPrice'] ?? '0').toString()) ?? 0.0;
+        final double cashPrice = double.tryParse(cashPriceStr) ?? 0.0;
+        final double profit = totalPrice > cashPrice ? (totalPrice - cashPrice) : 0.0;
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 🟢 پرافٹ کا چھوٹا سبز بیج (Non-Editable)
+            if (profit > 0)
+              Container(
+                margin: const EdgeInsets.only(bottom: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.green.shade400, width: 0.8),
+                ),
+                child: Text(
+                  "نفع: +${profit.toInt()}",
+                  style: TextStyle(color: Colors.green.shade900, fontSize: 9, fontWeight: FontWeight.bold),
+                ),
+              ),
+
+            // 🔴 نقد قیمت کا باکس (Editable)
+            Container(
+              height: 34,
+              width: 95,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.red.shade500, width: 1.5),
+                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))],
+              ),
+              child: TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                textAlignVertical: TextAlignVertical.center,
+                style: TextStyle(color: Colors.red.shade800, fontSize: 14, fontWeight: FontWeight.bold),
+                decoration: const InputDecoration(
+                  border: InputBorder.none, 
+                  isDense: true, 
+                  contentPadding: EdgeInsets.zero
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
