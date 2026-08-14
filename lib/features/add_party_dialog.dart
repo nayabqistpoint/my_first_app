@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import '../home_page/views/customers_list.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-// void کے بجائے Future<void> لگایا ہے تاکہ await کام کرے
 Future<void> showAddPartyDialog(BuildContext context) async {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
 
-  // showDialog سے پہلے await کا اضافہ کیا گیا ہے
   await showDialog(
     context: context,
     builder: (context) {
@@ -43,18 +41,39 @@ Future<void> showAddPartyDialog(BuildContext context) async {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.black87),
-            onPressed: () {
+            onPressed: () async {
               String name = nameController.text.trim();
               String phone = phoneController.text.trim();
 
-              if (name.isNotEmpty) {
-                // کنٹرولر کے ذریعے زیرو بیلنس پارٹی سیو کی جا رہی ہے
-                customerController.addManualCustomer(name: name, phone: phone);
+              if (name.isNotEmpty && phone.isNotEmpty) {
+                // 🎯 اصل باکس کا نام: customerBox
+                Box customerBox = Hive.box('customerBox');
 
-                Navigator.pop(context);
+                Map<String, dynamic> newCustomerData = {
+                  'customerName': name,
+                  'customerFatherName': null,
+                  'customerCaste': null,
+                  'customerPhone': phone,
+                  'customerCnic': null,
+                  'customerAddress': null,
+                  'customerSelfie': null,
+                  'isTermsAccepted': true,
+                  'status': 'Approved',
+                  'timestamp': DateTime.now().toIso8601String(),
+                };
 
+                // کی (Key) موبائل نمبر ہی بنے گی
+                await customerBox.put(phone, newCustomerData);
+
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('پارٹی کسٹمر باکس میں شامل ہو گئی')),
+                  );
+                }
+              } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('پارٹی کامیابی سے شامل ہو گئی')),
+                  const SnackBar(content: Text('نام اور فون نمبر درج کریں')),
                 );
               }
             },
