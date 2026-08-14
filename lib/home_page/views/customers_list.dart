@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:my_first_app/customer_ledger_page.dart';
-import '../../features/add_party_dialog.dart';
-import '../sections/sections_controller.dart';
+import '../../../features/add_party_dialog.dart';
+import 'customers_widgets/customer_row_ui.dart';
+import 'customers_widgets/customer_controller.dart';
 
+<<<<<<< HEAD
 // ==========================================
 // 1. CUSTOMER TRANSACTION MODEL
 // ==========================================
@@ -246,27 +247,54 @@ final CustomerController customerController = CustomerController();
 // 4. CUSTOMERS LIST VIEW
 // ==========================================
 class CustomersListView extends StatelessWidget {
+=======
+class CustomersListView extends StatefulWidget {
+>>>>>>> a
   const CustomersListView({super.key});
 
   @override
+  State<CustomersListView> createState() => _CustomersListViewState();
+}
+
+class _CustomersListViewState extends State<CustomersListView> {
+  final CustomerController _controller = CustomerController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.loadAndSortCustomers();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder(
-      valueListenable: Hive.box('customerBox').listenable(),
-      builder: (context, Box customerBox, _) {
-        return ValueListenableBuilder(
-          valueListenable: Hive.isBoxOpen('transactionBox')
-              ? Hive.box('transactionBox').listenable()
-              : ValueNotifier(null),
-          builder: (context, _, child) {
-            return ListenableBuilder(
-              listenable: sectionsController,
-              builder: (context, _) {
-                final allCustomers = customerController.customers;
+    return Column(
+      children: [
+        // ------------------ ٹاپ بار (RTL) ------------------
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: [
+                SizedBox(
+                  height: 38,
+                  child: ElevatedButton(
+                    onPressed: () => showAddPartyDialog(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      foregroundColor: Colors.white,
+                      elevation: 4.0,
+                      shadowColor: Colors.green.shade900.withValues(alpha: 0.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    ),
+                    child: const Text("ایڈ پارٹی", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ),
 
-                // 🎯 1. کل رقم کا لائیو مجموعہ
-                double totalRed = 0.0;   // آپ نے لینے ہیں (Negative Balance)
-                double totalGreen = 0.0; // آپ نے دینے ہیں (Positive Balance)
+                const SizedBox(width: 8),
 
+<<<<<<< HEAD
                 for (var c in allCustomers) {
                   double bal = c.calculateTotalBalance;
                   if (bal < 0) {
@@ -366,91 +394,81 @@ class CustomersListView extends StatelessWidget {
                             padding: EdgeInsets.zero,
                           ),
                         ],
+=======
+                Expanded(
+                  child: SizedBox(
+                    height: 38,
+                    child: TextField(
+                      textAlign: TextAlign.right,
+                      onChanged: (value) {
+                        setState(() {
+                          _controller.searchCustomers(value);
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: "سرچ...",
+                        hintStyle: const TextStyle(fontSize: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+>>>>>>> a
                       ),
                     ),
-                    const Divider(color: Colors.black, thickness: 1.2, height: 1),
-                    Expanded(
-                      child: displayedCustomers.isEmpty
-                          ? const Center(
-                              child: Text(
-                                "کوئی کسٹمر موجود نہیں",
-                                style: TextStyle(color: Colors.grey, fontSize: 14),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: EdgeInsets.zero,
-                              itemCount: displayedCustomers.length,
-                              itemBuilder: (context, index) {
-                                final customer = displayedCustomers[index];
+                  ),
+                ),
 
-                                double totalBalance = customer.calculateTotalBalance;
-                                Color amountColor = totalBalance == 0
-                                    ? Colors.black54
-                                    : (totalBalance > 0 ? Colors.green : Colors.red);
+                const SizedBox(width: 8),
 
-                                return InkWell(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => CustomerLedgerPage(customer: customer),
-                                      ),
-                                    ).then((_) {
-                                      customerController.refreshList();
-                                    });
-                                  },
-                                  child: Column(
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "Rs ${totalBalance.abs().toStringAsFixed(0)}",
-                                              style: TextStyle(
-                                                color: amountColor,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.end,
-                                              children: [
-                                                Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                                  children: [
-                                                    Text(
-                                                      "${customer.name} ${customer.cast}".trim(),
-                                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                                    ),
-                                                  ],
-                                                ),
-                                                const SizedBox(width: 10),
-                                                const CircleAvatar(
-                                                  radius: 15,
-                                                  backgroundColor: Colors.black12,
-                                                  child: Icon(Icons.person, size: 18, color: Colors.black54),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const Divider(color: Colors.black26, thickness: 0.5, height: 1),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
+                SizedBox(
+                  height: 38,
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      items: ["سب", "باقی", "مکمل"].map((String value) {
+                        return DropdownMenuItem<String>(value: value, child: Text(value, style: const TextStyle(fontSize: 12)));
+                      }).toList(),
+                      onChanged: (_) {},
+                      hint: const Text("فلٹر", style: TextStyle(fontSize: 12)),
                     ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const Divider(color: Colors.black12, thickness: 1, height: 1),
+
+        // ------------------ محفوظ لائیو کسٹمر لسٹ ------------------
+        Expanded(
+          child: Hive.isBoxOpen('customerBox')
+              ? ValueListenableBuilder(
+                  valueListenable: Hive.box('customerBox').listenable(),
+                  builder: (context, Box box, _) {
+                    _controller.loadAndSortCustomers();
+
+                    if (_controller.customers.isEmpty) {
+                      return const Center(
+                        child: Text("کوئی کسٹمر موجود نہیں ہے", style: TextStyle(color: Colors.grey)),
+                      );
+                    }
+
+                    return ListView.builder(
+                      itemCount: _controller.customers.length,
+                      itemBuilder: (context, index) {
+                        var customer = _controller.customers[index];
+                        return CustomerRowUI(
+                          name: customer['name'] ?? 'نامعلوم',
+                          phone: customer['phone'] ?? '',
+                          description: customer['description'] ?? '',
+                        );
+                      },
+                    );
+                  },
+                )
+              : const Center(
+                  child: CircularProgressIndicator(),
+                ),
+        ),
+      ],
     );
   }
 }
