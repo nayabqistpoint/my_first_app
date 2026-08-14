@@ -26,7 +26,7 @@ class LegalDocsController {
       dynamic targetKey;
       Map<String, dynamic>? targetData;
 
-      // 1. کسٹمر کا پیکیج ڈائریکٹ فون نمبر سے تلاش کریں (بغیر ٹائم اسٹیمپ والی کیز کے)
+      // 1. کسٹمر کا پیکیج ڈائریکٹ فون نمبر سے تلاش کریں
       if (packageBox.containsKey(cleanPhone)) {
         targetKey = cleanPhone;
         var rawVal = packageBox.get(cleanPhone);
@@ -61,11 +61,14 @@ class LegalDocsController {
           'isChequesReceived': isChequesReceived,
         };
 
-        // 🎯 Key کو بدلے بغیر اسی فون نمبر کی key پر سیو کریں
+        // 🎯 1. packageBox میں سیو کریں
         await packageBox.put(targetKey, targetData);
 
-        // 🎯 Stock Box میں سے موبائل کو Sold کریں
+        // 🎯 2. Stock Box میں سے موبائل کو Sold کریں
         await _reduceStock(soldImei, soldMobileName);
+
+        // 🎯 3. ٹرانزیکشن باکس میں سیل (Sale) کی اینٹری بھیجیں
+        await _addSaleToTransactionBox(cleanPhone, targetData);
 
         return true;
       }
@@ -73,6 +76,36 @@ class LegalDocsController {
       debugPrint("Handover Error: $e");
     }
     return false;
+  }
+
+  /// 🎯 ٹرانزیکشن باکس میں پرچیز کی رقم (totalPrice) ڈالنے کا سیف ہیلپر
+  Future<void> _addSaleToTransactionBox(String phone, Map<String, dynamic> pkgData) async {
+    try {
+      final Box transactionBox = Hive.isBoxOpen('transactionBox')
+          ? Hive.box('transactionBox')
+          : await Hive.openBox('transactionBox');
+
+      double totalPrice = double.tryParse((pkgData['totalPrice'] ?? '0').toString()) ?? 0.0;
+      String mobileName = (pkgData['mobileName'] ?? pkgData['mobileModel'] ?? 'موبائل').toString();
+
+      // یونیک ٹرانزیکشن کی (Unique Transaction Key)
+      String txKey = "sale_${DateTime.now().millisecondsSinceEpoch}";
+
+      Map<String, dynamic> saleTransaction = {
+        'type': 'sale',                              // 🎯 نئی ٹائپ (سیل)
+        'customerPhone': phone,
+        'customerId': phone,
+        'amount': totalPrice,                       // 🎯 کل رقم (مثلاً ۵۹ روپے)
+        'netAmount': totalPrice,
+        'description': 'پرچیز ریکویسٹ: $mobileName',
+        'status': 'completed',
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      await transactionBox.put(txKey, saleTransaction);
+    } catch (e) {
+      debugPrint("Error adding sale transaction: $e");
+    }
   }
 
   Future<void> _reduceStock(String imei, String mobileName) async {
