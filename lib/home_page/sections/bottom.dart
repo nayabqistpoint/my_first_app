@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-// یہ پاتھ درست ہے: ایک بار ../ سے sections سے باہر، اور دوسرا ../ سے home_page سے باہر lib فولڈر تک
-import '../../installment_calculater_page.dart';
-// خریداری فارم کا نیا پاتھ
-import '../transaction_forms/purchase_page.dart';
-// آپ کی نئی بنائی گئی ڈیٹا بیس فائل کا درست پاتھ
 import '../../database_page.dart';
+import '../../installment_calculater_page.dart';
+import '../transaction_forms/purchase_page.dart';
 
 class BottomSection extends StatelessWidget {
   const BottomSection({super.key});
@@ -12,55 +9,36 @@ class BottomSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10.0),
+      padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
       child: Row(
         children: [
-          // 1. پہلا بڑا کیپسول بٹن (قسط کیلکولیٹر)
+          // 1. قسط کیلکولیٹر
           Expanded(
-            flex: 4,
-            child: _buildCapsuleButton(
-              context, 
-              "قسط کیلکولیٹر", 
-              Colors.blue, 
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const InstallmentCalculaterPage()),
-                );
-              }
+            child: _buildActionBtn(
+              title: "قسط کیلکولیٹر",
+              color: Colors.blue,
+              onTap: () => _navigateTo(context, const InstallmentCalculaterPage()),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 4),
 
-          // 2. درمیان میں چھوٹا گول "پلس (+)" بٹن (ڈیٹا بیس کے لیے)
+          // 2. ڈیٹا بیس پلس بٹن (+)
           FloatingActionButton(
             heroTag: "database_plus_btn",
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const DatabasePage()),
-              );
-            },
+            onPressed: () => _navigateTo(context, const DatabasePage()),
             backgroundColor: Colors.orange,
-            elevation: 2,
-            mini: true, // بٹن کو چھوٹا اور خوبصورت رکھنے کے لیے
-            child: const Icon(Icons.add, color: Colors.white, size: 24),
+            elevation: 1,
+            mini: true,
+            child: const Icon(Icons.add, color: Colors.white, size: 20),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 4),
 
-          // 3. دوسرا بڑا کیپسول بٹن (خریداری)
+          // 3. خریداری
           Expanded(
-            flex: 4,
-            child: _buildCapsuleButton(
-              context, 
-              "خریداری", 
-              Colors.green, 
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const PurchasePage()),
-                );
-              },
+            child: _buildActionBtn(
+              title: "خریداری",
+              color: Colors.green,
+              onTap: () => _navigateTo(context, const PurchasePage()),
             ),
           ),
         ],
@@ -68,25 +46,36 @@ class BottomSection extends StatelessWidget {
     );
   }
 
-  // کیپسول ڈیزائن بنانے کا فنکشن (گول کونے)
-  Widget _buildCapsuleButton(BuildContext context, String title, Color color, VoidCallback onPressed) {
-    return SizedBox(
-      height: 48,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30), // مکمل گول کیپسول شیپ
-          ),
-          elevation: 2,
-        ),
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
+  void _navigateTo(BuildContext context, Widget page) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+  }
+
+  Widget _buildActionBtn({
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        minimumSize: const Size.fromHeight(38), // مناسب اور ہلکا سائز
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 1,
+        padding: EdgeInsets.zero, // مکمل جگہ ٹیکسٹ کو دینے کے لیے
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Text(
+            title,
+            maxLines: 1,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),

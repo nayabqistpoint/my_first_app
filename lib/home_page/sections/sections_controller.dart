@@ -67,10 +67,10 @@ class SectionsController extends ChangeNotifier {
       if (buttonId == "stock") {
         changePage(2);
       } else if (buttonId == "get") {
-        customerSortMode = "RED_FIRST"; // پہلے Red، پھر Green، پھر 0
+        customerSortMode = "RED_FIRST";
         changePage(0);
       } else if (buttonId == "give") {
-        customerSortMode = "GREEN_FIRST"; // پہلے Green، پھر Red، پھر 0
+        customerSortMode = "GREEN_FIRST";
         changePage(0);
       } else {
         notifyListeners();
