@@ -18,27 +18,28 @@ class BalanceHelper {
 
         if (phoneInTx == targetPhone) {
           String type = (tx['type'] ?? '').toString().toLowerCase();
+          String status = (tx['status'] ?? '').toString().toLowerCase();
+          bool isApproved = (tx['isApproved'] == true) || (status != 'pending' && tx['isApproved'] != false);
 
-          // 1. سیل (Sale) ➔ مائنس (Paid / Red)
-          if (type == 'sale') {
-            totalBalance -= _parseDouble(tx['amount'] ?? tx['netAmount']);
+          // 🎯 صرف منظور شدہ (Approved) اینٹریز ہی ٹوٹل بیلنس میں حساب ہوں گی
+          if (!isApproved) continue;
+
+          // 1. پرچیز (Purchase) ➔ براہِ راست remainingBalance کا اصل سائن (+ / -) شامل ہوگا
+          if (type == 'purchase') {
+            double rem = _parseDouble(tx['remainingBalance'] ?? tx['remaining']);
+            totalBalance += rem; // مثبت پر جمع (+)، منفی پر تفریق (-)
           }
-          // 2. پرچیز (Purchase) ➔ صرف remainingBalance
-          else if (type == 'purchase') {
-            totalBalance += _parseDouble(tx['remainingBalance']);
+          // 2. سیل (Sale) ➔ مائنس (Red)
+          else if (type == 'sale') {
+            totalBalance -= _parseDouble(tx['amount'] ?? tx['netAmount']);
           }
           // 3. پیمنٹ آؤٹ (Paid) ➔ مائنس (Red)
           else if (type == 'paid') {
             totalBalance -= _parseDouble(tx['netAmount'] ?? tx['amount']);
           }
-          // 4. پیمنٹ ان / قسط (Received) ➔ 🎯 صرف پینڈنگ کو چھوڑ کر جمع ہوگا
+          // 4. پیمنٹ ان / قسط (Received) ➔ جمع (Green)
           else if (type == 'received') {
-            String status = (tx['status'] ?? '').toString().toLowerCase();
-
-            // اگر سٹیٹس پینڈنگ (pending) ہے تو اگنور کریں، ورنہ جمع کریں
-            if (status != 'pending') {
-              totalBalance += _parseDouble(tx['amount'] ?? tx['netAmount']);
-            }
+            totalBalance += _parseDouble(tx['amount'] ?? tx['netAmount']);
           }
         }
       }
@@ -47,7 +48,7 @@ class BalanceHelper {
     return totalBalance;
   }
 
-  /// رقم کی بنیاد پر رنگ (پوزیٹو گرین، نیگیٹو ریڈ)
+  /// رقم کی بنیاد پر رنگ (ابو زیرو / پوزیٹو ➔ گرین، بیلو زیرو / نیگیٹو ➔ ریڈ)
   static Color getAmountColor(double balance) {
     if (balance > 0) return Colors.green.shade700;
     if (balance < 0) return Colors.red.shade700;
