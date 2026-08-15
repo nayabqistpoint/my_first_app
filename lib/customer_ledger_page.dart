@@ -48,15 +48,20 @@ class _CustomerLedgerPageState extends State<CustomerLedgerPage> {
           backgroundColor: Colors.white,
           body: Column(
             children: [
-              // ۱. ٹاپ ویجٹ (نام، بیلنس اور دیگر معلومات)
-              LedgerTopWidget(controller: _controller),
-              
-              // ۲. مڈل ویجٹ (سرچ بار اور ٹرانزیکشن لسٹ)
               Expanded(
-                child: LedgerMiddleWidget(controller: _controller),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      LedgerTopWidget(controller: _controller),
+                      
+                      // 🎯 یہاں const ہٹا کر controller پاس کر دیا گیا ہے
+                      LedgerMiddleWidget(controller: _controller),
+                    ],
+                  ),
+                ),
               ),
 
-              // ۳. باٹم ویجٹ (پیمنٹ ان اور پیمنٹ آؤٹ کے بٹن)
+              // ۳. باٹم ویجٹ
               LedgerBottomWidget(controller: _controller),
             ],
           ),
