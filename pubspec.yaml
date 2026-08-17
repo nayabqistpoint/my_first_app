@@ -46,6 +46,7 @@ dependencies:
   pdf: ^3.13.0
   printing: ^5.15.0
   arabic_reshaper: ^0.0.1
+  file_picker: ^8.0.0
 
 dev_dependencies:
   flutter_test:
