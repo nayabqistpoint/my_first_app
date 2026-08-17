@@ -46,7 +46,7 @@ dependencies:
   pdf: ^3.13.0
   printing: ^5.15.0
   arabic_reshaper: ^0.0.1
-  bidi: ^2.0.13
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -68,10 +68,6 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
-
-  # 🎯 جمیل نوری نستعلیق فونٹ کا درست انٹری
-  assets:
-    - assets/fonts/JameelNooriNastaliq.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

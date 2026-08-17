@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'legal_docs_controller.dart';
-import 'agreement_helper.dart'; // 🎯 معاہدہ ہیلپر فائل امپورٹ ہو گئی
+import 'agreement_helper.dart'; // 🎯 معاہدہ اقساط
+import 'guarantor_helper.dart'; // 🎯 ضمانت نامہ
+import 'declaration_helper.dart'; // 🎯 بیان حلفی
 
 class LegalDocsUI extends StatefulWidget {
   final Map<String, dynamic> requestData;
@@ -79,7 +81,7 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
             const Divider(height: 1),
             const SizedBox(height: 8),
 
-            // 🎯 1. پرنٹنگ بٹنز (معاہدہ اقساط کنیکٹ ہو گیا)
+            // 🎯 1. پرنٹنگ بٹنز (تینوں ایگریمنٹس فعال ہیں)
             const Text('1. ضروری دستاویزات جنریٹ کریں:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
 
@@ -91,7 +93,6 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
                     label: 'معاہدہ اقساط',
                     color: Colors.indigo.shade700,
                     onPressed: () {
-                      // 🎯 کلک کرنے پر پی ڈی ایف جنریٹ ہو گا
                       AgreementHelper.generateAndPrintPdf(
                         requestData: widget.requestData,
                         phone: widget.phone,
@@ -105,7 +106,12 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
                     icon: Icons.assignment_ind,
                     label: 'ضمانت نامہ',
                     color: Colors.teal.shade700,
-                    onPressed: () {},
+                    onPressed: () {
+                      GuarantorHelper.generateAndPrintPdf(
+                        requestData: widget.requestData,
+                        phone: widget.phone,
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 5),
@@ -114,7 +120,12 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
                     icon: Icons.verified_user,
                     label: 'بیان حلفی',
                     color: Colors.deepOrange.shade700,
-                    onPressed: () {},
+                    onPressed: () {
+                      DeclarationHelper.generateAndPrintPdf(
+                        requestData: widget.requestData,
+                        phone: widget.phone,
+                      );
+                    },
                   ),
                 ),
               ],

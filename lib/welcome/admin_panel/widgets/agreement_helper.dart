@@ -76,11 +76,18 @@ class AgreementHelper {
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  // Header
+                  // 🎯 Header (سلوگن کے ساتھ)
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text(_fixUrdu('نایاب قسط پوائنٹ'), style: pw.TextStyle(font: ttfFontBold, fontSize: 13)),
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(_fixUrdu('نایاب قسط پوائنٹ'), style: pw.TextStyle(font: ttfFontBold, fontSize: 13)),
+                          pw.Text(_fixUrdu('(آپ کی سہولت, ہمارا عزم)'), style: pw.TextStyle(font: ttfFont, fontSize: 8)),
+                        ],
+                      ),
                       pw.Text(_fixUrdu('زیر ملکیت: محمد ڈیری (رجسٹرڈ)'), style: pw.TextStyle(font: ttfFontBold, fontSize: 13)),
                     ],
                   ),
@@ -120,14 +127,14 @@ class AgreementHelper {
                   pw.Text(_fixUrdu('شرائط و دفعات معاہدہ:'), style: pw.TextStyle(font: ttfFontBold, fontSize: 10.5)),
                   pw.Divider(thickness: 0.5),
 
-                  // 🎯 اب ہیڈنگز بالکل نمایاں، سائز میں بڑی (9.5pt) اور گہری بولڈ دکھائی دیں گی
+                  // 🎯 ۶ شرائط (بڑا سائز اور گہرا بولڈ)
                   _buildParagraph('1. ملکیت و رہن:', ' فریق اول نے اثاثہ فریق دوم کے فزیکل قبضے میں دے دیا ہے، جس کے بعد اس کے استعمال کی تمام تر سول و کریمینل ذمہ داری خریدار پر ہوگی۔ موبائل کا اصل ڈبہ (Box) اور سیکیورٹی چیک/پرونوٹ فریق اول کے پاس بطور "رہن" (گروی) محفوظ رہیں گے۔', ttfFont, ttfFontBold),
                   _buildParagraph('2. اقساط کا شیڈول و بلاکنگ (ٹائم لائن):', ' ماہانہ قسط ہر مہینے کی ۵ تاریخ تک واجب الادا ہے۔ قسط ادا نہ ہونے پر ۱۵ تاریخ کو موبائل آن لائن بلاک کر دیا جائے گا (بحالی فیس 1000 روپے ہوگی)۔ اگر نادہندگی برقرار رہی تو ۲۰ تاریخ کو کسٹمر کو ۱۰ دن کی مہلت کا لیگل نوٹس جاری کیا جائے گا۔', ttfFont, ttfFontBold),
-                  _buildParagraph('3. حلول اقساط و یکمشت لائبلٹی:', ' مسلسل ۲ اقساط شارٹ ہونے پر کسٹمر کا حقِ قسط ختم ہو جائے گا اور کل بقایا رقم بوقوع ڈیفالٹ یکمشت واجب الادا قرض (Liability) بن جائے گا۔ ادارہ سیکیورٹی چیک/پرونوٹ میں ڈیجی کھاتا لیجر کے مطابق یہ کل رقم خود بھر کر کارروائی کرنے کا مجاز ہوگا۔', ttfFont, ttfFontBold),
+                  _buildParagraph('3. حلول اقساط و یکمشت لائبلٹی:', ' مسلسل ۲ اقساط شارٹ ہونے پر کسٹمر کا حقِ قسط ختم ہو جائے گا اور کل بقایا رقم بوقوع ڈیفالٹ یکمشت واجب الادا قرض (Liability) بن جائے گی۔ ادارہ سیکیورٹی چیک/پرونوٹ میں ڈیجی کھاتا لیجر کے مطابق یہ کل رقم خود بھر کر کارروائی کرنے کا مجاز ہوگا۔', ttfFont, ttfFontBold),
                   _buildParagraph('4. تصفیہ و نقد واپسی:', ' ثالثی کارروائی شروع ہونے سے قبل، کسٹمر کو حق حاصل ہے کہ وہ ادارے کے بااعتماد ڈیلرز (عامر موبائلز قائم پور، نعیم موبائلز قائم پور، ناصر موبائلز حاصل پور) سے مارکیٹ ریٹ رسید لگوا کر موبائل واپس کرے اور بقیہ خسارہ نقد ادا کر کے کھاتا صاف کر لے۔', ttfFont, ttfFontBold),
                   _buildParagraph('5. ثالثی معاہدہ (Pre-Dispute Arbitration):', ' کسی بھی تنازع یا ۲ اقساط کی نادہندگی پر The Arbitration Act 1940 کی روشنی میں، دونوں فریقین کی رضامندی سے نیچے دیے گئے جدول میں سے کسی بھی ایک معزز شخص کو واحد ثالث (Sole Arbitrator) مقرر کیا جائے گا۔ کسٹمر کو لیگل نوٹس کے بعد متبادل نام تجویز کرنے یا اعتراض کا حق صرف ۱۰ دن تک بذریعہ دفتری رسید/ڈاک حاصل ہوگا۔ ثالث دونوں فریقین کو بلا کر، دکان کے ڈیجی کھاتا لیجر ریکارڈ اور اس معاہدے کی روشنی میں ۱۵ دن کے اندر اندر تحریری فیصلہ (Arbitral Award) دینے کا پابند ہوگا، جو فریقین پر حتمی اور لازم (Binding) ہوگا اور دیوانی عدالت سے ڈگری کروایا جا سکے گا۔', ttfFont, ttfFontBold),
 
-                  pw.SizedBox(height: 5),
+                  pw.SizedBox(height: 4),
 
                   // 🎯 اردو RTL ٹیبل
                   pw.Table(
@@ -174,28 +181,49 @@ class AgreementHelper {
                     ],
                   ),
 
-                  pw.SizedBox(height: 5),
+                  pw.SizedBox(height: 4),
 
                   _buildParagraph('6. ثالثی و عدالتی اخراجات:', ' معاہدے یا ثالثی فیصلے سے انحراف کرنے والا فریق، ثالثی کے آغاز سے لے کر عدالت سے ڈگری کرانے تک کے تمام قانونی و دفتری اخراجات ادا کرنے کا پابند ہوگا گے۔ نادہندگی کی صورت میں یہ اخراجات کسٹمر کے ذمے بقایا کھاتے میں شامل کیے جائیں گے۔', ttfFont, ttfFontBold),
 
-                  pw.SizedBox(height: 20),
+                  pw.Spacer(), // فوٹر کو نچلے حصے پر سیٹ کرنے کے لیے
 
                   // ۳ دستخط
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text(_fixUrdu('دستخط/انگوٹھا خریدار: _______________________'), style: pw.TextStyle(font: ttfFont, fontSize: 8.5)),
-                      pw.Text(_fixUrdu('دستخط/انگوٹھا ضامن: _______________________'), style: pw.TextStyle(font: ttfFont, fontSize: 8.5)),
+                      pw.Text(_fixUrdu('دستخط/انگوٹھا خریدار: _______________________'), style: pw.TextStyle(font: ttfFont, fontSize: 8)),
+                      pw.Text(_fixUrdu('دستخط/انگوٹھا ضامن: _______________________'), style: pw.TextStyle(font: ttfFont, fontSize: 8)),
                     ],
                   ),
-                  pw.SizedBox(height: 10),
+                  pw.SizedBox(height: 8),
 
                   // نگران اعلیٰ دستخط اور لائیو تاریخ
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text(_fixUrdu('دستخط نگران اعلیٰ (فریق اول): _______________________'), style: pw.TextStyle(font: ttfFont, fontSize: 8.5)),
-                      pw.Text(_fixUrdu('تاریخ: $liveDateStr'), style: pw.TextStyle(font: ttfFont, fontSize: 8.5)),
+                      pw.Text(_fixUrdu('دستخط نگران اعلیٰ (فریق اول): _______________________'), style: pw.TextStyle(font: ttfFont, fontSize: 8)),
+                      pw.Text(_fixUrdu('تاریخ: $liveDateStr'), style: pw.TextStyle(font: ttfFont, fontSize: 8)),
+                    ],
+                  ),
+
+                  pw.SizedBox(height: 8),
+                  pw.Divider(thickness: 1),
+                  pw.SizedBox(height: 2),
+
+                  // 🎯 نیا فوٹر (بغیر ڈیش کے فون نمبرز کے ساتھ)
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(_fixUrdu('نگرانِ اعلیٰ: حافظ محمد صابر (03012700351)'), style: pw.TextStyle(font: ttfFont, fontSize: 7.5)),
+                      pw.Text(_fixUrdu('ای میل: nayabsahulatcentre@gmail.com'), style: pw.TextStyle(font: ttfFont, fontSize: 7.5)),
+                    ],
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(_fixUrdu('آن لائن ادائیگی و واٹس ایپ: 03231988351 (راست/جیزکیش/ایزی پیسہ)'), style: pw.TextStyle(font: ttfFont, fontSize: 7.5)),
+                      pw.Text(_fixUrdu('پتہ: ہیڈ اسلام روڈ، بستی محمد نگر، قائم پور'), style: pw.TextStyle(font: ttfFont, fontSize: 7.5)),
                     ],
                   ),
                 ],
@@ -216,14 +244,14 @@ class AgreementHelper {
   // 🎯 بڑا سائز (9.5pt) اور پرفیکٹ بولڈ ہیڈنگ ویجیٹ
   static pw.Widget _buildParagraph(String title, String text, pw.Font fontRegular, pw.Font fontBold) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 2.5),
+      padding: const pw.EdgeInsets.only(bottom: 2),
       child: pw.RichText(
         textAlign: pw.TextAlign.justify,
         text: pw.TextSpan(
           children: [
             pw.TextSpan(
               text: _fixUrdu(title),
-              style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColors.black), // 👈 بڑا سائز اور گہرا بولڈ
+              style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColors.black),
             ),
             pw.TextSpan(
               text: _fixUrdu(text),
@@ -237,7 +265,7 @@ class AgreementHelper {
 
   static pw.Widget _buildTableCell(String text, pw.Font font, {bool isHeader = false}) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.all(2.5),
+      padding: const pw.EdgeInsets.all(2),
       child: pw.Center(
         child: pw.Text(
           text,
