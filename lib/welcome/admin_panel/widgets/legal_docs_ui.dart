@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'legal_docs_controller.dart';
+import 'agreement_helper.dart'; // 🎯 معاہدہ ہیلپر فائل امپورٹ ہو گئی
 
 class LegalDocsUI extends StatefulWidget {
   final Map<String, dynamic> requestData;
@@ -78,7 +79,7 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
             const Divider(height: 1),
             const SizedBox(height: 8),
 
-            // 🎯 1. پرنٹنگ بٹنز (بڑا ٹیکسٹ + سائیڈ آئیکن)
+            // 🎯 1. پرنٹنگ بٹنز (معاہدہ اقساط کنیکٹ ہو گیا)
             const Text('1. ضروری دستاویزات جنریٹ کریں:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
 
@@ -89,7 +90,13 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
                     icon: Icons.description,
                     label: 'معاہدہ اقساط',
                     color: Colors.indigo.shade700,
-                    onPressed: () {},
+                    onPressed: () {
+                      // 🎯 کلک کرنے پر پی ڈی ایف جنریٹ ہو گا
+                      AgreementHelper.generateAndPrintPdf(
+                        requestData: widget.requestData,
+                        phone: widget.phone,
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 5),
@@ -126,7 +133,6 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
             _buildCheckboxTile('ایڈوانس رقم موصول ہو گئی ہے (اگر پیکیج میں شامل ہے)', _controller.isAdvanceReceived, (v) => setState(() => _controller.isAdvanceReceived = v ?? false)),
             _buildCheckboxTile('موبائل کا اصل ڈبہ بطور سکیورٹی موصول ہو گیا ہے', _controller.isBoxReceived, (v) => setState(() => _controller.isBoxReceived = v ?? false)),
             _buildCheckboxTile('فزیکل اسٹامپ پیپر و پرنوٹ موصول ہو گئے ہیں', _controller.isStampReceived, (v) => setState(() => _controller.isStampReceived = v ?? false)),
-            // 🎯 درست شدہ عبارت
             _buildCheckboxTile('فزیکل بینک چیکس موصول ہو گئے ہیں (اگر پیکیج میں شامل ہے)', _controller.isChequesReceived, (v) => setState(() => _controller.isChequesReceived = v ?? false)),
 
             const SizedBox(height: 8),
@@ -196,7 +202,6 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
     );
   }
 
-  // 🎯 بڑا اور واضح ٹیکسٹ والا بٹن (سائیڈ آئیکن کے ساتھ)
   Widget _buildPdfButton({
     required IconData icon,
     required String label,
