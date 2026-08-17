@@ -19,23 +19,21 @@ class _DatabasePageState extends State<DatabasePage> {
     'transactionBox': {'title': 'ٹرانزیکشن باکس', 'color': Colors.green},
     'expenseBox': {'title': 'اخراجات باکس', 'color': Colors.deepOrange},
     'bankBox': {'title': 'بینک باکس', 'color': Colors.amber},
-    // 🎯 نیا نفع نقصان باکس شامل کر دیا گیا ہے
     'financialSummaryBox': {'title': 'نفع نقصان باکس', 'color': Colors.indigo},
+    'summaryBox': {'title': 'سمری باکس (نیا)', 'color': Colors.deepPurple},
   };
 
-  // ہائیو بینک باکس کا اٹومیٹک کلین اپ اور مرج فنکشن
-  void _cleanupBankBox(Box box) {
+  void _checkAndCleanupBankBox(Box box) {
     if (_selectedBoxName != 'bankBox') return;
 
     if (box.containsKey('cashInHand')) {
       final double oldCash = (box.get('cashInHand') ?? 0.0).toDouble();
       final double currentCash = (box.get('Cash') ?? 0.0).toDouble();
 
-      // ۱. دونوں کیش رقم کو ایک ہی 'Cash' کی کے تحت مرج کرنا
-      box.put('Cash', currentCash + oldCash);
-
-      // ۲. پرانی 'cashInHand' کی کو ہمیشہ کے لیے ڈیلیٹ کرنا
-      box.delete('cashInHand');
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await box.put('Cash', currentCash + oldCash);
+        await box.delete('cashInHand');
+      });
     }
   }
 
@@ -50,7 +48,7 @@ class _DatabasePageState extends State<DatabasePage> {
         style: TextStyle(
           color: isSelected ? Colors.white : Colors.black87,
           fontWeight: FontWeight.bold,
-          fontSize: 12,
+          fontSize: 11,
         ),
       ),
       selected: isSelected,
@@ -61,8 +59,55 @@ class _DatabasePageState extends State<DatabasePage> {
         side: BorderSide(color: isSelected ? color : Colors.grey.shade300),
       ),
       onSelected: (selected) {
-        if (selected) setState(() => _selectedBoxName = key);
+        if (selected) {
+          setState(() {
+            _selectedBoxName = key;
+          });
+        }
       },
+    );
+  }
+
+  // ڈیٹا کو خوبصورت اور صاف فارمیٹ میں پرنٹ کرنے کا ہیلپر
+  Widget _buildFormattedData(dynamic rawData, Color themeColor) {
+    if (rawData is Map) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 6.0),
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: rawData.entries.map((entry) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: themeColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: themeColor.withValues(alpha: 0.2)),
+              ),
+              child: RichText(
+                text: TextSpan(
+                  style: const TextStyle(fontSize: 11, color: Colors.black87),
+                  children: [
+                    TextSpan(
+                      text: '${entry.key}: ',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: themeColor),
+                    ),
+                    TextSpan(
+                      text: '${entry.value}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      );
+    }
+
+    return Text(
+      rawData.toString(),
+      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
     );
   }
 
@@ -75,43 +120,32 @@ class _DatabasePageState extends State<DatabasePage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('ڈیٹا بیس مانیٹر', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          title: const Text(
+            'ڈیٹا بیس مانیٹر',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
           backgroundColor: themeColor,
           foregroundColor: Colors.white,
         ),
         body: Column(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
               color: Colors.grey[100],
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: ['customerBox', 'guarantorBox', 'packageBox'].map(_buildChip).toList(),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: ['stockBox', 'transactionBox', 'expenseBox'].map(_buildChip).toList(),
-                  ),
-                  const SizedBox(height: 4),
-                  // 🎯 بینک باکس اور نفع نقصان باکس کو ایک ہی رو (Row) میں ایڈجسٹ کر دیا گیا ہے
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: ['bankBox', 'financialSummaryBox'].map(_buildChip).toList(),
-                  ),
-                ],
+              width: double.infinity,
+              child: Wrap(
+                spacing: 6.0,
+                runSpacing: 4.0,
+                alignment: WrapAlignment.center,
+                children: _boxesInfo.keys.map(_buildChip).toList(),
               ),
             ),
             const Divider(height: 1),
-
             Expanded(
               child: ValueListenableBuilder(
                 valueListenable: currentBox.listenable(),
                 builder: (context, Box box, _) {
-                  // خودکار صفائی کال کرنا
-                  _cleanupBankBox(box);
+                  _checkAndCleanupBankBox(box);
 
                   if (box.isEmpty) {
                     return Center(
@@ -129,19 +163,52 @@ class _DatabasePageState extends State<DatabasePage> {
                       final rawData = box.getAt(index);
 
                       return Card(
+                        elevation: 1.5,
                         margin: const EdgeInsets.symmetric(vertical: 4),
-                        child: ListTile(
-                          title: Text(
-                            'Key: $key',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: themeColor, fontSize: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: themeColor,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Key: $key',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                  if (_selectedBoxName == 'bankBox' && key != 'Cash')
+                                    IconButton(
+                                      constraints: const BoxConstraints(),
+                                      padding: EdgeInsets.zero,
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.red,
+                                        size: 20,
+                                      ),
+                                      onPressed: () => box.delete(key),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              _buildFormattedData(rawData, themeColor),
+                            ],
                           ),
-                          subtitle: Text(rawData.toString(), style: const TextStyle(fontSize: 12)),
-                          trailing: _selectedBoxName == 'bankBox' && key != 'Cash'
-                              ? IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                                  onPressed: () => box.delete(key),
-                                )
-                              : null,
                         ),
                       );
                     },

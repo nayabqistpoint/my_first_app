@@ -17,7 +17,7 @@ void main() async {
   // ہائیو ڈیٹا بیس کو انیشلائز کرنا
   await Hive.initFlutter();
 
-  // 🎯 تمام باکسز کو ایک ساتھ (Parallel) کھولنا تاکہ ایپ تیز سٹارٹ ہو
+  // 🎯 تمام باکسز بشمول نیا summaryBox ایک ساتھ (Parallel) کھولنا
   await Future.wait([
     Hive.openBox('customerBox'),
     Hive.openBox('guarantorBox'),
@@ -27,6 +27,7 @@ void main() async {
     Hive.openBox('expenseBox'),
     Hive.openBox('bankBox'),
     Hive.openBox('financialSummaryBox'),
+    Hive.openBox('summaryBox'), // 🎯 نیا سمری باکس یہاں شامل کر دیا گیا ہے
   ]);
 
   runApp(const MyApp());
