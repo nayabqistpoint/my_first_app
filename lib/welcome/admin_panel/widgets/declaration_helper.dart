@@ -16,6 +16,7 @@ class DeclarationHelper {
     required Map<String, dynamic> requestData,
     required String phone,
     Uint8List? stampBytes,
+    String? fileExtension,
   }) async {
     try {
       final pdf = pw.Document();
@@ -37,11 +38,12 @@ class DeclarationHelper {
       String mobileName = packageData['mobileName'] ?? packageData['itemName'] ?? 'غیر موجود';
 
       pw.MemoryImage? stampBgImage;
+
       if (stampBytes != null && stampBytes.isNotEmpty) {
         try {
           stampBgImage = pw.MemoryImage(stampBytes);
         } catch (e) {
-          developer.log('Stamp Image Decode Warning: $e');
+          developer.log('Stamp Image Load Error: $e');
           stampBgImage = null;
         }
       }
@@ -49,63 +51,59 @@ class DeclarationHelper {
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.only(left: 25, right: 25, top: 10, bottom: 15),
+          margin: const pw.EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 10),
           build: (pw.Context context) {
             return pw.Directionality(
               textDirection: pw.TextDirection.rtl,
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  // 🎯 1. ای اسٹامپ کا صرف چالان ہیڈر (چوڑائی میں پورا پھیلا ہوا اور نچلا کالا حاشیہ کٹا ہوا)
+                  // 🎯 1. ای اسٹامپ ہیڈر (آپ کی ہدایت کے مطابق 260 کی فکسڈ جگہ)
                   if (stampBgImage != null)
                     pw.Container(
-                      height: 180, // صرف ہیڈر کی اونچائی
+                      height: 260,
                       width: double.infinity,
-                      margin: const pw.EdgeInsets.only(bottom: 5),
+                      margin: const pw.EdgeInsets.only(bottom: 8),
                       child: pw.ClipRect(
-                        child: pw.Align(
+                        child: pw.Image(
+                          stampBgImage,
+                          fit: pw.BoxFit.cover,
                           alignment: pw.Alignment.topCenter,
-                          child: pw.Image(
-                            stampBgImage,
-                            fit: pw.BoxFit.fitWidth, // چوڑائی میں پورا پھیلاؤ
-                          ),
                         ),
                       ),
                     )
                   else
-                    pw.SizedBox(height: 180), // ای اسٹامپ ہیڈر کے لیے خالی جگہ
+                    pw.SizedBox(height: 260),
 
-                  // 🎯 2. عنوان اور خریدار کی تفصیلات
+                  // 🎯 2. عنوان (اپنی جگہ بالکل فکس ہے)
                   pw.Center(
                     child: pw.Text(
                       _fixUrdu('بیانِ حلفی (خریدار)'),
-                      style: pw.TextStyle(font: ttfFontBold, fontSize: 14.0, color: PdfColors.black),
+                      style: pw.TextStyle(font: ttfFontBold, fontSize: 14.5, color: PdfColors.black),
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+
+                  // 🎯 خریدار کی تفصیلات (اب ایک ہی روانی میں ۲ لائنوں میں کمپریس کر دی ہیں)
+                  pw.RichText(
+                    text: pw.TextSpan(
+                      children: [
+                        pw.TextSpan(
+                          text: _fixUrdu('منکہ مسمٰی/مسماۃ: $applicantName  ولدیت/زوجیت: $fatherOrHusbandName  سکنہ: $currentAddress  شناختی کارڈ نمبر: $cnicNumber۔ '),
+                          style: pw.TextStyle(font: ttfFontBold, fontSize: 10.0, color: PdfColors.black),
+                        ),
+                        pw.TextSpan(
+                          text: _fixUrdu('حلفاً اقرار کرتا/کرتی ہوں کہ نایاب قسط پوائنٹ (زیرِ ملکیت محمد ڈیری رجسٹرڈ) کو آئندہ صرف "ادارہ" تسلیم کیا جائے گا۔'),
+                          style: pw.TextStyle(font: ttfFontBold, fontSize: 10.0, color: PdfColors.black),
+                        ),
+                      ],
                     ),
                   ),
                   pw.SizedBox(height: 3),
-
-                  pw.Text(
-                    _fixUrdu('منکہ مسمٰی/مسماۃ: $applicantName  ولدیت/زوجیت: $fatherOrHusbandName'),
-                    style: pw.TextStyle(font: ttfFontBold, fontSize: 10.2, color: PdfColors.black),
-                  ),
-                  pw.SizedBox(height: 2),
-                  pw.Text(
-                    _fixUrdu('سکنہ: $currentAddress  شناختی کارڈ نمبر: $cnicNumber'),
-                    style: pw.TextStyle(font: ttfFontBold, fontSize: 10.2, color: PdfColors.black),
-                  ),
-
+                  pw.Divider(thickness: 0.6, color: PdfColors.black),
                   pw.SizedBox(height: 3),
-                  pw.Text(
-                    _fixUrdu('حلفاً اقرار کرتا/کرتی ہوں کہ:'),
-                    style: pw.TextStyle(font: ttfFontBold, fontSize: 10.5, color: PdfColors.black),
-                  ),
-                  pw.Text(
-                    _fixUrdu('نایاب قسط پوائنٹ (زیرِ ملکیت محمد ڈیری رجسٹرڈ) کو آئندہ صرف "ادارہ" تسلیم کیا جائے گا۔'),
-                    style: pw.TextStyle(font: ttfFontBold, fontSize: 9.5, color: PdfColors.black),
-                  ),
-                  pw.Divider(thickness: 0.7, color: PdfColors.black),
 
-                  // 🎯 3. تمام اوریجنل ۶ شقیں
+                  // 🎯 3. تمام اوریجنل ۶ شقیں (سائز بہترین اور واضح)
                   _buildParagraph('1. ', 'میں نے مطلوبہ اثاثہ/موبائل بالکل ٹھیک حالت میں خود چیک کر کے حاصل کیا ہے، لہذا بعد میں کسی دفتری نقص یا خرابی کا عذر قابلِ قبول نہ ہوگا۔ نیز، موبائل کی وصولی کے وقت میری بنائی گئی آڈیو/ویڈیو ریکارڈنگ اور بائیومیٹرک تصدیق میری اپنی مرضی سے ہے، جسے ادارہ بوقتِ ضرورت پیش کرنے کا مجاز ہے۔', ttfFontBold),
                   _buildParagraph('2. ', 'میں اقرار کرتا ہوں کہ قسطوں پر حاصل کردہ موبائل فون، یا کسی دیگر الیکٹرانکس اشیاء کی ضمانت کے طور پر رکھوائے گئے ذاتی موبائل فون $mobileName کا اصل ڈبہ (Box) ادارے کے پاس بطورِ گروی رہے گا۔ میں اعتراف کرتا ہوں کہ مذکورہ موبائل فون میں ادارے کی بلاکنگ ایپ اور ایڈمن پرمیشنز (Admin Rights) میری رضامندی سے فعال کی گئی ہیں۔ قسط لیٹ ہونے پر ادارے کو موبائل آن لائن بلاک کرنے کا پورا قانونی حق حاصل ہے اور بلاکنگ کے دوران بھی اقساط کا شیڈول اور نادہندگی کا وقت برابر جاری رہے گا۔', ttfFontBold),
                   _buildParagraph('3. ', 'میں اقرار کرتا ہوں کہ اگر میرے ذمے ایک سے زائد اقساط واجب الادا ہو گئیں، تو ادارہ صرف ایک قسط (جزوی ادائیگی) لینے سے انکار کا پورا حق رکھتا ہے، اور ایک قسط دینے سے میرا پرانا ڈیفالٹ یا نادہندگی کا وقت معاف نہیں ہوگا۔', ttfFontBold),
@@ -120,22 +118,22 @@ class DeclarationHelper {
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Text(_fixUrdu('دستخط/انگوٹھا مقر: _______________________'),
-                          style: pw.TextStyle(font: ttfFontBold, fontSize: 10.0, color: PdfColors.black)),
+                          style: pw.TextStyle(font: ttfFontBold, fontSize: 9.8, color: PdfColors.black)),
                       pw.Text(_fixUrdu('تاریخ: $liveDateStr'),
-                          style: pw.TextStyle(font: ttfFontBold, fontSize: 10.0, color: PdfColors.black)),
+                          style: pw.TextStyle(font: ttfFontBold, fontSize: 9.8, color: PdfColors.black)),
                     ],
                   ),
 
                   pw.SizedBox(height: 6),
 
-                  // 🎯 5. گواہ نمبر 1 اور گواہ نمبر 2
+                  // 🎯 5. گواہان (اب دونوں لائنیں پیج پر بالکل صاف اور مارجن کے ساتھ آئیں گی)
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Text(_fixUrdu('گواہ نمبر 1 (نام و شناختی کارڈ): _______________________'),
-                          style: pw.TextStyle(font: ttfFontBold, fontSize: 9.5, color: PdfColors.black)),
+                          style: pw.TextStyle(font: ttfFontBold, fontSize: 9.2, color: PdfColors.black)),
                       pw.Text(_fixUrdu('دستخط: _______________________'),
-                          style: pw.TextStyle(font: ttfFontBold, fontSize: 9.5, color: PdfColors.black)),
+                          style: pw.TextStyle(font: ttfFontBold, fontSize: 9.2, color: PdfColors.black)),
                     ],
                   ),
                   pw.SizedBox(height: 4),
@@ -143,9 +141,9 @@ class DeclarationHelper {
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Text(_fixUrdu('گواہ نمبر 2 (نام و شناختی کارڈ): _______________________'),
-                          style: pw.TextStyle(font: ttfFontBold, fontSize: 9.5, color: PdfColors.black)),
+                          style: pw.TextStyle(font: ttfFontBold, fontSize: 9.2, color: PdfColors.black)),
                       pw.Text(_fixUrdu('دستخط: _______________________'),
-                          style: pw.TextStyle(font: ttfFontBold, fontSize: 9.5, color: PdfColors.black)),
+                          style: pw.TextStyle(font: ttfFontBold, fontSize: 9.2, color: PdfColors.black)),
                     ],
                   ),
                 ],
@@ -165,7 +163,7 @@ class DeclarationHelper {
 
   static pw.Widget _buildParagraph(String prefix, String text, pw.Font fontBold) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 2.5),
+      padding: const pw.EdgeInsets.only(bottom: 2.2),
       child: pw.RichText(
         textAlign: pw.TextAlign.justify,
         text: pw.TextSpan(
