@@ -48,6 +48,8 @@ dependencies:
   arabic_reshaper: ^0.0.1
   file_picker: ^8.0.0
   pdfx: ^2.9.2
+  image_picker: ^1.2.3
+  record: ^7.1.1
 
 dev_dependencies:
   flutter_test:

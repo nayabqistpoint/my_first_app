@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class GuarantorInfoWidget extends StatefulWidget {
   const GuarantorInfoWidget({super.key});
@@ -149,13 +150,22 @@ class GuarantorInfoWidgetState extends State<GuarantorInfoWidget> {
                     ],
                   ),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        guarantorSelfiePath = 'dummy_path/guarantor_selfie.jpg';
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('ضامن کی سیلفی محفوظ ہو گئی ہے')),
+                    onPressed: () async {
+                      final XFile? photo = await ImagePicker().pickImage(
+                        source: ImageSource.camera,
+                        preferredCameraDevice: CameraDevice.front,
+                        imageQuality: 80,
                       );
+                      if (photo != null) {
+                        setState(() {
+                          guarantorSelfiePath = photo.path;
+                        });
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('ضامن کی سیلفی محفوظ ہو گئی ہے')),
+                          );
+                        }
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: guarantorSelfiePath != null ? Colors.green : Colors.red[800],

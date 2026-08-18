@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/installment_calculater_page.dart';
+import 'package:record/record.dart'; // اصلی آڈیو ریکارڈنگ پیکیج
 import 'item_package_logic.dart';
 
 // ری یوزیبل IMEI ڈائیلاگ کی امپورٹ
@@ -21,6 +22,9 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
   bool _hasRecordedAudio = false;
   String? _audioPath;
 
+  // اصلی آڈیو ریکارڈر کا ابجیکٹ
+  final AudioRecorder _audioRecorder = AudioRecorder();
+
   @override
   bool get wantKeepAlive => true;
 
@@ -28,6 +32,12 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
   void initState() {
     super.initState();
     _logic = ItemPackageLogic();
+  }
+
+  @override
+  void dispose() {
+    _audioRecorder.dispose(); // میموری لیک سے بچنے کے لیے ریکارڈر ڈسپوز
+    super.dispose();
   }
 
   /// باہر سے یا سائن ان / پرچیز پیج سے سوئچ فورس آن کرنے کا ہیلپر
@@ -77,17 +87,46 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
     }
   }
 
-  void _toggleRecording() {
-    setState(() {
+  // اصلی مائیک سے ریکارڈنگ شروع یا بند کرنے کا فنکشن
+  Future<void> _toggleRecording() async {
+    try {
       if (_isRecording) {
-        _isRecording = false;
-        _hasRecordedAudio = true;
-        _audioPath = "audio_recorded_placeholder_path";
+        // ریکارڈنگ روکیں اور فائل کا پاتھ حاصل کریں
+        final path = await _audioRecorder.stop();
+        if (path != null) {
+          setState(() {
+            _isRecording = false;
+            _hasRecordedAudio = true;
+            _audioPath = path; // یہاں اصلی ریکارڈیڈ فائل کا سچا پاتھ آئے گا
+          });
+        }
       } else {
-        _isRecording = true;
-        _hasRecordedAudio = false;
+        // مائیکرو فون کی اجازت چیک کریں
+        if (await _audioRecorder.hasPermission()) {
+          // ریکارڈنگ شروع کریں
+          await _audioRecorder.start(
+            const RecordConfig(encoder: AudioEncoder.aacLc), 
+            path: '', // خالی چھوڑنے سے یہ خود ہی بہترین ٹیمپریری پاتھ بنا لیتا ہے
+          );
+          setState(() {
+            _isRecording = true;
+            _hasRecordedAudio = false;
+          });
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('آڈیو ریکارڈنگ کے لیے مائیک کی اجازت درکار ہے')),
+            );
+          }
+        }
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ریکارڈنگ میں مسئلہ آیا: $e')),
+        );
+      }
+    }
   }
 
   // --- ڈائنامک IMEI / نقد قیمت باکس ---

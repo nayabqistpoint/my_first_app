@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class CustomerInfoWidget extends StatefulWidget {
   const CustomerInfoWidget({super.key});
@@ -17,6 +18,9 @@ class CustomerInfoWidgetState extends State<CustomerInfoWidget> with AutomaticKe
   final TextEditingController addressController = TextEditingController();
   String? customerSelfiePath;
 
+  // کیمرے سے تصویر لینے کے لیے ImagePicker کا انسٹنس
+  final ImagePicker _picker = ImagePicker();
+
   @override
   bool get wantKeepAlive => true; // یہ ڈیٹا کو ہمیشہ زندہ اور محفوظ رکھے گا
 
@@ -29,6 +33,35 @@ class CustomerInfoWidgetState extends State<CustomerInfoWidget> with AutomaticKe
     cnicController.dispose();
     addressController.dispose();
     super.dispose();
+  }
+
+  // اصلی کیمرہ کھول کر تصویر لینے کا فنکشن
+  Future<void> _takeCustomerSelfie() async {
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front, // فرنٹ کیمرہ (سیلفی) کے لیے
+        imageQuality: 80, // تصویر کا سائز مناسب رکھنے کے لیے
+      );
+
+      if (photo != null) {
+        setState(() {
+          customerSelfiePath = photo.path; // یہاں اصلی کیمرے کی تصویر کا سچا پاتھ سیو ہو گا
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('کسٹمر کی سیلفی محفوظ ہو گئی ہے')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('کیمرہ کھولنے میں مسئلہ آیا: $e')),
+        );
+      }
+    }
   }
 
   // پیرنٹ پیج کو صرف اس فنکشن کے ذریعے کسٹمر کا ڈیٹا ملے گا
@@ -123,14 +156,7 @@ class CustomerInfoWidgetState extends State<CustomerInfoWidget> with AutomaticKe
                   ],
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      customerSelfiePath = 'dummy_path/customer_selfie.jpg';
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('کسٹمر کی سیلفی محفوظ ہو گئی ہے')),
-                    );
-                  },
+                  onPressed: _takeCustomerSelfie, // اب یہ اصل کیمرہ کھولے گا
                   style: ElevatedButton.styleFrom(
                     backgroundColor: customerSelfiePath != null ? Colors.green : Colors.red[800],
                     foregroundColor: Colors.white,
@@ -138,7 +164,7 @@ class CustomerInfoWidgetState extends State<CustomerInfoWidget> with AutomaticKe
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   icon: Icon(customerSelfiePath != null ? Icons.done : Icons.camera, size: 16),
-                  label: Text(customerSelfiePath != null ? 'دوباره لیں' : 'تصویر لیں', style: const TextStyle(fontSize: 12)),
+                  label: Text(customerSelfiePath != null ? 'دوبارہ لیں' : 'تصویر لیں', style: const TextStyle(fontSize: 12)),
                 ),
               ],
             ),
@@ -158,7 +184,6 @@ class CustomerInfoWidgetState extends State<CustomerInfoWidget> with AutomaticKe
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
-      // براؤزر کی پرانی سجیشن اور آٹو فل کو یہاں سختی سے بند کیا گیا ہے تاکہ 1234 یا کوئی اور پاسورڈ سجسٹ نہ ہو
       enableSuggestions: !isPhoneOrId,
       autocorrect: false,
       autofillHints: isPhoneOrId ? [] : null,
