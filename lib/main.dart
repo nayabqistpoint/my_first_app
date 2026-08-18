@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'welcome/login_page.dart';
 
 void main() async {
-  // فلاتر اور پیکیجز کی بائنڈنگز کو یقینی بنانا
+  // فلیٹر اور پیکیجز کی بائنڈنگز کو یقینی بنانا
   WidgetsFlutterBinding.ensureInitialized();
 
   // فائر بیس کو انیشلائز کرنا
@@ -17,18 +17,16 @@ void main() async {
   // ہائیو ڈیٹا بیس کو انیشلائز کرنا
   await Hive.initFlutter();
 
-  // 🎯 تمام باکسز بشمول نیا summaryBox ایک ساتھ (Parallel) کھولنا
-  await Future.wait([
-    Hive.openBox('customerBox'),
-    Hive.openBox('guarantorBox'),
-    Hive.openBox('packageBox'),
-    Hive.openBox('stockBox'),
-    Hive.openBox('transactionBox'),
-    Hive.openBox('expenseBox'),
-    Hive.openBox('bankBox'),
-    Hive.openBox('financialSummaryBox'),
-    Hive.openBox('summaryBox'), // 🎯 نیا سمری باکس یہاں شامل کر دیا گیا ہے
-  ]);
+  // 🎯 ویب ڈیوائس پر بلاکنگ سے بچنے کے لیے تمام باکسز کو ایک ایک کر کے اوپن کرنا
+  await Hive.openBox('customerBox');
+  await Hive.openBox('guarantorBox');
+  await Hive.openBox('packageBox');
+  await Hive.openBox('stockBox');
+  await Hive.openBox('transactionBox');
+  await Hive.openBox('expenseBox');
+  await Hive.openBox('bankBox');
+  await Hive.openBox('financialSummaryBox');
+  await Hive.openBox('summaryBox');
 
   runApp(const MyApp());
 }

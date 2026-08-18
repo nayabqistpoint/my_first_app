@@ -69,7 +69,10 @@ class GuarantorInfoWidget extends StatelessWidget {
                   border: Border.all(color: Colors.grey.shade400),
                 ),
                 child: selfie.isNotEmpty
-                    ? ClipRRect(borderRadius: BorderRadius.circular(5), child: _buildSelfieImage(selfie))
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(5),
+                        child: _buildSelfieImage(selfie),
+                      )
                     : const Icon(Icons.person, size: 45, color: Colors.grey),
               ),
               const SizedBox(width: 12),
@@ -107,10 +110,31 @@ class GuarantorInfoWidget extends StatelessWidget {
   }
 
   Widget _buildSelfieImage(String source) {
+    if (source.startsWith('http')) {
+      return Image.network(
+        source,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
+      );
+    }
+
     try {
-      return source.startsWith('http')
-          ? Image.network(source, fit: BoxFit.cover)
-          : Image.memory(base64Decode(source), fit: BoxFit.cover);
+      // 🎯 اگر Base64 سٹرنگ میں Header (data:image/...) لگا ہو تو اسے فلٹر کرنا
+      String cleanBase64 = source;
+      if (source.contains(',')) {
+        cleanBase64 = source.split(',').last;
+      }
+
+      final bytes = base64Decode(cleanBase64.replaceAll(RegExp(r'\s+'), ''));
+
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        // 🎯 فریم ورک کریش سے بچانے کے لیے errorBuilder
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(Icons.broken_image, color: Colors.grey);
+        },
+      );
     } catch (_) {
       return const Icon(Icons.broken_image, color: Colors.grey);
     }

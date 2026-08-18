@@ -85,11 +85,31 @@ class CustomerInfoWidget extends StatelessWidget {
   }
 
   Widget _buildSelfieImage(String source) {
+    if (source.startsWith('http')) {
+      return Image.network(
+        source,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
+      );
+    }
+
     try {
-      if (source.startsWith('http')) {
-        return Image.network(source, fit: BoxFit.cover);
+      // 🎯 اگر Base64 کے ساتھ Header (data:image/...) لگا ہو تو اسے صاف کرنا
+      String cleanBase64 = source;
+      if (source.contains(',')) {
+        cleanBase64 = source.split(',').last;
       }
-      return Image.memory(base64Decode(source), fit: BoxFit.cover);
+      
+      final bytes = base64Decode(cleanBase64.replaceAll(RegExp(r'\s+'), ''));
+
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        // 🎯 فریم ورک کریش سے بچانے کے لیے errorBuilder
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(Icons.broken_image, color: Colors.grey);
+        },
+      );
     } catch (_) {
       return const Icon(Icons.broken_image, color: Colors.grey);
     }
