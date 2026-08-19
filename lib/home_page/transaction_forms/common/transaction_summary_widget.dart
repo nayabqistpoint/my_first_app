@@ -5,9 +5,6 @@ class TransactionSummaryWidget extends StatefulWidget {
   final double discountAmount;
   final double grandTotal;
   final TextEditingController receivedController;
-  final TextEditingController descriptionController;
-  final VoidCallback? onAddPhotoPressed;
-  final String? attachedPhotoName;
 
   const TransactionSummaryWidget({
     super.key,
@@ -15,9 +12,6 @@ class TransactionSummaryWidget extends StatefulWidget {
     required this.discountAmount,
     required this.grandTotal,
     required this.receivedController,
-    required this.descriptionController,
-    this.onAddPhotoPressed,
-    this.attachedPhotoName,
   });
 
   @override
@@ -30,8 +24,6 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
   @override
   Widget build(BuildContext context) {
     final paidAmount = double.tryParse(widget.receivedController.text) ?? 0.0;
-    
-    // 🛡️ فکس: کلیمپ (clamp) ہٹا دیا تاکہ اگر ادائیگی زیادہ ہو تو نیگیٹو (Negative) ویلیو صحیح طریقے سے آئے
     final balance = widget.grandTotal - paidAmount;
 
     return Container(
@@ -161,59 +153,6 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
                   fontSize: 11, 
                   fontWeight: FontWeight.bold, 
                   color: balance < 0 ? Colors.red : (balance > 0 ? Colors.green : Colors.black87),
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 12),
-
-          // 5. ڈسکرپشن اور فوٹو باکس
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: TextField(
-                    controller: widget.descriptionController,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      hintText: 'نوٹس یا تفصیل لکھیں...',
-                      hintStyle: const TextStyle(fontSize: 10, color: Colors.grey),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(6)),
-                        borderSide: BorderSide(color: Color(0xFFE53935), width: 1.5),
-                      ),
-                    ),
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: widget.onAddPhotoPressed,
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.camera_alt_outlined, size: 20, color: Color(0xFFE53935)),
-                      SizedBox(height: 2),
-                      Text('تصویر', style: TextStyle(fontSize: 8, color: Colors.grey)),
-                    ],
-                  ),
                 ),
               ),
             ],

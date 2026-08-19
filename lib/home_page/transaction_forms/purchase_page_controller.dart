@@ -26,14 +26,13 @@ class PurchasePageController {
   double remainingBalance = 0.0;
   double discountValue = 0.0;
   bool isDiscountPercentage = false;
-  String descriptionText = '';
 
   String? selectedPaymentSource = 'Cash';
   List<Map<String, dynamic>> splitPaymentsList = [];
 
   final GlobalKey<PaymentSourceCardState> paymentCardKey = GlobalKey<PaymentSourceCardState>();
 
-  // 🎯 محفوظ طریقے سے ہائیو باکسز گیٹ کرنے کا ہیلپر فنکشن (سائز کم کرنے کے لیے)
+  // 🎯 محفوظ طریقے سے ہائیو باکسز گیٹ کرنے کا ہیلپر فنکشن
   Future<Box> _getBox(String boxName) async =>
       Hive.isBoxOpen(boxName) ? Hive.box(boxName) : await Hive.openBox(boxName);
 
@@ -166,11 +165,16 @@ class PurchasePageController {
         }
       }
 
-      // 3. اسپلٹ پیمنٹس اور بینک باکس (bankBox) سے رقم منہا کرنا
+      // 3. PaymentSourceCard سے ڈیٹا (تصویر کا پاتھ اور ڈسکرپشن) محفوظ طریقے سے نکالنا
       final cardState = paymentCardKey.currentState;
       bool isSplit = cardState?.isSplitMode ?? false;
       splitPaymentsList = isSplit ? (cardState?.getSplitPaymentsList() ?? []) : [];
 
+      String? picturePath = cardState?.attachedImagePath ?? cardState?.imagePath;
+      bool hasPicture = picturePath != null && picturePath.trim().isNotEmpty;
+      String actualDescription = cardState?.noteController.text.trim() ?? cardState?.descriptionController.text.trim() ?? '';
+
+      // 4. اسپلٹ پیمنٹس اور بینک باکس (bankBox) سے رقم منہا کرنا
       if (paidAmount > 0) {
         if (isSplit && splitPaymentsList.isNotEmpty) {
           for (var split in splitPaymentsList) {
@@ -188,7 +192,7 @@ class PurchasePageController {
         }
       }
 
-      // 4. ٹرانزیکشن باکس (transactionBox) میں محفوظ کرنا
+      // 5. ٹرانزیکشن باکس (transactionBox) میں محفوظ کرنا
       final transactionData = {
         'type': 'purchase',
         'customerPhone': selectedPartyPhone ?? '',
@@ -197,7 +201,7 @@ class PurchasePageController {
         'amount': grandTotalAmount,
         'paidAmount': paidAmount,
         'remainingBalance': remainingBalance,
-        'description': descriptionText,
+        'description': actualDescription,
         'remarks': imeiList.join(','),
         'date': nowIso,
         'items': minimalTransactionItems,
@@ -207,7 +211,8 @@ class PurchasePageController {
         },
         'source': selectedPaymentSource,
         'splitPayments': splitPaymentsList,
-        'hasAttachment': false,
+        'hasPicture': hasPicture,
+        'picturePath': picturePath,
         'timestamp': nowIso,
         'purchasedImeis': imeiList,
         'isCreatedByAdmin': true,
@@ -215,7 +220,7 @@ class PurchasePageController {
 
       await transactionBox.put(timeKey.toString(), transactionData);
 
-      // 🎯 5. [میپنگ برج] packageBox کے اندر IMEI، mobileName، اور cashPrice کی اپڈیٹ
+      // 🎯 6. [میپنگ برج] packageBox کے اندر ڈیٹا اپڈیٹ
       final String phoneToUpdate = (targetApplicantPhone ?? selectedPartyPhone ?? '').trim();
 
       if (phoneToUpdate.isNotEmpty && itemsList.isNotEmpty) {

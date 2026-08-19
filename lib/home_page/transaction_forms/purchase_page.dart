@@ -5,12 +5,9 @@ import 'common/party_selector_widget.dart';
 import 'common/item_selector_row_widget.dart';
 import 'common/discount_widget.dart';
 import 'common/transaction_summary_widget.dart';
-
-// بالکل درست پاتھ کے ساتھ نیا پیمنٹ سورس کارڈ امپورٹ
 import '../../dashboard/widgets/payment_source_card.dart';
 
 class PurchasePage extends StatefulWidget {
-  // 🎯 کسٹمر (Applicant) کا فون نمبر ریسیو کرنے کے لیے نيا پیرامیٹر
   final String? applicantPhone;
 
   const PurchasePage({super.key, this.applicantPhone});
@@ -24,17 +21,15 @@ class _PurchasePageState extends State<PurchasePage> {
 
   double _discountValue = 0.0;
   bool _isDiscountPercentage = false;
-  String _selectedDiscountCategory = 'Discounts'; // 🔥 ڈراپ ڈاؤن سے منتخب کیٹیگری
+  String _selectedDiscountCategory = 'Discounts';
 
   final TextEditingController _receivedController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     controller = PurchasePageController();
     
-    // 🎯 کسٹمر کے فون نمبر کو کنٹرولر کی targetApplicantPhone فیلڈ سے جوڑ دیا گیا
     if (widget.applicantPhone != null && widget.applicantPhone!.trim().isNotEmpty) {
       controller.targetApplicantPhone = widget.applicantPhone!.trim();
     }
@@ -43,7 +38,6 @@ class _PurchasePageState extends State<PurchasePage> {
   @override
   void dispose() {
     _receivedController.dispose();
-    _descriptionController.dispose();
     controller.dispose();
     super.dispose();
   }
@@ -86,14 +80,12 @@ class _PurchasePageState extends State<PurchasePage> {
     controller.remainingBalance = remaining;
     controller.discountValue = _calculatedDiscountAmount;
     controller.isDiscountPercentage = _isDiscountPercentage;
-    controller.descriptionText = _descriptionController.text.trim();
 
     bool success = await controller.savePurchase();
 
     if (!mounted) return;
 
     if (success) {
-      // 🔥 ٹرانزیکشن کامیابی سے سیو ہونے پر ڈسکاؤنٹ کو ہائیو باکس کی منتخب کردہ کیٹیگری میں بھیجنا 🔥
       if (_calculatedDiscountAmount > 0) {
         DiscountWidget.recordDiscountInHive(
           categoryName: _selectedDiscountCategory,
@@ -190,7 +182,7 @@ class _PurchasePageState extends State<PurchasePage> {
 
                         const SizedBox(height: 10),
 
-                        // 🔥 3 پیرامیٹرز والے اپ ڈیٹ شدہ DiscountWidget کی ہینڈلنگ 🔥
+                        // Discount Widget
                         DiscountWidget(
                           onDiscountChanged: (String categoryName, double discountValue, bool isPercentage) {
                             setState(() {
@@ -203,13 +195,12 @@ class _PurchasePageState extends State<PurchasePage> {
 
                         const SizedBox(height: 10),
 
-                        // Transaction Summary Widget
+                        // Transaction Summary Widget (Cleaned parameters)
                         TransactionSummaryWidget(
                           subTotal: _subTotal,
                           discountAmount: _calculatedDiscountAmount,
                           grandTotal: _grandTotal,
                           receivedController: _receivedController,
-                          descriptionController: _descriptionController,
                         ),
 
                         const SizedBox(height: 10),

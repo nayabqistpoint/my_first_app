@@ -36,8 +36,11 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
   late final TextEditingController noteController;
   String? _attachedImagePath;
 
+  // 🎯 پبلک گیٹرز (تمام کنٹرولرز کے ساتھ یکسانیت کے لیے)
   bool get isSplitMode => _isSplitMode;
   String? get attachedImagePath => _attachedImagePath;
+  String? get imagePath => _attachedImagePath; // 👈 کنٹرولرز کی سہولت کے لیے
+  TextEditingController get descriptionController => noteController; // 👈 کنٹرولرز کی سہولت کے لیے
 
   @override
   void initState() {
@@ -193,7 +196,7 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
             ] else ...[
               ..._rows.asMap().entries.map((entry) {
                 final int idx = entry.key;
-                final  item = entry.value;
+                final item = entry.value;
                 final String rowCurrent = sources.contains(item.source) ? item.source : 'Cash';
 
                 return Padding(
