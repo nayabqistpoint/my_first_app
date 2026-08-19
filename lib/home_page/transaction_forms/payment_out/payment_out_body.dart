@@ -23,17 +23,12 @@ class _PaymentOutBodyState extends State<PaymentOutBody> {
     });
   }
 
-  // پرمیشن کی شرط اور ریکارڈنگ ہینڈلنگ
   Future<void> _handleAudioRecording() async {
-    // ۱۔ اگر پہلے سے ریکارڈنگ جاری تھی اور صارف نے سٹاپ کا بٹن دبایا
     if (_isRecording) {
-      setState(() {
-        _isRecording = false;
-      });
+      setState(() => _isRecording = false);
       return;
     }
 
-    // ۲۔ پرمیشن کی حقیقی چیکنگ
     bool hasPermission = await _checkMicrophonePermission();
 
     if (!hasPermission) {
@@ -45,21 +40,14 @@ class _PaymentOutBodyState extends State<PaymentOutBody> {
           ),
         );
       }
-      return; // پرمیشن نہ ملنے پر UI ریکارڈنگ موڈ میں نہیں جائے گی
+      return;
     }
 
-    // ۳۔ اگر اجازت مل جائے تب ہی UI تبدیل ہو
-    setState(() {
-      _isRecording = true;
-    });
+    setState(() => _isRecording = true);
   }
 
-  // مائیک پرمیشن چیکنگ لاجک
-  Future<bool> _checkMicrophonePermission() async {
-    return false; // پرمیشن نہ ہونے کی صورت میں بغیر ڈمی پاتھ کے محفوظ رہے گا
-  }
+  Future<bool> _checkMicrophonePermission() async => false;
 
-  // آڈیو کلیئر کرنے کا فنکشن
   void _clearAudio() {
     setState(() {
       _isRecording = false;
@@ -74,7 +62,7 @@ class _PaymentOutBodyState extends State<PaymentOutBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ۱۔ تاریخ کی پٹی
+          // تاریخ کی پٹی
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -100,7 +88,7 @@ class _PaymentOutBodyState extends State<PaymentOutBody> {
           ),
           const SizedBox(height: 20),
 
-          // ۲۔ رقم (Amount) درج کرنے کا خانہ
+          // رقم درج کرنے کا خانہ
           TextField(
             controller: widget.controller.amountController,
             focusNode: widget.controller.amountFocusNode,
@@ -110,9 +98,7 @@ class _PaymentOutBodyState extends State<PaymentOutBody> {
             decoration: InputDecoration(
               labelText: 'رقم درج کریں (Amount)',
               prefixText: 'Rs. ',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Colors.red, width: 2),
@@ -121,7 +107,7 @@ class _PaymentOutBodyState extends State<PaymentOutBody> {
           ),
           const SizedBox(height: 16),
 
-          // ۳۔ رقم داخل کرنے کے بعد ظاہر ہونے والے وزٹس
+          // مشروط ڈسپلے وزٹس
           ValueListenableBuilder<bool>(
             valueListenable: widget.controller.hasAmountEntered,
             builder: (context, hasAmount, child) {
@@ -132,7 +118,7 @@ class _PaymentOutBodyState extends State<PaymentOutBody> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // وائس نوٹ / آڈیو ریکارڈر باکس
+                  // وائس نوٹ باکس
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -148,7 +134,7 @@ class _PaymentOutBodyState extends State<PaymentOutBody> {
                         Row(
                           children: [
                             Icon(
-                              Icons.mic, 
+                              Icons.mic,
                               color: _isRecording ? Colors.red : (hasAudioSaved ? Colors.red[700] : Colors.grey),
                             ),
                             const SizedBox(width: 10),
@@ -172,7 +158,7 @@ class _PaymentOutBodyState extends State<PaymentOutBody> {
                               ),
                             IconButton(
                               icon: Icon(
-                                _isRecording ? Icons.stop : Icons.fiber_manual_record, 
+                                _isRecording ? Icons.stop : Icons.fiber_manual_record,
                                 color: Colors.red,
                               ),
                               onPressed: _handleAudioRecording,
@@ -186,7 +172,7 @@ class _PaymentOutBodyState extends State<PaymentOutBody> {
 
                   // ڈسکاؤنٹ وزٹ
                   DiscountWidget(
-                    onDiscountChanged: (String categoryName, double discountValue, bool isPercentage) {
+                    onDiscountChanged: (categoryName, discountValue, isPercentage) {
                       widget.controller.updateDiscount(categoryName, discountValue, isPercentage);
                     },
                   ),
@@ -197,7 +183,7 @@ class _PaymentOutBodyState extends State<PaymentOutBody> {
                     key: widget.controller.sourceCardKey,
                     isAdmin: true,
                     selectedSource: widget.controller.selectedPaymentSource,
-                    onChanged: (String? newSource) {
+                    onChanged: (newSource) {
                       setState(() {
                         widget.controller.updateSelectedSource(newSource);
                       });

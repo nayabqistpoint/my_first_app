@@ -11,22 +11,17 @@ class PaymentOutController {
   final ValueNotifier<double> currentAmountNotifier = ValueNotifier<double>(0.0);
   final ValueNotifier<bool> isSaving = ValueNotifier<bool>(false);
 
-  // GlobalKey for PaymentSourceCard State
   final GlobalKey<PaymentSourceCardState> sourceCardKey = GlobalKey<PaymentSourceCardState>();
 
   String? audioPath;
-
   double _discountValue = 0.0;
   bool _isPercentageDiscount = false;
   String _selectedDiscountCategory = 'Discounts';
-  
   String? _selectedSource = 'Cash';
 
   String? get selectedPaymentSource => _selectedSource;
 
-  void updateSelectedSource(String? newSource) {
-    _selectedSource = newSource;
-  }
+  void updateSelectedSource(String? newSource) => _selectedSource = newSource;
 
   PaymentOutController() {
     amountController.addListener(_onAmountChanged);
@@ -34,9 +29,7 @@ class PaymentOutController {
 
   void _onAmountChanged() {
     final text = amountController.text.trim();
-    final parsedAmount = double.tryParse(text) ?? 0.0;
-    
-    currentAmountNotifier.value = parsedAmount;
+    currentAmountNotifier.value = double.tryParse(text) ?? 0.0;
     hasAmountEntered.value = text.isNotEmpty;
   }
 
@@ -54,11 +47,10 @@ class PaymentOutController {
     isSaving.dispose();
   }
 
-  // پیمنٹ آؤٹ سیو کرنے کا اپڈیٹ شدہ اور آپٹمائزڈ فنکشن
   Future<void> savePaymentOut(BuildContext context, {String? customerId, bool isExpense = false}) async {
     if (isSaving.value) return;
 
-    String amountText = amountController.text.trim();
+    final String amountText = amountController.text.trim();
     if (amountText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('براہ کرم رقم درج کریں')),
@@ -67,22 +59,13 @@ class PaymentOutController {
     }
 
     isSaving.value = true;
+    final double amount = double.tryParse(amountText) ?? 0.0;
 
-    double amount = double.tryParse(amountText) ?? 0.0;
+    // ڈسکاؤنٹ اور بقایا رقم کا حساب
+    final double calculatedDiscountAmount = _isPercentageDiscount ? (amount * _discountValue) / 100 : _discountValue;
+    final double netAmountToDeduct = (amount - calculatedDiscountAmount).clamp(0.0, double.infinity);
 
-    // ۱۔ ڈسکاؤنٹ کی رقم کا حساب لگانا
-    double calculatedDiscountAmount = 0.0;
-    if (_isPercentageDiscount) {
-      calculatedDiscountAmount = (amount * _discountValue) / 100;
-    } else {
-      calculatedDiscountAmount = _discountValue;
-    }
-
-    // ۲۔ کیش یا بینک سے منہا ہونے والی اصل بقایا رقم
-    double netAmountToDeduct = amount - calculatedDiscountAmount;
-    if (netAmountToDeduct < 0) netAmountToDeduct = 0.0;
-
-    // PaymentSourceCard سے تصویر، ڈسکرپشن اور اسپلٹ لسٹ حاصل کرنا (ناموں کو فکس کر دیا گیا ہے)
+    // PaymentSourceCard سے ڈیٹا کی وصولی
     List<Map<String, dynamic>> splitPayments = [];
     String? picturePath;
     String description = '';
@@ -90,21 +73,19 @@ class PaymentOutController {
     final state = sourceCardKey.currentState;
     if (state != null) {
       splitPayments = state.getSplitPaymentsList();
-      picturePath = state.attachedImagePath; // 'imagePath' کے بجائے 'attachedImagePath'
-      description = state.noteController.text.trim(); // 'descriptionController' کے بجائے 'noteController'
+      picturePath = state.attachedImagePath;
+      description = state.noteController.text.trim();
     }
 
-    bool hasPicture = picturePath != null && picturePath.isNotEmpty;
-    bool hasAudio = audioPath != null && audioPath!.isNotEmpty;
-
-    String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    final bool hasPicture = picturePath != null && picturePath.isNotEmpty;
+    final bool hasAudio = audioPath != null && audioPath!.isNotEmpty;
+    final String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
     final String nowIso = DateTime.now().toIso8601String();
 
-    // اپڈیٹ شدہ اور کلین ڈیٹا ماڈل (کوئی remarks فیلڈ نہیں)
     final Map<String, dynamic> transactionData = {
-      'type': 'paid', 
+      'type': 'paid',
       'customerPhone': cleanPhone,
-      'customerId': cleanPhone, 
+      'customerId': cleanPhone,
       'amount': amount,
       'netAmount': netAmountToDeduct,
       'description': description,
@@ -126,19 +107,14 @@ class PaymentOutController {
     };
 
     try {
-      // ۱۔ ٹرانزیکشن باکس میں سیو کرنا
-      var txnBox = Hive.box('transactionBox');
-      await txnBox.add(transactionData);
-
-      // ۲۔ اگر یہ دکان کا خرچہ ہے تو اخراجات باکس میں بھی سیو کریں
+      // ۱۔ ٹرانزیکشن اور ایکسپینس باکس میں سیو
+      await Hive.box('transactionBox').add(transactionData);
       if (isExpense) {
-        var expenseBox = Hive.box('expenseBox');
-        await expenseBox.add(transactionData);
+        await Hive.box('expenseBox').add(transactionData);
       }
 
-      // ۳۔ bankBox سے رقم منہا (Deduct) کرنا
+      // ۲۔ بینک/کیش باکس اپڈیٹ
       var bankBox = Hive.box('bankBox');
-
       if (splitPayments.isNotEmpty) {
         for (var split in splitPayments) {
           String srcKey = split['source'] ?? 'Cash';
@@ -157,7 +133,7 @@ class PaymentOutController {
         await bankBox.put(sourceKey, currentBalance - netAmountToDeduct);
       }
 
-      // ۴۔ ڈسکاؤنٹ کی رقم کو 'expenseBox' کی کیٹیگری میں ریکارڈ کرنا
+      // ۳۔ ڈسکاؤنٹ ریکارڈنگ
       if (calculatedDiscountAmount > 0) {
         DiscountWidget.recordDiscountInHive(
           categoryName: _selectedDiscountCategory,
@@ -177,16 +153,11 @@ class PaymentOutController {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خرابی پیش آئی: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('خرابی پیش آئی: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
-      if (context.mounted) {
-        isSaving.value = false;
-      }
+      if (context.mounted) isSaving.value = false;
     }
   }
 }
