@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../dashboard/widgets/payment_source_card.dart';
-import '../common/discount_widget.dart'; // 🔥 DiscountWidget امپورٹ
+import '../common/discount_widget.dart';
 
 class PaymentOutController {
   final TextEditingController amountController = TextEditingController();
-  final TextEditingController remarksController = TextEditingController();
-  
   final FocusNode amountFocusNode = FocusNode();
 
   final ValueNotifier<bool> hasAmountEntered = ValueNotifier<bool>(false);
   final ValueNotifier<double> currentAmountNotifier = ValueNotifier<double>(0.0);
   final ValueNotifier<bool> isSaving = ValueNotifier<bool>(false);
 
-  // ڈائنامک سورس کارڈ کا کنٹرول کے لیے GlobalKey
+  // GlobalKey for PaymentSourceCard State
   final GlobalKey<PaymentSourceCardState> sourceCardKey = GlobalKey<PaymentSourceCardState>();
+
+  String? audioPath;
 
   double _discountValue = 0.0;
   bool _isPercentageDiscount = false;
-  String _selectedDiscountCategory = 'Discounts'; // 🔥 منتخب کردہ ڈسکاؤنٹ/انکم کیٹیگری
+  String _selectedDiscountCategory = 'Discounts';
   
   String? _selectedSource = 'Cash';
 
@@ -40,7 +40,6 @@ class PaymentOutController {
     hasAmountEntered.value = text.isNotEmpty;
   }
 
-  // 🔥 3 پیرامیٹرز کے ساتھ اپ ڈیٹ شدہ ڈسکاؤنٹ فنکشن 🔥
   void updateDiscount(String categoryName, double value, bool isPercentage) {
     _selectedDiscountCategory = categoryName;
     _discountValue = value;
@@ -49,14 +48,13 @@ class PaymentOutController {
 
   void dispose() {
     amountController.dispose();
-    remarksController.dispose();
     amountFocusNode.dispose();
     hasAmountEntered.dispose();
     currentAmountNotifier.dispose();
     isSaving.dispose();
   }
 
-  // ہائیو باکس (bankBox) سے ڈائنامک رقم منہا (Deduct) کرنے کا اصلی فنکشن
+  // پیمنٹ آؤٹ سیو کرنے کا اپڈیٹ شدہ اور آپٹمائزڈ فنکشن
   Future<void> savePaymentOut(BuildContext context, {String? customerId, bool isExpense = false}) async {
     if (isSaving.value) return;
 
@@ -71,9 +69,8 @@ class PaymentOutController {
     isSaving.value = true;
 
     double amount = double.tryParse(amountText) ?? 0.0;
-    String remarks = remarksController.text.trim();
 
-    // 🔥 ۱۔ ڈسکاؤنٹ کی رقم کا حساب لگانا 🔥
+    // ۱۔ ڈسکاؤنٹ کی رقم کا حساب لگانا
     double calculatedDiscountAmount = 0.0;
     if (_isPercentageDiscount) {
       calculatedDiscountAmount = (amount * _discountValue) / 100;
@@ -81,27 +78,36 @@ class PaymentOutController {
       calculatedDiscountAmount = _discountValue;
     }
 
-    // 🔥 ۲۔ کیش یا بینک سے وضع (Deduct) ہونے والی اصل بقایا رقم 🔥
+    // ۲۔ کیش یا بینک سے منہا ہونے والی اصل بقایا رقم
     double netAmountToDeduct = amount - calculatedDiscountAmount;
     if (netAmountToDeduct < 0) netAmountToDeduct = 0.0;
 
-    // PaymentSourceCard سے لائیو اسپلٹ لسٹ اٹھانا
+    // PaymentSourceCard سے تصویر، ڈسکرپشن اور اسپلٹ لسٹ حاصل کرنا (ناموں کو فکس کر دیا گیا ہے)
     List<Map<String, dynamic>> splitPayments = [];
-    if (sourceCardKey.currentState != null) {
-      splitPayments = sourceCardKey.currentState!.getSplitPaymentsList();
+    String? picturePath;
+    String description = '';
+
+    final state = sourceCardKey.currentState;
+    if (state != null) {
+      splitPayments = state.getSplitPaymentsList();
+      picturePath = state.attachedImagePath; // 'imagePath' کے بجائے 'attachedImagePath'
+      description = state.noteController.text.trim(); // 'descriptionController' کے بجائے 'noteController'
     }
+
+    bool hasPicture = picturePath != null && picturePath.isNotEmpty;
+    bool hasAudio = audioPath != null && audioPath!.isNotEmpty;
 
     String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
     final String nowIso = DateTime.now().toIso8601String();
 
+    // اپڈیٹ شدہ اور کلین ڈیٹا ماڈل (کوئی remarks فیلڈ نہیں)
     final Map<String, dynamic> transactionData = {
       'type': 'paid', 
       'customerPhone': cleanPhone,
       'customerId': cleanPhone, 
       'amount': amount,
       'netAmount': netAmountToDeduct,
-      'description': remarks,
-      'remarks': remarks,
+      'description': description,
       'date': nowIso,
       'discount': {
         'category': _selectedDiscountCategory,
@@ -112,26 +118,28 @@ class PaymentOutController {
       'source': _selectedSource ?? 'Cash',
       'splitPayments': splitPayments,
       'isExpense': isExpense,
-      'hasAttachment': false,
+      'hasPicture': hasPicture,
+      'picturePath': hasPicture ? picturePath : null,
+      'hasAudio': hasAudio,
+      'audioPath': hasAudio ? audioPath : null,
       'timestamp': nowIso,
     };
 
     try {
-      // ۱۔ ٹرانزیکشن باکس میں انٹری
+      // ۱۔ ٹرانزیکشن باکس میں سیو کرنا
       var txnBox = Hive.box('transactionBox');
       await txnBox.add(transactionData);
 
-      // ۲۔ اگر یہ دکان کا خرچہ ہے تو اخراجات باکس میں بھی بھیجیں
+      // ۲۔ اگر یہ دکان کا خرچہ ہے تو اخراجات باکس میں بھی سیو کریں
       if (isExpense) {
         var expenseBox = Hive.box('expenseBox');
         await expenseBox.add(transactionData);
       }
 
-      // ۳۔ ڈائریکٹ ہائیو (bankBox) سے مائنس ڈسکاؤنٹ شدہ رقم (Net Amount) منہا (Deduct) کرنا
+      // ۳۔ bankBox سے رقم منہا (Deduct) کرنا
       var bankBox = Hive.box('bankBox');
 
       if (splitPayments.isNotEmpty) {
-        // اسپلٹ موڈ: تمام منتخب سورسز سے الگ الگ کٹوتی
         for (var split in splitPayments) {
           String srcKey = split['source'] ?? 'Cash';
           double splitAmt = (split['amount'] is num)
@@ -144,13 +152,12 @@ class PaymentOutController {
           }
         }
       } else {
-        // سنگل موڈ: منتخب کردہ بینک یا کیش سے مائنس ڈسکاؤنٹ رقم کی کٹوتی
         String sourceKey = _selectedSource ?? 'Cash';
         double currentBalance = (bankBox.get(sourceKey, defaultValue: 0.0) as num).toDouble();
         await bankBox.put(sourceKey, currentBalance - netAmountToDeduct);
       }
 
-      // 🔥 ۴۔ ڈسکاؤنٹ کی رقم کو 'expenseBox' کی منتخب کردہ کیٹیگری میں ریکارڈ کرنا 🔥
+      // ۴۔ ڈسکاؤنٹ کی رقم کو 'expenseBox' کی کیٹیگری میں ریکارڈ کرنا
       if (calculatedDiscountAmount > 0) {
         DiscountWidget.recordDiscountInHive(
           categoryName: _selectedDiscountCategory,

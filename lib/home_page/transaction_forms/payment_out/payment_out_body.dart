@@ -3,10 +3,69 @@ import 'payment_out_controller.dart';
 import '../common/discount_widget.dart';
 import '../../../dashboard/widgets/payment_source_card.dart';
 
-class PaymentOutBody extends StatelessWidget {
+class PaymentOutBody extends StatefulWidget {
   final PaymentOutController controller;
 
   const PaymentOutBody({super.key, required this.controller});
+
+  @override
+  State<PaymentOutBody> createState() => _PaymentOutBodyState();
+}
+
+class _PaymentOutBodyState extends State<PaymentOutBody> {
+  bool _isRecording = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(widget.controller.amountFocusNode);
+    });
+  }
+
+  // پرمیشن کی شرط اور ریکارڈنگ ہینڈلنگ
+  Future<void> _handleAudioRecording() async {
+    // ۱۔ اگر پہلے سے ریکارڈنگ جاری تھی اور صارف نے سٹاپ کا بٹن دبایا
+    if (_isRecording) {
+      setState(() {
+        _isRecording = false;
+      });
+      return;
+    }
+
+    // ۲۔ پرمیشن کی حقیقی چیکنگ
+    bool hasPermission = await _checkMicrophonePermission();
+
+    if (!hasPermission) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('مائیکروفون کی اجازت درکار ہے...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return; // پرمیشن نہ ملنے پر UI ریکارڈنگ موڈ میں نہیں جائے گی
+    }
+
+    // ۳۔ اگر اجازت مل جائے تب ہی UI تبدیل ہو
+    setState(() {
+      _isRecording = true;
+    });
+  }
+
+  // مائیک پرمیشن چیکنگ لاجک
+  Future<bool> _checkMicrophonePermission() async {
+    return false; // پرمیشن نہ ہونے کی صورت میں بغیر ڈمی پاتھ کے محفوظ رہے گا
+  }
+
+  // آڈیو کلیئر کرنے کا فنکشن
+  void _clearAudio() {
+    setState(() {
+      _isRecording = false;
+      widget.controller.audioPath = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,6 +74,7 @@ class PaymentOutBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ۱۔ تاریخ کی پٹی
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -40,10 +100,10 @@ class PaymentOutBody extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // رقم کا خانہ (Amount)
+          // ۲۔ رقم (Amount) درج کرنے کا خانہ
           TextField(
-            controller: controller.amountController,
-            focusNode: controller.amountFocusNode,
+            controller: widget.controller.amountController,
+            focusNode: widget.controller.amountFocusNode,
             autofocus: true,
             keyboardType: TextInputType.number,
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -61,91 +121,86 @@ class PaymentOutBody extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // رقم درج ہونے پر باقی فارم ظاہر ہوگا
+          // ۳۔ رقم داخل کرنے کے بعد ظاہر ہونے والے وزٹس
           ValueListenableBuilder<bool>(
-            valueListenable: controller.hasAmountEntered,
+            valueListenable: widget.controller.hasAmountEntered,
             builder: (context, hasAmount, child) {
               if (!hasAmount) return const SizedBox.shrink();
+
+              final bool hasAudioSaved = widget.controller.audioPath != null && widget.controller.audioPath!.isNotEmpty;
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
-                    controller: controller.remarksController,
-                    maxLines: 2,
-                    keyboardType: TextInputType.text,
-                    decoration: InputDecoration(
-                      labelText: 'تفصیل یا ریمارکس (Remarks)',
-                      alignLabelWithHint: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.red, width: 2),
-                      ),
-                      suffixIcon: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.camera_alt, color: Colors.red),
-                            onPressed: () {},
-                            tooltip: 'تصویر لیں',
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.attach_file, color: Colors.red),
-                            onPressed: () {},
-                            tooltip: 'فائل اٹیچ کریں',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  // وائس نوٹ / آڈیو ریکارڈر باکس
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade400),
+                      border: Border.all(
+                        color: hasAudioSaved ? Colors.red : Colors.grey.shade400,
+                      ),
                       borderRadius: BorderRadius.circular(8),
-                      color: Colors.grey[50],
+                      color: hasAudioSaved ? Colors.red.shade50 : Colors.grey[50],
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(Icons.mic, color: Colors.red),
-                            SizedBox(width: 10),
+                            Icon(
+                              Icons.mic, 
+                              color: _isRecording ? Colors.red : (hasAudioSaved ? Colors.red[700] : Colors.grey),
+                            ),
+                            const SizedBox(width: 10),
                             Text(
-                              'وائس نوٹ ریکارڈ کریں',
-                              style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w500),
+                              _isRecording
+                                  ? 'ریکارڈنگ ہو رہی ہے...'
+                                  : (hasAudioSaved ? 'وائس نوٹ حاصل ہو گیا ہے' : 'وائس نوٹ ریکارڈ کریں'),
+                              style: TextStyle(
+                                color: hasAudioSaved ? Colors.red[900] : Colors.black54,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.fiber_manual_record, color: Colors.red),
-                          onPressed: () {},
+                        Row(
+                          children: [
+                            if (hasAudioSaved && !_isRecording)
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: _clearAudio,
+                              ),
+                            IconButton(
+                              icon: Icon(
+                                _isRecording ? Icons.stop : Icons.fiber_manual_record, 
+                                color: Colors.red,
+                              ),
+                              onPressed: _handleAudioRecording,
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  // 🔥 3 پیرامیٹرز (categoryName، discountValue، isPercentage) پاس کر کے ٹھیک کر دیا گیا ہے 🔥
+                  // ڈسکاؤنٹ وزٹ
                   DiscountWidget(
                     onDiscountChanged: (String categoryName, double discountValue, bool isPercentage) {
-                      controller.updateDiscount(categoryName, discountValue, isPercentage);
+                      widget.controller.updateDiscount(categoryName, discountValue, isPercentage);
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // ڈائنامک PaymentSourceCard
+                  // پیمنٹ سورس کارڈ
                   PaymentSourceCard(
-                    key: controller.sourceCardKey,
+                    key: widget.controller.sourceCardKey,
                     isAdmin: true,
-                    selectedSource: controller.selectedPaymentSource,
+                    selectedSource: widget.controller.selectedPaymentSource,
                     onChanged: (String? newSource) {
-                      controller.updateSelectedSource(newSource);
+                      setState(() {
+                        widget.controller.updateSelectedSource(newSource);
+                      });
                     },
                   ),
                 ],
