@@ -14,8 +14,6 @@ class PaymentSourceCard extends StatefulWidget {
   final String? selectedSource;
   final ValueChanged<String?> onChanged;
   final bool isAdmin;
-  
-  // پیرنٹ سے ملنے والے کنٹرولر اور فنکشنز
   final TextEditingController? noteController;
   final ValueChanged<String>? onAttachmentPicked;
 
@@ -39,8 +37,6 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
   String? _attachedImagePath;
 
   bool get isSplitMode => _isSplitMode;
-  
-  // کنٹرولر کے لیے تصویری پاتھ کا پبلک گیٹر
   String? get attachedImagePath => _attachedImagePath;
 
   @override
@@ -54,13 +50,10 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
     for (var row in _rows) {
       row.amountController.dispose();
     }
-    if (widget.noteController == null) {
-      noteController.dispose();
-    }
+    if (widget.noteController == null) noteController.dispose();
     super.dispose();
   }
 
-  // کیمرہ یا گیلری منتخب کرنے کا فنکشن
   void _pickAttachment() {
     showModalBottomSheet(
       context: context,
@@ -92,12 +85,8 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
   }
 
   void _setImagePath(String path) {
-    setState(() {
-      _attachedImagePath = path;
-    });
-    if (widget.onAttachmentPicked != null) {
-      widget.onAttachmentPicked!(path);
-    }
+    setState(() => _attachedImagePath = path);
+    widget.onAttachmentPicked?.call(path);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('رسید کی تصویر منسلک ہو گئی ہے')),
     );
@@ -107,9 +96,8 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
     setState(() {
       _isSplitMode = true;
       _rows.clear();
-      String first = widget.selectedSource ?? 'Cash';
-      String second = sources.firstWhere((s) => s != first, orElse: () => 'Cash');
-
+      final String first = widget.selectedSource ?? 'Cash';
+      final String second = sources.firstWhere((s) => s != first, orElse: () => 'Cash');
       _rows.addAll([
         PaymentRowItem(source: first),
         PaymentRowItem(source: second),
@@ -119,7 +107,7 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
 
   void _addRow(List<String> sources) {
     setState(() {
-      String next = sources.firstWhere(
+      final String next = sources.firstWhere(
         (s) => !_rows.any((r) => r.source == s),
         orElse: () => 'Cash',
       );
@@ -139,7 +127,7 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
   }
 
   double get totalReceived => _rows.fold(
-      0, (sum, item) => sum + (double.tryParse(item.amountController.text) ?? 0));
+      0.0, (sum, item) => sum + (double.tryParse(item.amountController.text) ?? 0.0));
 
   List<Map<String, dynamic>> getSplitPaymentsList() {
     if (!_isSplitMode) return [];
@@ -156,33 +144,26 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
     return ValueListenableBuilder<Box>(
       valueListenable: Hive.box('bankBox').listenable(),
       builder: (context, box, child) {
-        // ۱۔ پرانی cashInHand کو ختم کر کے Cash کے ساتھ مرج کرنا
-        double cashBalance = 0.0;
-        if (box.containsKey('Cash')) {
-          cashBalance += (box.get('Cash') ?? 0.0).toDouble();
-        }
+        double cashBalance = (box.get('Cash') ?? 0.0).toDouble();
         if (box.containsKey('cashInHand')) {
           cashBalance += (box.get('cashInHand') ?? 0.0).toDouble();
           box.put('Cash', cashBalance);
           box.delete('cashInHand');
         }
 
-        Map<String, double> bankBalances = {};
+        final Map<String, double> bankBalances = {};
         for (var key in box.keys) {
-          String keyStr = key.toString();
+          final String keyStr = key.toString();
           if (keyStr != 'cashInHand' && keyStr != 'Cash') {
-            String cleanName = keyStr.startsWith('bank_')
+            final String cleanName = keyStr.startsWith('bank_')
                 ? keyStr.replaceFirst('bank_', '')
                 : keyStr;
             bankBalances[cleanName] = (box.get(key) ?? 0.0).toDouble();
           }
         }
 
-        final Set<String> sourcesSet = {'Cash', ...bankBalances.keys};
-        final List<String> sources = sourcesSet.toList();
-
-        String current = (widget.selectedSource != null &&
-                sources.contains(widget.selectedSource))
+        final List<String> sources = {'Cash', ...bankBalances.keys}.toList();
+        final String current = (widget.selectedSource != null && sources.contains(widget.selectedSource))
             ? widget.selectedSource!
             : 'Cash';
 
@@ -193,16 +174,12 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text("Payment Type",
-                      style: TextStyle(fontSize: 15, color: Colors.black54)),
+                  const Text("Payment Type", style: TextStyle(fontSize: 15, color: Colors.black54)),
                   DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: current,
                       icon: const Icon(Icons.arrow_drop_down),
-                      items: sources
-                          .map((s) => _buildDropdownItem(
-                              s, cashBalance, bankBalances))
-                          .toList(),
+                      items: sources.map((s) => _buildDropdownItem(s, cashBalance, bankBalances)).toList(),
                       onChanged: widget.onChanged,
                     ),
                   ),
@@ -211,17 +188,13 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
               InkWell(
                 onTap: () => _toggleSplitMode(sources),
                 child: const Text("+ Add Payment Type",
-                    style: TextStyle(
-                        color: Colors.blue, fontWeight: FontWeight.bold)),
+                    style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
               ),
             ] else ...[
               ..._rows.asMap().entries.map((entry) {
-                int idx = entry.key;
-                var item = entry.value;
-
-                String rowCurrent = sources.contains(item.source)
-                    ? item.source
-                    : 'Cash';
+                final int idx = entry.key;
+                final  item = entry.value;
+                final String rowCurrent = sources.contains(item.source) ? item.source : 'Cash';
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -231,25 +204,18 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
                         child: DropdownButton<String>(
                           value: rowCurrent,
                           isDense: true,
-                          items: sources
-                              .map((s) => _buildDropdownItem(
-                                  s, cashBalance, bankBalances))
-                              .toList(),
+                          items: sources.map((s) => _buildDropdownItem(s, cashBalance, bankBalances)).toList(),
                           onChanged: (val) {
-                            if (val != null) {
-                              setState(() => item.source = val);
-                            }
+                            if (val != null) setState(() => item.source = val);
                           },
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline,
-                            size: 18, color: Colors.black45),
+                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.black45),
                         onPressed: () => _removeRow(idx),
                       ),
                       const Spacer(),
-                      const Text("Rs ",
-                          style: TextStyle(fontSize: 14, color: Colors.black87)),
+                      const Text("Rs ", style: TextStyle(fontSize: 14, color: Colors.black87)),
                       SizedBox(
                         width: 90,
                         child: TextField(
@@ -258,8 +224,7 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
                           textAlign: TextAlign.right,
                           onChanged: (_) => setState(() {}),
                           decoration: const InputDecoration(isDense: true),
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -273,21 +238,16 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
                   InkWell(
                     onTap: () => _addRow(sources),
                     child: const Text("+ Add Payment Type",
-                        style: TextStyle(
-                            color: Colors.blue, fontWeight: FontWeight.bold)),
+                        style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
                   ),
-                  Text(
-                    "Received Rs ${totalReceived.toStringAsFixed(0)}",
-                    style: const TextStyle(
-                        color: Colors.black54, fontWeight: FontWeight.bold),
-                  ),
+                  Text("Received Rs ${totalReceived.toStringAsFixed(0)}",
+                      style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
                 ],
               ),
             ],
             const SizedBox(height: 16),
             const Divider(color: Colors.black12, height: 1),
             const SizedBox(height: 12),
-            // ڈسکرپشن اور کیمرہ باکس (60px)
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -301,8 +261,7 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
                         labelText: "Description",
                         hintText: "Add Note",
                         alignLabelWithHint: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: const BorderSide(color: Colors.black26),
@@ -313,7 +272,7 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
                 ),
                 const SizedBox(width: 8),
                 InkWell(
-                  onTap: _pickAttachment, // کیمرہ یا گیلری کھولنا
+                  onTap: _pickAttachment,
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     width: 60,
@@ -354,8 +313,8 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
 
   DropdownMenuItem<String> _buildDropdownItem(
       String source, double cashBalance, Map<String, double> banks) {
-    bool isCash = source == 'Cash';
-    double balance = isCash ? cashBalance : (banks[source] ?? 0.0);
+    final bool isCash = source == 'Cash';
+    final double balance = isCash ? cashBalance : (banks[source] ?? 0.0);
 
     return DropdownMenuItem<String>(
       value: source,

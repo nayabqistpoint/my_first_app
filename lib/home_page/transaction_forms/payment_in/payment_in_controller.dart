@@ -11,23 +11,17 @@ class PaymentInController {
   final ValueNotifier<double> currentAmountNotifier = ValueNotifier<double>(0.0);
   final ValueNotifier<bool> isSaving = ValueNotifier<bool>(false);
 
-  // PaymentSourceCard کے ساتھ رابطہ قائم کرنے والی GlobalKey
   final GlobalKey<PaymentSourceCardState> paymentSourceCardKey = GlobalKey<PaymentSourceCardState>();
 
-  // آڈیو پاتھ کو کنٹرول کرنے کا ویری ایبل
   String? audioPath;
-
   double _discountValue = 0.0;
   bool _isPercentageDiscount = false;
   String _selectedDiscountCategory = 'Discounts';
-  
   String? _selectedSource = 'Cash';
 
   String? get selectedPaymentSource => _selectedSource;
 
-  void updateSelectedSource(String? newSource) {
-    _selectedSource = newSource;
-  }
+  void updateSelectedSource(String? newSource) => _selectedSource = newSource;
 
   PaymentInController() {
     amountController.addListener(_onAmountChanged);
@@ -35,9 +29,7 @@ class PaymentInController {
 
   void _onAmountChanged() {
     final text = amountController.text.trim();
-    final parsedAmount = double.tryParse(text) ?? 0.0;
-    
-    currentAmountNotifier.value = parsedAmount;
+    currentAmountNotifier.value = double.tryParse(text) ?? 0.0;
     hasAmountEntered.value = text.isNotEmpty;
   }
 
@@ -58,7 +50,7 @@ class PaymentInController {
   Future<void> savePaymentIn(BuildContext context, {String? customerId}) async {
     if (isSaving.value) return;
 
-    String amountText = amountController.text.trim();
+    final String amountText = amountController.text.trim();
     if (amountText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('براہ کرم رقم درج کریں')),
@@ -69,43 +61,32 @@ class PaymentInController {
     isSaving.value = true;
 
     try {
-      double totalAmount = double.tryParse(amountText) ?? 0.0;
+      final double totalAmount = double.tryParse(amountText) ?? 0.0;
 
-      // ۱۔ ڈسکاؤنٹ کا حساب
-      double calculatedDiscountAmount = 0.0;
-      if (_isPercentageDiscount) {
-        calculatedDiscountAmount = (totalAmount * _discountValue) / 100;
-      } else {
-        calculatedDiscountAmount = _discountValue;
-      }
+      // ۱۔ ڈسکاؤنٹ اور نٹ اماؤنٹ کا حساب
+      final double calculatedDiscount = _isPercentageDiscount
+          ? (totalAmount * _discountValue) / 100
+          : _discountValue;
 
-      // ۲۔ اصل رقم (Net Amount)
-      double netAmountToReceive = totalAmount - calculatedDiscountAmount;
-      if (netAmountToReceive < 0) netAmountToReceive = 0.0;
-
-      String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+      final double netAmountToReceive = (totalAmount - calculatedDiscount).clamp(0.0, double.infinity);
+      final String cleanPhone = (customerId ?? '').replaceAll(RegExp(r'[^0-9]'), '');
       final String nowIso = DateTime.now().toIso8601String();
 
-      // ۳۔ لائیو PaymentSourceCard سے تصویر اور نوٹ کا ڈیٹا حاصل کرنا
+      // ۲۔ PaymentSourceCard سے تصویر اور نوٹ ریسیو کرنا
       final cardState = paymentSourceCardKey.currentState;
-      bool isSplit = cardState?.isSplitMode ?? false;
-      List<Map<String, dynamic>> splitList = cardState?.getSplitPaymentsList() ?? [];
+      final bool isSplit = cardState?.isSplitMode ?? false;
+      final List<Map<String, dynamic>> splitList = cardState?.getSplitPaymentsList() ?? [];
+      final String cardDescription = cardState?.noteController.text.trim() ?? '';
 
-      // PaymentSourceCard سے ڈسکرپشن نکالنا
-      String cardDescription = cardState?.noteController.text.trim() ?? '';
-      
-      // PaymentSourceCard کی اسٹیٹ سے منسلک تصویر کا پاتھ حاصل کرنا
-      String? picturePath = cardState?.attachedImagePath;
-      bool hasPicture = picturePath != null && picturePath.trim().isNotEmpty;
+      final String? picturePath = cardState?.attachedImagePath;
+      final bool hasPicture = picturePath != null && picturePath.trim().isNotEmpty;
+      final bool hasAudio = audioPath != null && audioPath!.trim().isNotEmpty;
 
-      // آڈیو پاتھ کی جانچ
-      bool hasAudio = audioPath != null && audioPath!.trim().isNotEmpty;
-
-      // ٹرانزیکشن کا حقیقی ماڈل
+      // ۳۔ ٹرانزیکشن کا ڈیٹا ابجیکٹ
       final Map<String, dynamic> transactionData = {
-        'type': 'received', 
+        'type': 'received',
         'customerPhone': cleanPhone,
-        'customerId': cleanPhone, 
+        'customerId': cleanPhone,
         'amount': totalAmount,
         'netAmount': netAmountToReceive,
         'description': cardDescription,
@@ -113,7 +94,7 @@ class PaymentInController {
         'discount': {
           'category': _selectedDiscountCategory,
           'value': _discountValue,
-          'amount': calculatedDiscountAmount,
+          'amount': calculatedDiscount,
           'isPercentage': _isPercentageDiscount,
         },
         'source': _selectedSource ?? 'Cash',
@@ -125,37 +106,35 @@ class PaymentInController {
         'timestamp': nowIso,
       };
 
-      // ہائیو کے TransactionBox میں ڈیٹا محفوظ کرنا
-      var txnBox = Hive.box('transactionBox');
-      await txnBox.add(transactionData);
+      // ۴۔ ڈیٹا بیس (Hive) میں ڈیٹا محفوظ کرنا
+      await Hive.box('transactionBox').add(transactionData);
 
-      // BankBox میں لیجر اپڈیٹ کرنا
-      var bankBox = Hive.box('bankBox');
-
+      // ۵۔ BankBox اپڈیٹ
+      final  bankBox = Hive.box('bankBox');
       if (isSplit && splitList.isNotEmpty) {
         for (var split in splitList) {
-          String srcKey = split['source'] ?? 'Cash';
-          double splitAmt = (split['amount'] is num)
+          final String srcKey = split['source'] ?? 'Cash';
+          final double splitAmt = (split['amount'] is num)
               ? (split['amount'] as num).toDouble()
               : (double.tryParse(split['amount'].toString()) ?? 0.0);
 
           if (splitAmt > 0) {
-            double currentBalance = (bankBox.get(srcKey, defaultValue: 0.0) as num).toDouble();
-            await bankBox.put(srcKey, currentBalance + splitAmt);
+            final double currBal = (bankBox.get(srcKey, defaultValue: 0.0) as num).toDouble();
+            await bankBox.put(srcKey, currBal + splitAmt);
           }
         }
       } else {
-        String sourceKey = _selectedSource ?? 'Cash';
-        double currentBalance = (bankBox.get(sourceKey, defaultValue: 0.0) as num).toDouble();
-        await bankBox.put(sourceKey, currentBalance + netAmountToReceive);
+        final String sourceKey = _selectedSource ?? 'Cash';
+        final double currBal = (bankBox.get(sourceKey, defaultValue: 0.0) as num).toDouble();
+        await bankBox.put(sourceKey, currBal + netAmountToReceive);
       }
 
-      // ExpenseBox میں ڈسکاؤنٹ کی اینٹری
-      if (calculatedDiscountAmount > 0) {
+      // ۶۔ ExpenseBox ڈسکاؤنٹ ہینڈلنگ
+      if (calculatedDiscount > 0) {
         try {
           DiscountWidget.recordDiscountInHive(
             categoryName: _selectedDiscountCategory,
-            amount: calculatedDiscountAmount,
+            amount: calculatedDiscount,
           );
         } catch (e) {
           debugPrint('Discount recording error: $e');
