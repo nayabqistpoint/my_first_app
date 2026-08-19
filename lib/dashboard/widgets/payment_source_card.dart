@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 
 class PaymentRowItem {
   String source;
@@ -13,12 +14,18 @@ class PaymentSourceCard extends StatefulWidget {
   final String? selectedSource;
   final ValueChanged<String?> onChanged;
   final bool isAdmin;
+  
+  // پیرنٹ سے ملنے والے کنٹرولر اور فنکشنز
+  final TextEditingController? noteController;
+  final ValueChanged<String>? onAttachmentPicked;
 
   const PaymentSourceCard({
     super.key,
     required this.selectedSource,
     required this.onChanged,
     this.isAdmin = false,
+    this.noteController,
+    this.onAttachmentPicked,
   });
 
   @override
@@ -28,17 +35,69 @@ class PaymentSourceCard extends StatefulWidget {
 class PaymentSourceCardState extends State<PaymentSourceCard> {
   bool _isSplitMode = false;
   final List<PaymentRowItem> _rows = [];
-  final TextEditingController noteController = TextEditingController();
+  late final TextEditingController noteController;
+  String? _attachedImagePath;
 
   bool get isSplitMode => _isSplitMode;
+
+  @override
+  void initState() {
+    super.initState();
+    noteController = widget.noteController ?? TextEditingController();
+  }
 
   @override
   void dispose() {
     for (var row in _rows) {
       row.amountController.dispose();
     }
-    noteController.dispose();
+    if (widget.noteController == null) {
+      noteController.dispose();
+    }
     super.dispose();
+  }
+
+  // کیمرہ یا گیلری منتخب کرنے کا فنکشن
+  void _pickAttachment() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Colors.blue),
+              title: const Text('کیمرے سے تصویر لیں'),
+              onTap: () async {
+                Navigator.pop(context);
+                final photo = await ImagePicker().pickImage(source: ImageSource.camera);
+                if (photo != null) _setImagePath(photo.path);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.green),
+              title: const Text('گیلری سے منتخب کریں'),
+              onTap: () async {
+                Navigator.pop(context);
+                final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+                if (image != null) _setImagePath(image.path);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _setImagePath(String path) {
+    setState(() {
+      _attachedImagePath = path;
+    });
+    if (widget.onAttachmentPicked != null) {
+      widget.onAttachmentPicked!(path);
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('رسید کی تصویر منسلک ہو گئی ہے')),
+    );
   }
 
   void _toggleSplitMode(List<String> sources) {
@@ -226,7 +285,7 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
             const SizedBox(height: 16),
             const Divider(color: Colors.black12, height: 1),
             const SizedBox(height: 12),
-            // ڈسکرپشن اور کیمرہ باکس جن کی ہائٹ بالکل برابر (60px) کر دی گئی ہے
+            // ڈسکرپشن اور کیمرہ باکس (60px)
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -252,26 +311,33 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
                 ),
                 const SizedBox(width: 8),
                 InkWell(
-                  onTap: () {},
+                  onTap: _pickAttachment, // کیمرہ یا گیلری کھولنا
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black26),
+                      border: Border.all(
+                        color: _attachedImagePath != null ? Colors.green : Colors.black26,
+                        width: _attachedImagePath != null ? 2 : 1,
+                      ),
                       borderRadius: BorderRadius.circular(8),
+                      color: _attachedImagePath != null ? Colors.green.shade50 : null,
                     ),
-                    child: const Stack(
+                    child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        Icon(Icons.image_outlined,
-                            color: Colors.black38, size: 28),
-                        Positioned(
-                          top: 6,
-                          right: 6,
-                          child: Icon(Icons.add_circle,
-                              color: Colors.blue, size: 16),
+                        Icon(
+                          _attachedImagePath != null ? Icons.check_circle : Icons.image_outlined,
+                          color: _attachedImagePath != null ? Colors.green : Colors.black38,
+                          size: 28,
                         ),
+                        if (_attachedImagePath == null)
+                          const Positioned(
+                            top: 6,
+                            right: 6,
+                            child: Icon(Icons.add_circle, color: Colors.blue, size: 16),
+                          ),
                       ],
                     ),
                   ),

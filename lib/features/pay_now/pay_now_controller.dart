@@ -10,6 +10,12 @@ class PayNowController extends ChangeNotifier {
 
   String customerMobileNumber = "";
 
+  // ۱. آڈیو ریکارڈنگ کا پاتھ
+  String? audioPath;
+
+  // ۲. رسید/تصویر کی اٹیچمنٹ کا پاتھ
+  String? attachmentPath;
+
   PayNowController() {
     amountController.addListener(_onAmountChanged);
   }
@@ -66,18 +72,29 @@ class PayNowController extends ChangeNotifier {
     final String description = descriptionController.text.trim();
     final String currentDate = "${DateTime.now().day} اگست ${DateTime.now().year}";
 
+    bool isAudioAvailable = audioPath != null && audioPath!.isNotEmpty;
+    bool isPictureAvailable = attachmentPath != null && attachmentPath!.isNotEmpty;
+
+    // مکمل اور صاف ٹرانزیکشن پیکج
     final Map<String, dynamic> transactionData = {
       'type': 'received',
       'customerPhone': customerMobileNumber,
       'customerId': customerMobileNumber,
       'amount': _enteredAmount,
       'description': description,
-      'remarks': '',
       'date': currentDate,
       'discount': {'value': 0, 'isPercentage': false},
       'source': paymentSource,
       'splitPayments': splitPaymentsList ?? [],
-      'hasAttachment': false,
+
+      // تصویر/رسید کا لاجک
+      'hasPicture': isPictureAvailable,
+      'picturePath': isPictureAvailable ? attachmentPath : '',
+
+      // آڈیو ریکارڈنگ کا لاجک
+      'hasAudioRecorded': isAudioAvailable,
+      'audioPath': isAudioAvailable ? audioPath : 'Not Recorded',
+
       'timestamp': DateTime.now().toIso8601String(),
       'status': 'pending',
       'isApproved': false,
@@ -99,7 +116,7 @@ class PayNowController extends ChangeNotifier {
           await _deductFromBankBox(src, amt);
         }
       } else {
-        // ۳۔ سادھے موڈ میں سلیکٹ شدہ سورس (مثلاً 'aa' یا 'dd') سے کاٹنا
+        // ۳۔ سادھے موڈ میں سلیکٹ شدہ سورس سے کاٹنا
         await _deductFromBankBox(paymentSource, _enteredAmount);
       }
     } catch (e) {
@@ -108,9 +125,12 @@ class PayNowController extends ChangeNotifier {
 
     if (!context.mounted) return;
 
+    // فارم اور متغیرات صاف کرنا
     amountController.clear();
     descriptionController.clear();
     _enteredAmount = 0.0;
+    audioPath = null;
+    attachmentPath = null;
     notifyListeners();
 
     ScaffoldMessenger.of(context).showSnackBar(

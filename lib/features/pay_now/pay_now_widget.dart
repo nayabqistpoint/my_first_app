@@ -114,7 +114,7 @@ class _PayNowWidgetState extends State<PayNowWidget> {
                           ),
                           const SizedBox(height: 12),
 
-                          // پیمنٹ سورس کارڈ (GlobalKey کے ساتھ)
+                          // پیمنٹ سورس کارڈ (GlobalKey اور اٹیچمنٹ کنکشن کے ساتھ)
                           PaymentSourceCard(
                             key: _paymentCardKey,
                             isAdmin: false,
@@ -125,6 +125,11 @@ class _PayNowWidgetState extends State<PayNowWidget> {
                                   selectedPaymentSource = newValue;
                                 });
                               }
+                            },
+                            // 🎯 یہ دو فیلڈز کنٹرولر کو تصویر اور ڈسکرپشن مہیا کریں گی
+                            noteController: payNowController.descriptionController,
+                            onAttachmentPicked: (path) {
+                              payNowController.attachmentPath = path;
                             },
                           ),
                         ],
