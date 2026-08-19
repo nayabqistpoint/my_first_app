@@ -31,7 +31,7 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200, width: 1),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -43,7 +43,7 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. سب ٹوٹل
+          // ۱. سب ٹوٹل
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -63,7 +63,7 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
           ],
           const Divider(height: 12),
 
-          // 2. گرینڈ ٹوٹل
+          // ۲. گرینڈ ٹوٹل
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -73,7 +73,7 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
           ),
           const SizedBox(height: 10),
 
-          // 3. وصول / ادا شدہ رقم اور فل پیڈ باکس
+          // ۳۔ وصول / ادا شدہ رقم اور فل پیڈ باکس
           Row(
             children: [
               const Text('وصول / ادا شدہ:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
@@ -82,11 +82,7 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
                 onTap: () {
                   setState(() {
                     _isFullPaid = !_isFullPaid;
-                    if (_isFullPaid) {
-                      widget.receivedController.text = widget.grandTotal.toStringAsFixed(0);
-                    } else {
-                      widget.receivedController.text = '';
-                    }
+                    widget.receivedController.text = _isFullPaid ? widget.grandTotal.toStringAsFixed(0) : '';
                   });
                 },
                 child: Container(
@@ -130,9 +126,9 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
                       borderRadius: BorderRadius.circular(6),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    focusedBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(6)),
-                      borderSide: BorderSide(color: Color(0xFFE53935), width: 1.5),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.5),
                     ),
                   ),
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
@@ -142,7 +138,7 @@ class _TransactionSummaryWidgetState extends State<TransactionSummaryWidget> {
           ),
           const SizedBox(height: 8),
 
-          // 4. بقایا بیلنس (نیگیٹو ہونے پر ریڈ اور پوزیٹو ہونے پر گرین کلر)
+          // ۴۔ بقایا بیلنس
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

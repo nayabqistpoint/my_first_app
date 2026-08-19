@@ -18,18 +18,15 @@ class PurchasePage extends StatefulWidget {
 
 class _PurchasePageState extends State<PurchasePage> {
   late final PurchasePageController controller;
-
   double _discountValue = 0.0;
   bool _isDiscountPercentage = false;
   String _selectedDiscountCategory = 'Discounts';
-
   final TextEditingController _receivedController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     controller = PurchasePageController();
-    
     if (widget.applicantPhone != null && widget.applicantPhone!.trim().isNotEmpty) {
       controller.targetApplicantPhone = widget.applicantPhone!.trim();
     }
@@ -45,17 +42,13 @@ class _PurchasePageState extends State<PurchasePage> {
   double get _subTotal {
     double total = 0.0;
     for (var item in controller.itemsList) {
-      final val = double.tryParse(item['subTotal']?.toString() ?? '0') ?? 0.0;
-      total += val;
+      total += double.tryParse(item['subTotal']?.toString() ?? '0') ?? 0.0;
     }
     return total;
   }
 
   double get _calculatedDiscountAmount {
-    if (_isDiscountPercentage) {
-      return (_subTotal * _discountValue) / 100;
-    }
-    return _discountValue;
+    return _isDiscountPercentage ? (_subTotal * _discountValue) / 100 : _discountValue;
   }
 
   double get _grandTotal {
@@ -65,24 +58,20 @@ class _PurchasePageState extends State<PurchasePage> {
 
   Future<void> _openItemDetails(int index, {bool isEdit = false}) async {
     await controller.handleItemDetailNavigation(context, index, isEdit: isEdit);
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _onSavePressed() async {
     double paid = double.tryParse(_receivedController.text.trim()) ?? 0.0;
     double grand = _grandTotal;
-    double remaining = grand - paid;
-
+    
     controller.grandTotalAmount = grand;
     controller.paidAmount = paid;
-    controller.remainingBalance = remaining;
+    controller.remainingBalance = grand - paid;
     controller.discountValue = _calculatedDiscountAmount;
     controller.isDiscountPercentage = _isDiscountPercentage;
 
     bool success = await controller.savePurchase();
-
     if (!mounted) return;
 
     if (success) {
@@ -92,7 +81,6 @@ class _PurchasePageState extends State<PurchasePage> {
           amount: _calculatedDiscountAmount,
         );
       }
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('ڈیٹا کامیابی سے محفوظ ہو گیا ہے!'),
@@ -130,7 +118,6 @@ class _PurchasePageState extends State<PurchasePage> {
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                     child: Column(
                       children: [
-                        // Party Selector Widget
                         PartySelectorWidget(
                           onPartySelected: (String? phone, String? name) {
                             controller.selectedPartyPhone = phone;
@@ -138,23 +125,19 @@ class _PurchasePageState extends State<PurchasePage> {
                           },
                         ),
                         const SizedBox(height: 8),
-
-                        // Item Rows List
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: controller.itemsList.length,
                           itemBuilder: (context, index) {
                             final item = controller.itemsList[index];
-
                             return ItemSelectorRowWidget(
                               itemName: item['itemName'] ?? '',
                               imeiNo: item['imeiNo'] ?? '',
                               subTotal: item['subTotal'] ?? '0.00',
                               calculationText: item['calculationText'] ?? '1 × 0',
                               onAddPressed: () {
-                                bool isAdded = controller.addNewItemRow();
-                                if (!isAdded) {
+                                if (!controller.addNewItemRow()) {
                                   ScaffoldMessenger.of(context).clearSnackBars();
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -169,9 +152,7 @@ class _PurchasePageState extends State<PurchasePage> {
                               },
                               onDeletePressed: () {
                                 if (controller.itemsList.length > 1) {
-                                  setState(() {
-                                    controller.removeItemRow(index);
-                                  });
+                                  setState(() => controller.removeItemRow(index));
                                 }
                               },
                               onEditPressed: () => _openItemDetails(index, isEdit: true),
@@ -179,40 +160,29 @@ class _PurchasePageState extends State<PurchasePage> {
                             );
                           },
                         ),
-
                         const SizedBox(height: 10),
-
-                        // Discount Widget
                         DiscountWidget(
-                          onDiscountChanged: (String categoryName, double discountValue, bool isPercentage) {
+                          onDiscountChanged: (catName, discVal, isPerc) {
                             setState(() {
-                              _selectedDiscountCategory = categoryName;
-                              _discountValue = discountValue;
-                              _isDiscountPercentage = isPercentage;
+                              _selectedDiscountCategory = catName;
+                              _discountValue = discVal;
+                              _isDiscountPercentage = isPerc;
                             });
                           },
                         ),
-
                         const SizedBox(height: 10),
-
-                        // Transaction Summary Widget (Cleaned parameters)
                         TransactionSummaryWidget(
                           subTotal: _subTotal,
                           discountAmount: _calculatedDiscountAmount,
                           grandTotal: _grandTotal,
                           receivedController: _receivedController,
                         ),
-
                         const SizedBox(height: 10),
-
-                        // Payment Source Card
                         PaymentSourceCard(
                           key: controller.paymentCardKey,
                           selectedSource: controller.selectedPaymentSource,
                           onChanged: (val) {
-                            setState(() {
-                              controller.selectedPaymentSource = val;
-                            });
+                            setState(() => controller.selectedPaymentSource = val);
                           },
                           isAdmin: true,
                         ),
@@ -222,8 +192,6 @@ class _PurchasePageState extends State<PurchasePage> {
                 ),
               ),
               const SizedBox(height: 8),
-
-              // Save Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

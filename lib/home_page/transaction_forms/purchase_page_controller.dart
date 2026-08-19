@@ -4,7 +4,6 @@ import 'common/item_detail_widget.dart';
 import '../../dashboard/widgets/payment_source_card.dart';
 
 class PurchasePageController {
-  // 🎯 اس کسٹمر (Applicant) کا فون نمبر جس کی خریداری ہو رہی ہے
   String? targetApplicantPhone;
 
   List<Map<String, dynamic>> itemsList = [
@@ -32,7 +31,6 @@ class PurchasePageController {
 
   final GlobalKey<PaymentSourceCardState> paymentCardKey = GlobalKey<PaymentSourceCardState>();
 
-  // 🎯 محفوظ طریقے سے ہائیو باکسز گیٹ کرنے کا ہیلپر فنکشن
   Future<Box> _getBox(String boxName) async =>
       Hive.isBoxOpen(boxName) ? Hive.box(boxName) : await Hive.openBox(boxName);
 
@@ -105,7 +103,6 @@ class PurchasePageController {
 
       String finalPartyName = selectedPartyName ?? '';
 
-      // 1. کسٹمر/پارٹی کا نام نکالنا
       if (finalPartyName.isEmpty && selectedPartyPhone != null && selectedPartyPhone!.isNotEmpty) {
         if (Hive.isBoxOpen('customerBox')) {
           final customerBox = Hive.box('customerBox');
@@ -125,7 +122,6 @@ class PurchasePageController {
       final String nowIso = DateTime.now().toIso8601String();
       final int timeKey = DateTime.now().millisecondsSinceEpoch;
 
-      // 2. تمام آئٹمز کو سٹاک باکس (stockBox) میں محفوظ کرنا
       for (int i = 0; i < itemsList.length; i++) {
         var item = itemsList[i];
         if ((item['itemName'] ?? '').toString().isNotEmpty) {
@@ -165,7 +161,6 @@ class PurchasePageController {
         }
       }
 
-      // 3. PaymentSourceCard سے ڈیٹا (تصویر کا پاتھ اور ڈسکرپشن) محفوظ طریقے سے نکالنا
       final cardState = paymentCardKey.currentState;
       bool isSplit = cardState?.isSplitMode ?? false;
       splitPaymentsList = isSplit ? (cardState?.getSplitPaymentsList() ?? []) : [];
@@ -174,7 +169,6 @@ class PurchasePageController {
       bool hasPicture = picturePath != null && picturePath.trim().isNotEmpty;
       String actualDescription = cardState?.noteController.text.trim() ?? cardState?.descriptionController.text.trim() ?? '';
 
-      // 4. اسپلٹ پیمنٹس اور بینک باکس (bankBox) سے رقم منہا کرنا
       if (paidAmount > 0) {
         if (isSplit && splitPaymentsList.isNotEmpty) {
           for (var split in splitPaymentsList) {
@@ -192,7 +186,6 @@ class PurchasePageController {
         }
       }
 
-      // 5. ٹرانزیکشن باکس (transactionBox) میں محفوظ کرنا
       final transactionData = {
         'type': 'purchase',
         'customerPhone': selectedPartyPhone ?? '',
@@ -220,7 +213,6 @@ class PurchasePageController {
 
       await transactionBox.put(timeKey.toString(), transactionData);
 
-      // 🎯 6. [میپنگ برج] packageBox کے اندر ڈیٹا اپڈیٹ
       final String phoneToUpdate = (targetApplicantPhone ?? selectedPartyPhone ?? '').trim();
 
       if (phoneToUpdate.isNotEmpty && itemsList.isNotEmpty) {
