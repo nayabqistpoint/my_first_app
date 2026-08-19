@@ -39,6 +39,9 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
   String? _attachedImagePath;
 
   bool get isSplitMode => _isSplitMode;
+  
+  // کنٹرولر کے لیے تصویری پاتھ کا پبلک گیٹر
+  String? get attachedImagePath => _attachedImagePath;
 
   @override
   void initState() {
@@ -153,14 +156,13 @@ class PaymentSourceCardState extends State<PaymentSourceCard> {
     return ValueListenableBuilder<Box>(
       valueListenable: Hive.box('bankBox').listenable(),
       builder: (context, box, child) {
-        // ۱۔ پرانی cashInHand کو ختم کر کے Cash کے ساتھ مرج (Merge) کرنا
+        // ۱۔ پرانی cashInHand کو ختم کر کے Cash کے ساتھ مرج کرنا
         double cashBalance = 0.0;
         if (box.containsKey('Cash')) {
           cashBalance += (box.get('Cash') ?? 0.0).toDouble();
         }
         if (box.containsKey('cashInHand')) {
           cashBalance += (box.get('cashInHand') ?? 0.0).toDouble();
-          // مرج کرنے کے بعد پرانی کیز ختم کرنا
           box.put('Cash', cashBalance);
           box.delete('cashInHand');
         }
