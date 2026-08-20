@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:my_first_app/installment_calculater_page.dart';
+import 'package:my_first_app/installment_calculator_page.dart';
 import 'package:record/record.dart'; // اصلی آڈیو ریکارڈنگ پیکیج
 import 'package:path_provider/path_provider.dart'; // ٹیمپریری پاتھ کے لیے
 import 'package:my_first_app/welcome/signup/item_package_logic.dart';

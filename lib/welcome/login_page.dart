@@ -4,7 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:my_first_app/welcome/signup_page.dart'; 
-import 'package:my_first_app/installment_calculater_page.dart'; 
+import 'package:my_first_app/installment_calculator_page.dart'; 
 import 'package:my_first_app/home_page.dart'; 
 import 'package:my_first_app/customer_ledger_page.dart'; 
 

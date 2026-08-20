@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:my_first_app/installment_calculater_page.dart';
+import 'package:my_first_app/installment_calculator_page.dart';
 
 class CustomerLedgerController extends ChangeNotifier {
   final dynamic customer;

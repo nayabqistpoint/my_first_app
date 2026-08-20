@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 // یہ پاتھ درست ہے: ایک بار ../ سے sections سے باہر، اور دوسرا ../ سے home_page سے باہر lib فولڈر تک
-import 'package:my_first_app/installment_calculater_page.dart';
+import 'package:my_first_app/installment_calculator_page.dart';
 // خریداری فارم کا نیا پاتھ
 import 'package:my_first_app/home_page/transaction_forms/purchase_page.dart';
 // آپ کی نئی بنائی گئی ڈیٹا بیس فائل کا درست پاتھ
