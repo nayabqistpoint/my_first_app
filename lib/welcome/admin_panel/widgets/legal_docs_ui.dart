@@ -5,7 +5,7 @@ import 'legal_docs_controller.dart';
 import 'agreement_helper.dart';
 import 'guarantor_helper.dart';
 import 'declaration_helper.dart';
-import 'invoice_helper.dart'; // 🎯 انوائس ہیلپر امپورٹ
+import 'invoice_helper.dart';
 
 class LegalDocsUI extends StatefulWidget {
   final Map<String, dynamic> requestData;
@@ -27,7 +27,7 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
   final LegalDocsController _controller = LegalDocsController();
   Uint8List? _stampBytes;
   String? _stampExtension;
-  bool _isInvoiceGenerated = false; // 🎯 انوائس پرنٹ کا سٹیٹس فلیگ
+  bool _isInvoiceGenerated = false;
 
   @override
   void dispose() {
@@ -35,28 +35,47 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
     super.dispose();
   }
 
-  // 🎯 تصویر (JPG/PNG) اپ لوڈ کرنے کا فنکشن
+  // 🎯 file_picker 12.0.0 کے مطابق ۱۰۰٪ ایرر فری فنکشن
   Future<void> _pickStamp() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['png', 'jpg', 'jpeg'],
-      withData: true,
-    );
+    try {
+      final List<PlatformFile> selectedFiles = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['png', 'jpg', 'jpeg'],
+      );
 
-    if (result != null && result.files.single.bytes != null) {
-      setState(() {
-        _stampBytes = result.files.single.bytes;
-        _stampExtension = result.files.single.extension;
-      });
+      if (selectedFiles.isNotEmpty) {
+        final PlatformFile file = selectedFiles.first;
+        final Uint8List bytes = await file.readAsBytes(); // Non-nullable fixed
+
+        setState(() {
+          _stampBytes = bytes;
+          // extension کی جگہ نام سے فائل کی ایکسٹینشن حاصل کرنا
+          _stampExtension = file.name.contains('.') 
+              ? file.name.split('.').last 
+              : 'jpg';
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ای اسٹامپ تصویر اپ لوڈ ہو گئی!'), 
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ای اسٹامپ تصویر اپ لوڈ ہو گئی!'), backgroundColor: Colors.green),
+          SnackBar(
+            content: Text('تصویر منتخب کرنے میں مسئلہ آیا: $e'), 
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
-  // 🎯 انوائس جنریٹ کرنے کا فنکشن
   Future<void> _handleInvoicePrint() async {
     setState(() {
       _isInvoiceGenerated = true;
@@ -107,7 +126,6 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🎯 ہیڈر پٹی: عنوان + انوائس لنک + ای اسٹامپ اپلوڈ لنک
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -121,7 +139,6 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
                   ),
                   Row(
                     children: [
-                      // 🎯 1. انوائس کا نیا خوبصورت ہائپر لنک
                       InkWell(
                         onTap: _handleInvoicePrint,
                         child: Row(
@@ -145,8 +162,6 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
                         ),
                       ),
                       const SizedBox(width: 10),
-
-                      // 🎯 2. ای اسٹامپ کا ہائپر لنک
                       InkWell(
                         onTap: _pickStamp,
                         child: Row(
@@ -174,8 +189,6 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
                 ],
               ),
               const Divider(height: 16),
-
-              // 🎯 3 اصلی بٹنز (معاہدہ اقساط، ضمانت نامہ، بیان حلفی)
               const Text('1. ضروری دستاویزات جنریٹ کریں:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Row(
@@ -213,8 +226,6 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
                 ],
               ),
               const Divider(height: 16),
-
-              // فزیکل تصدیق کے چیک باکسز
               const Text('2. تحویل سے پہلے فزیکل وصولی کی تصدیق:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
               _chk('شناختی کارڈ کاپیاں (لازمی)', _controller.isCnicReceived, (v) => setState(() => _controller.isCnicReceived = v ?? false)),
               _chk('کاغذات پر دستخط مکمل ہیں (لازمی)', _controller.isDocsSigned, (v) => setState(() => _controller.isDocsSigned = v ?? false)),
@@ -223,8 +234,6 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
               _chk('فزیکل اسٹامپ پیپر و پرنوٹ موصول ہو گئے', _controller.isStampReceived, (v) => setState(() => _controller.isStampReceived = v ?? false)),
               _chk('فزیکل بینک چیکس موصول ہو گئے', _controller.isChequesReceived, (v) => setState(() => _controller.isChequesReceived = v ?? false)),
               const Divider(height: 16),
-
-              // تصویر اور نوٹس
               const Text('3. تحویل کی تصویر اور اضافی تفصیلات:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
               Row(
@@ -251,8 +260,6 @@ class _LegalDocsUIState extends State<LegalDocsUI> {
                 ],
               ),
               const SizedBox(height: 10),
-
-              // ہینڈ اوور بٹن
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

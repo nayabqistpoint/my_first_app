@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:my_first_app/installment_calculater_page.dart';
 import 'package:record/record.dart'; // اصلی آڈیو ریکارڈنگ پیکیج
+import 'package:path_provider/path_provider.dart'; // ٹیمپریری پاتھ کے لیے
 import 'item_package_logic.dart';
 
 // ری یوزیبل IMEI ڈائیلاگ کی امپورٹ
@@ -87,7 +89,7 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
     }
   }
 
-  // اصلی مائیک سے ریکارڈنگ شروع یا بند کرنے کا فنکشن
+  // اصلی مائیک سے ریکارڈنگ شروع یا بند کرنے کا محفوظ فنکشن
   Future<void> _toggleRecording() async {
     try {
       if (_isRecording) {
@@ -97,17 +99,28 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
           setState(() {
             _isRecording = false;
             _hasRecordedAudio = true;
-            _audioPath = path; // یہاں اصلی ریکارڈیڈ فائل کا سچا پاتھ آئے گا
+            _audioPath = path; // یہاں اصلی ریکارڈیڈ فائل کا پاتھ آئے گا
           });
         }
       } else {
         // مائیکرو فون کی اجازت چیک کریں
         if (await _audioRecorder.hasPermission()) {
-          // ریکارڈنگ شروع کریں
+          // موبائل کی ٹیمپریری ڈائریکٹری حاصل کریں
+          final Directory tempDir = await getTemporaryDirectory();
+          
+          // ایک مکمل اور محفوظ فائل نیم اور پاتھ بنائیں
+          final String filePath = '${tempDir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+          // اینڈرائیڈ کے لیے محفوظ ریکارڈنگ شروع کریں
           await _audioRecorder.start(
-            const RecordConfig(encoder: AudioEncoder.aacLc), 
-            path: '', // خالی چھوڑنے سے یہ خود ہی بہترین ٹیمپریری پاتھ بنا لیتا ہے
+            const RecordConfig(
+              encoder: AudioEncoder.aacLc, // اینڈرائیڈ کے لیے بہترین فارمیٹ
+              bitRate: 128000,
+              sampleRate: 44100,
+            ), 
+            path: filePath, // اب پاتھ صحیح اور محفوظ ہے
           );
+
           setState(() {
             _isRecording = true;
             _hasRecordedAudio = false;
@@ -122,6 +135,9 @@ class ItemPackageUIState extends State<ItemPackageUI> with AutomaticKeepAliveCli
       }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _isRecording = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('ریکارڈنگ میں مسئلہ آیا: $e')),
         );
