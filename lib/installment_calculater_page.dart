@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // پرووائیڈر کو امپورٹ کریں
-import 'calculater/calculater_controller.dart'; // کنٹرولر کو امپورٹ کریں
-import 'calculater/calculater_header.dart';
-import 'calculater/calculater_list.dart';
+import 'package:my_first_app/calculater/calculater_controller.dart'; // کنٹرولر کو امپورٹ کریں
+import 'package:my_first_app/calculater/calculater_header.dart';
+import 'package:my_first_app/calculater/calculater_list.dart';
 
 class InstallmentCalculaterPage extends StatefulWidget {
   const InstallmentCalculaterPage({super.key});

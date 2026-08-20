@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'customer_ledger/customer_ledger_controller.dart';
-import 'customer_ledger/top.dart';
-import 'customer_ledger/middle.dart';
-import 'customer_ledger/bottom.dart';
+import 'package:my_first_app/customer_ledger/customer_ledger_controller.dart';
+import 'package:my_first_app/customer_ledger/top.dart';
+import 'package:my_first_app/customer_ledger/middle.dart';
+import 'package:my_first_app/customer_ledger/bottom.dart';
 
 class CustomerLedgerPage extends StatefulWidget {
   final dynamic customer;

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'customer_info.dart';
-import 'guarantor_info.dart';
-import 'item_package_ui.dart';
+import 'package:my_first_app/welcome/signup/customer_info.dart';
+import 'package:my_first_app/welcome/signup/guarantor_info.dart';
+import 'package:my_first_app/welcome/signup/item_package_ui.dart';
 
 class SignUpController extends ChangeNotifier {
   final GlobalKey<CustomerInfoWidgetState> customerKey = GlobalKey<CustomerInfoWidgetState>();

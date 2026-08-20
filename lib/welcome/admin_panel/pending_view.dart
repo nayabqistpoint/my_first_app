@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'admin_panel_controller.dart';
-import 'request_card_item.dart';
+import 'package:my_first_app/welcome/admin_panel/admin_panel_controller.dart';
+import 'package:my_first_app/welcome/admin_panel/request_card_item.dart';
 
 class PendingView extends StatelessWidget {
   final AdminPanelController controller;

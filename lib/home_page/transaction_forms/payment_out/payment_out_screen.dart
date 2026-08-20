@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'payment_out_controller.dart';
-import 'payment_out_header.dart';
-import 'payment_out_body.dart';
+import 'package:my_first_app/home_page/transaction_forms/payment_out/payment_out_controller.dart';
+import 'package:my_first_app/home_page/transaction_forms/payment_out/payment_out_header.dart';
+import 'package:my_first_app/home_page/transaction_forms/payment_out/payment_out_body.dart';
 
 class PaymentOutScreen extends StatefulWidget {
   final String? customerId;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'dart:developer' as developer;
-import '../../welcome/signup/item_package_ui.dart';
+import 'package:my_first_app/welcome/signup/item_package_ui.dart';
 
 class PurchaseNowController {
   // پیکج یو آئی کی گلوبل کی (Key)

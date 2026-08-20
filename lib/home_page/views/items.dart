@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../controllers/item_controller.dart';
+import 'package:my_first_app/home_page/views/item_controller.dart';
 
 class ItemsPage extends StatelessWidget {
   const ItemsPage({super.key});

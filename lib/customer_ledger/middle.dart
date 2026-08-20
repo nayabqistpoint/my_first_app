@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'customer_ledger_controller.dart';
-import 'ledger_middle_helper.dart';
+import 'package:my_first_app/customer_ledger/customer_ledger_controller.dart';
+import 'package:my_first_app/customer_ledger/ledger_middle_helper.dart';
 
 class LedgerMiddleWidget extends StatelessWidget {
   final CustomerLedgerController controller;

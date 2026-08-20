@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../../../features/add_party_dialog.dart';
-import 'customers_widgets/customer_row_ui.dart';
-import 'customers_widgets/customer_controller.dart';
+import 'package:my_first_app/features/add_party_dialog.dart';
+import 'package:my_first_app/home_page/views/customers_widgets/customer_row_ui.dart';
+import 'package:my_first_app/home_page/views/customers_widgets/customer_controller.dart';
 
 class CustomersListView extends StatefulWidget {
   const CustomersListView({super.key});

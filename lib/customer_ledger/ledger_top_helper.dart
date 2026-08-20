@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../features/installment_plan_dialog.dart';
-import '../home_page/views/customers_widgets/balance_helper.dart';
+import 'package:my_first_app/features/installment_plan_dialog.dart';
+import 'package:my_first_app/home_page/views/customers_widgets/balance_helper.dart';
 
 class LedgerTopHelper {
   static String getHeaderTitle({

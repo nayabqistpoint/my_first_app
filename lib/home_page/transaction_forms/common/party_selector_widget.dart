@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../../../../features/add_party_dialog.dart';
+import 'package:my_first_app/features/add_party_dialog.dart';
 
 class PartySelectorWidget extends StatefulWidget {
   final Function(String? phone, String? name) onPartySelected;

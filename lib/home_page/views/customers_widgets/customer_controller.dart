@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'balance_helper.dart';
+import 'package:my_first_app/home_page/views/customers_widgets/balance_helper.dart';
 
 class CustomerController extends ChangeNotifier {
   List<Map<String, dynamic>> _allCustomers = [];

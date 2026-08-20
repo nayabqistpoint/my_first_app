@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dashboard/widgets/profit_loss.dart'; 
-import 'dashboard/widgets/cash.dart'; 
-import 'dashboard/widgets/expenses.dart'; 
+import 'package:my_first_app/dashboard/widgets/profit_loss.dart'; 
+import 'package:my_first_app/dashboard/widgets/cash.dart'; 
+import 'package:my_first_app/dashboard/widgets/expenses.dart'; 
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});

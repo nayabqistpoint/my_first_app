@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'payment_out_controller.dart';
-import '../common/discount_widget.dart';
-import '../../../dashboard/widgets/payment_source_card.dart';
+import 'package:my_first_app/home_page/transaction_forms/payment_out/payment_out_controller.dart';
+import 'package:my_first_app/home_page/transaction_forms/common/discount_widget.dart';
+import 'package:my_first_app/dashboard/widgets/payment_source_card.dart';
 
 class PaymentOutBody extends StatefulWidget {
   final PaymentOutController controller;

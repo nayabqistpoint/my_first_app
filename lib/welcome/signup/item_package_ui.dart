@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:my_first_app/installment_calculater_page.dart';
 import 'package:record/record.dart'; // اصلی آڈیو ریکارڈنگ پیکیج
 import 'package:path_provider/path_provider.dart'; // ٹیمپریری پاتھ کے لیے
-import 'item_package_logic.dart';
+import 'package:my_first_app/welcome/signup/item_package_logic.dart';
 
 // ری یوزیبل IMEI ڈائیلاگ کی امپورٹ
 import 'package:my_first_app/features/imei_details_dialog.dart';

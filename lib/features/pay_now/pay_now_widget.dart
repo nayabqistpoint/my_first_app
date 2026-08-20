@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'pay_now_body.dart';
-import 'pay_now_controller.dart';
-import '../../dashboard/widgets/payment_source_card.dart';
+import 'package:my_first_app/features/pay_now/pay_now_body.dart';
+import 'package:my_first_app/features/pay_now/pay_now_controller.dart';
+import 'package:my_first_app/dashboard/widgets/payment_source_card.dart';
 
 class PayNowWidget extends StatefulWidget {
   final String customerMobileNumber;

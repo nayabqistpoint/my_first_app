@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../controllers/item_controller.dart';
-import 'sections_controller.dart';
-import '../../welcome/login_page.dart';
-import '../views/customers_widgets/balance_helper.dart';
+import 'package:my_first_app/home_page/views/item_controller.dart';
+import 'package:my_first_app/home_page/sections/sections_controller.dart';
+import 'package:my_first_app/welcome/login_page.dart';
+import 'package:my_first_app/home_page/views/customers_widgets/balance_helper.dart';
 
 class TopSection extends StatelessWidget {
   const TopSection({super.key});

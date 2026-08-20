@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../controller.dart';
+import 'package:my_first_app/dashboard/controller.dart';
 
 class CashWidget extends StatefulWidget {
   const CashWidget({super.key});

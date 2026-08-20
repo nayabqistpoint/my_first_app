@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'customer_ledger_controller.dart';
-import '../home_page/transaction_forms/payment_in/payment_in_screen.dart';
-import '../home_page/transaction_forms/payment_out/payment_out_screen.dart';
-import '../features/pay_now/pay_now_widget.dart';
-import '../features/purchase_now/purchase_now.dart';
+import 'package:my_first_app/customer_ledger/customer_ledger_controller.dart';
+import 'package:my_first_app/home_page/transaction_forms/payment_in/payment_in_screen.dart';
+import 'package:my_first_app/home_page/transaction_forms/payment_out/payment_out_screen.dart';
+import 'package:my_first_app/features/pay_now/pay_now_widget.dart';
+import 'package:my_first_app/features/purchase_now/purchase_now.dart';
 
 class LedgerBottomHelper {
   static Future<void> handleLeftButton(BuildContext context, CustomerLedgerController controller) =>

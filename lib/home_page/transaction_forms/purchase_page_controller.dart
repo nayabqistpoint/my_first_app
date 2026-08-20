@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'common/item_detail_widget.dart';
-import '../../dashboard/widgets/payment_source_card.dart';
+import 'package:my_first_app/home_page/transaction_forms/common/item_detail_widget.dart';
+import 'package:my_first_app/dashboard/widgets/payment_source_card.dart';
 
 class PurchasePageController {
   String? targetApplicantPhone;

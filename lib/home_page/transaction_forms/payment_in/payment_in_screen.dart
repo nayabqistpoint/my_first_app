@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'payment_in_controller.dart';
-import 'payment_header.dart';
-import 'payment_body.dart';
+import 'package:my_first_app/home_page/transaction_forms/payment_in/payment_in_controller.dart';
+import 'package:my_first_app/home_page/transaction_forms/payment_in/payment_header.dart';
+import 'package:my_first_app/home_page/transaction_forms/payment_in/payment_body.dart';
 
 class PaymentInScreen extends StatefulWidget {
   final String? customerId; // 🔑 کسٹमर آئی ڈی (موبائل نمبر) یہاں وصول کی جائے گی

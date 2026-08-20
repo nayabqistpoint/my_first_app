@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../../../features/imei_details_dialog.dart';
-import '../../../features/installment_plan_dialog.dart';
+import 'package:my_first_app/features/imei_details_dialog.dart';
+import 'package:my_first_app/features/installment_plan_dialog.dart';
 
 class RequestCardHelper {
   // 🎯 1. کسٹمر ہیڈر (نام، ولدیت، قوم)

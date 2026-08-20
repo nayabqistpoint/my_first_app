@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'legal_docs_controller.dart';
-import 'agreement_helper.dart';
-import 'guarantor_helper.dart';
-import 'declaration_helper.dart';
-import 'invoice_helper.dart';
+import 'package:my_first_app/welcome/admin_panel/widgets/legal_docs_controller.dart';
+import 'package:my_first_app/welcome/admin_panel/widgets/agreement_helper.dart';
+import 'package:my_first_app/welcome/admin_panel/widgets/guarantor_helper.dart';
+import 'package:my_first_app/welcome/admin_panel/widgets/declaration_helper.dart';
+import 'package:my_first_app/welcome/admin_panel/widgets/invoice_helper.dart';
 
 class LegalDocsUI extends StatefulWidget {
   final Map<String, dynamic> requestData;

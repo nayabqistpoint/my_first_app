@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../../../dashboard/widgets/payment_source_card.dart';
-import '../common/discount_widget.dart';
+import 'package:my_first_app/dashboard/widgets/payment_source_card.dart';
+import 'package:my_first_app/home_page/transaction_forms/common/discount_widget.dart';
 
 class PaymentOutController {
   final TextEditingController amountController = TextEditingController();

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'pending_approvals_controller.dart';
+import 'package:my_first_app/welcome/admin_panel/pending/pending_approvals_controller.dart';
 
 class PendingApprovalsDrawer extends StatefulWidget {
   const PendingApprovalsDrawer({super.key});

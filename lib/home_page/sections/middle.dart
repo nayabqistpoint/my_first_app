@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'sections_controller.dart';
+import 'package:my_first_app/home_page/sections/sections_controller.dart';
 
 class MiddleSection extends StatelessWidget {
   const MiddleSection({super.key});

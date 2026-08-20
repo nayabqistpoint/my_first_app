@@ -3,10 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'signup_page.dart'; 
-import '../installment_calculater_page.dart'; 
-import '../home_page.dart'; 
-import '../customer_ledger_page.dart'; 
+import 'package:my_first_app/welcome/signup_page.dart'; 
+import 'package:my_first_app/installment_calculater_page.dart'; 
+import 'package:my_first_app/home_page.dart'; 
+import 'package:my_first_app/customer_ledger_page.dart'; 
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

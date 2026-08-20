@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'welcome/admin_panel/admin_panel_controller.dart';
-import 'welcome/admin_panel/approved_view.dart';
-import 'welcome/admin_panel/pending_view.dart';
-import 'welcome/admin_panel/completed_view.dart'; 
-import 'welcome/admin_panel/pending/pending_approvals_drawer.dart'; 
-import 'welcome/admin_panel/pending/pending_approvals_controller.dart';
-import 'welcome/admin_panel/admin_top_ui.dart';
+import 'package:my_first_app/welcome/admin_panel/admin_panel_controller.dart';
+import 'package:my_first_app/welcome/admin_panel/approved_view.dart';
+import 'package:my_first_app/welcome/admin_panel/pending_view.dart';
+import 'package:my_first_app/welcome/admin_panel/completed_view.dart'; 
+import 'package:my_first_app/welcome/admin_panel/pending/pending_approvals_drawer.dart'; 
+import 'package:my_first_app/welcome/admin_panel/pending/pending_approvals_controller.dart';
+import 'package:my_first_app/welcome/admin_panel/admin_top_ui.dart';
 
 class AdminPanelPage extends StatefulWidget {
   const AdminPanelPage({super.key});

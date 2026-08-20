@@ -1,17 +1,17 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'dashboard_page.dart';
-import 'admin_panel_page.dart';
+import 'package:my_first_app/dashboard_page.dart';
+import 'package:my_first_app/admin_panel_page.dart';
 
 // سیکشنز اور ویوز کی امپورٹس
-import 'home_page/sections/top.dart';
-import 'home_page/sections/middle.dart';
-import 'home_page/sections/bottom.dart';
-import 'home_page/sections/sections_controller.dart';
+import 'package:my_first_app/home_page/sections/top.dart';
+import 'package:my_first_app/home_page/sections/middle.dart';
+import 'package:my_first_app/home_page/sections/bottom.dart';
+import 'package:my_first_app/home_page/sections/sections_controller.dart';
 
-import 'home_page/views/customers_list.dart';
-import 'home_page/views/items.dart';
-import 'home_page/views/transactions.dart';
+import 'package:my_first_app/home_page/views/customers_list.dart';
+import 'package:my_first_app/home_page/views/items.dart';
+import 'package:my_first_app/home_page/views/transactions.dart';
 
 class AppScrollBehavior extends MaterialScrollBehavior {
   @override

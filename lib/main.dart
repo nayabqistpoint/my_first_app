@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'welcome/login_page.dart';
+import 'package:my_first_app/welcome/login_page.dart';
 
 void main() async {
   // فلیٹر اور پیکیجز کی بائنڈنگز کو یقینی بنانا

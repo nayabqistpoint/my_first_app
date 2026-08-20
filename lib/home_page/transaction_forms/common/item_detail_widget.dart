@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 // درست امپورٹ پاتھ: کیونکہ کنٹرولر ذیلی فولڈر 'item_detail_widgets' کے اندر ہے
-import 'item_detail_widgets/item_detail_controller.dart';
-import 'item_detail_widgets/action_buttons.dart';
-import 'item_detail_widgets/condition_selector.dart';
-import 'item_detail_widgets/manual_boxes.dart';
+import 'package:my_first_app/home_page/transaction_forms/common/item_detail_widgets/item_detail_controller.dart';
+import 'package:my_first_app/home_page/transaction_forms/common/item_detail_widgets/action_buttons.dart';
+import 'package:my_first_app/home_page/transaction_forms/common/item_detail_widgets/condition_selector.dart';
+import 'package:my_first_app/home_page/transaction_forms/common/item_detail_widgets/manual_boxes.dart';
 
 class ItemDetailWidget extends StatefulWidget {
   final Map<String, dynamic>? initialData;

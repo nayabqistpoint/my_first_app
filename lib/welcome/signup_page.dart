@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'signup/customer_info.dart';
-import 'signup/guarantor_info.dart';
-import 'signup/item_package_ui.dart';
-import 'signup/terms_block.dart';
-import 'signup/signup_controller.dart';
+import 'package:my_first_app/welcome/signup/customer_info.dart';
+import 'package:my_first_app/welcome/signup/guarantor_info.dart';
+import 'package:my_first_app/welcome/signup/item_package_ui.dart';
+import 'package:my_first_app/welcome/signup/terms_block.dart';
+import 'package:my_first_app/welcome/signup/signup_controller.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
